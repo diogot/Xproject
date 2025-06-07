@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(rake:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(mkdir:*)",
+      "Bash(swift build)",
+      "Bash(swift run:*)",
+      "Bash(swift test)",
+      "Bash(swift build:*)",
+      "Bash(./.build/release/xp:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(swift --version)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(.build/debug/xp:*)"
+    ],
+    "deny": []
+  }
+}
