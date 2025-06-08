@@ -28,11 +28,16 @@ public final class SetupService: Sendable {
             throw SetupError.brewNotInstalled
         }
 
-        // Update brew
+        // Update brew (retry once if it fails)
         do {
             try executor.executeOrThrow("brew update")
         } catch {
-            // Continue if update fails
+            do {
+                print("⚠️  brew update failed, retrying...")
+                try executor.executeOrThrow("brew update")
+            } catch {
+                print("⚠️  brew update failed twice, continuing with potentially outdated package list: \(error.localizedDescription)")
+            }
         }
 
         // Install formulas if specified
