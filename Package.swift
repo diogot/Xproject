@@ -1,0 +1,38 @@
+// swift-tools-version: 6.1
+import PackageDescription
+
+let package = Package(
+    name: "XProject",
+    platforms: [
+        .macOS(.v14)
+    ],
+    products: [
+        .executable(name: "xp", targets: ["XProjectCLI"]),
+        .library(name: "XProject", targets: ["XProject"])
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
+        .package(url: "https://github.com/jpsim/Yams", from: "5.0.0")
+    ],
+    targets: [
+        .executableTarget(
+            name: "XProjectCLI",
+            dependencies: [
+                "XProject",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ]
+        ),
+        .target(
+            name: "XProject",
+            dependencies: [
+                "Yams"
+            ]
+        ),
+        .testTarget(
+            name: "XProjectTests",
+            dependencies: [
+                "XProject"
+            ]
+        )
+    ]
+)
