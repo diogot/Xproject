@@ -14,6 +14,36 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 
 **Important**: The current Ruby rakelib should be used only as reference for understanding existing functionality. All new development should focus on the Swift XProject tool, migrating features one by one while improving upon the original design.
 
+## Current Implementation Status
+
+### Completed Features
+- ✅ **Swift Package Manager structure**: Package.swift with XProject library and XProjectCLI executable
+- ✅ **Type-safe configuration system**: YAML loading with Codable structs, validation, and layered overrides
+- ✅ **Setup command**: Homebrew formula installation (deprecated bundler/cocoapods/submodules removed)
+- ✅ **Command execution utilities**: Safe shell command execution with proper error handling
+- ✅ **Clean architecture**: Separated CLI concerns from business logic
+
+### Architecture Overview
+**Targets:**
+- `XProjectCLI`: CLI layer using ArgumentParser, calls into XProject library
+- `XProject`: Core business logic library (configuration, services, utilities) - no CLI dependencies
+- `XProjectTests`: Test suite for core library
+
+**Key Services:**
+- `ConfigurationService`: Thread-safe singleton for loading and caching YAML configs
+- `SetupService`: Handles project setup (currently Homebrew only)
+- `CommandExecutor`: Utility for executing shell commands safely
+
+### Available Commands
+```bash
+xp setup           # Install/update Homebrew formulas from config
+xp config show     # Display current configuration
+xp config validate # Validate configuration files
+xp build           # TODO: Implement build functionality
+xp test            # TODO: Implement test functionality
+xp release         # TODO: Implement release functionality
+```
+
 ## Current System Overview (Reference Only)
 
 This is the existing Nebula iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.
@@ -64,7 +94,7 @@ rake xcode:upload[env]              # Upload to App Store Connect
 ### Version Management
 ```bash
 rake bump:patch[target]       # Bump patch version (1.0.0 -> 1.0.1)
-rake bump:minor[target]       # Bump minor version (1.0.0 -> 1.1.0)  
+rake bump:minor[target]       # Bump minor version (1.0.0 -> 1.1.0)
 rake bump:major[target]       # Bump major version (1.0.0 -> 2.0.0)
 ```
 
@@ -106,7 +136,7 @@ rake swiftgen:strings       # Generate localized strings
 ### Release Environments
 - **production-ios/tvos**: App Store releases
 - **dev-ios/tvos**: Development builds
-- **staging-ios/tvos**: Staging/QA builds  
+- **staging-ios/tvos**: Staging/QA builds
 - **snapshot-ios/tvos**: Snapshot testing builds
 
 ## File Generation Patterns
@@ -127,6 +157,23 @@ rake swiftgen:strings       # Generate localized strings
 - **Build artifacts**: Stored in configurable `build/` and `reports/` directories
 - **Environment variables**: Support for `BUNDLER_PATH`, `ARTIFACTS_PATH`, `TEST_REPORTS_PATH`, `APP_STORE_PASS`, `EJSON_PRIVATE_KEY`, `PROVISION_PASSWORD`
 
-## Security Guidelines
+## Important Development Guidelines
 
+### Architecture Decisions Made
+1. **No CLI dependencies in core library**: XProject library must remain free of ArgumentParser or other CLI frameworks
+2. **Deprecated dependency managers**: Do not implement bundler, cocoapods, submodules, or carthage - these are deprecated
+3. **Service-based architecture**: Business logic should be in services that CLI commands call into
+4. **Swift 6.1 compliance**: Project uses Swift 6.1 with strict concurrency checking
+
+### Security Guidelines
 - Any use of @unchecked Sendable or nonisolated(unsafe) needs my approval
+
+### Code Quality Guidelines
+- Swift files should have less up to 300 lines
+
+### Next Steps
+Priority order for implementing remaining features:
+1. Build command (migrate from xcode.rake)
+2. Test command (migrate from xcode.rake)
+3. Release command (migrate from xcode.rake)
+4. Environment management features

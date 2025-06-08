@@ -6,7 +6,7 @@ struct TestCommand: ParsableCommand {
         commandName: "test",
         abstract: "Run project tests"
     )
-    
+
     func run() throws {
         print("🧪 Running tests...")
         // TODO: Implement test functionality

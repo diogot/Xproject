@@ -7,12 +7,12 @@ struct SetupCommand: ParsableCommand {
         commandName: "setup",
         abstract: "Setup project dependencies and environment"
     )
-    
+
     func run() throws {
         print("🔧 Setting up project...")
-        
+
         let setupService = SetupService()
-        
+
         do {
             try setupService.runSetup()
             print("✅ Setup completed!")

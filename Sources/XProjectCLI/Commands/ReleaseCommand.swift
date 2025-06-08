@@ -6,7 +6,7 @@ struct ReleaseCommand: ParsableCommand {
         commandName: "release",
         abstract: "Create a release build"
     )
-    
+
     func run() throws {
         print("🚀 Creating release...")
         // TODO: Implement release functionality

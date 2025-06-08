@@ -6,7 +6,7 @@ struct BuildCommand: ParsableCommand {
         commandName: "build",
         abstract: "Build the project"
     )
-    
+
     func run() throws {
         print("🔨 Building project...")
         // TODO: Implement build functionality
