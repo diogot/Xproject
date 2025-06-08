@@ -47,6 +47,9 @@ XProject.local.yaml
 *.swo
 *~
 
+# Claude Code local settings
+.claude/
+
 # Build outputs
 build/
 reports/
