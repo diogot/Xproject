@@ -13,7 +13,7 @@ A modern Swift command line tool for Xcode project build automation.
    # Option 1: Clone directly
    git clone https://github.com/diogot/XProject.git
    cd XProject
-   
+
    # Option 2: Add as submodule to your project
    git submodule add https://github.com/diogot/XProject.git Tools/XProject
    cd Tools/XProject
@@ -23,16 +23,16 @@ A modern Swift command line tool for Xcode project build automation.
    ```bash
    # Show help
    swift run xp --help
-   
+
    # Setup project
    swift run xp setup
-   
-   # Build project  
+
+   # Build project
    swift run xp build --scheme MyApp --configuration Release
-   
+
    # Run tests
    swift run xp test --scheme MyApp --clean
-   
+
    # Create release
    swift run xp release production-ios
    ```
@@ -41,7 +41,7 @@ A modern Swift command line tool for Xcode project build automation.
    ```bash
    swift build -c release
    cp .build/release/xp /usr/local/bin/xp
-   
+
    # Now you can use it globally
    xp setup
    ```
@@ -50,7 +50,7 @@ A modern Swift command line tool for Xcode project build automation.
 
 - `xp setup` - Setup project dependencies and environment
 - `xp build` - Build the Xcode project
-- `xp test` - Run unit tests  
+- `xp test` - Run unit tests
 - `xp release` - Create a release build (archive + IPA)
 - `xp config` - Manage project configuration
 

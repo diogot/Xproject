@@ -1,0 +1,10 @@
+app_name: XProject
+project_path:
+  cli: Package.swift
+
+setup:
+  brew:
+    enabled: true
+    formulas:
+      - swiftgen
+      - swiftlint
