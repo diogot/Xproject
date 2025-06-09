@@ -1,20 +1,26 @@
-import XCTest
+import Testing
 @testable import XProject
 
-final class XProjectTests: XCTestCase {
+@Suite("XProject Core Tests")
+struct XProjectTests {
 
-    func testVersion() throws {
-        XCTAssertEqual(XProject.version, "0.1.0")
+    @Test("XProject version is correct", .tags(.unit, .fast))
+    func version() throws {
+        #expect(XProject.version == "0.1.0")
     }
 
-    func testXProjectCanBeInstantiated() throws {
+    @Test("XProject can be instantiated", .tags(.unit, .fast))
+    func instantiation() throws {
         let core = XProject()
-        XCTAssertNotNil(core)
+        // Simply verify instantiation succeeded (no assertion needed for non-optional)
+        _ = core
     }
 
-    func testConfigurationServiceIsAvailable() throws {
+    @Test("Configuration service is available", .tags(.unit, .fast))
+    func configurationServiceAvailability() throws {
         // Test that we can access the configuration service
         let service = ConfigurationService.shared
-        XCTAssertNotNil(service)
+        // Simply verify access succeeded (no assertion needed for non-optional)
+        _ = service
     }
 }
