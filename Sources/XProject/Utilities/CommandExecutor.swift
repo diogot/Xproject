@@ -1,13 +1,56 @@
 import Foundation
 
+// MARK: - Command Execution Protocol
+
+public protocol CommandExecuting: Sendable {
+    func execute(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
+    func executeOrThrow(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
+    func commandExists(_ command: String) -> Bool
+}
+
+public extension CommandExecuting {
+    func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+    }
+    
+    func executeOrThrow(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+        return try executeOrThrow(command, workingDirectory: workingDirectory, environment: environment)
+    }
+}
+
 // MARK: - Command Execution Utilities
 
-public struct CommandExecutor: Sendable {
-    public init() {}
+public struct CommandExecutor: CommandExecuting, Sendable {
+    private let dryRun: Bool
+    
+    public init(dryRun: Bool = false) {
+        self.dryRun = dryRun
+    }
 
     /// Execute a shell command and return the result
     @discardableResult
     public func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+        if dryRun {
+            var context = ""
+            if let workingDirectory = workingDirectory {
+                context += " (in \(workingDirectory.path))"
+            }
+            if let environment = environment, !environment.isEmpty {
+                let envVars = environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+                context += " (env: \(envVars))"
+            }
+            
+            print("[DRY RUN] Would run: \(command)\(context)")
+            
+            // Return mock successful result for dry run
+            return CommandResult(
+                exitCode: 0,
+                output: "",
+                error: "",
+                command: command
+            )
+        }
+        
         let process = Process()
 
         // Set command
@@ -67,6 +110,11 @@ public struct CommandExecutor: Sendable {
 
     /// Check if a command exists in PATH
     public func commandExists(_ command: String) -> Bool {
+        if dryRun {
+            print("[DRY RUN] Would check if '\(command)' command exists")
+            return true // Assume command exists in dry run mode
+        }
+        
         do {
             let result = try execute("which \(command)")
             return result.exitCode == 0

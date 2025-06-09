@@ -4,9 +4,14 @@ import Foundation
 
 public final class SetupService: Sendable {
     private let configService: ConfigurationService
-    private let executor: CommandExecutor
+    private let executor: any CommandExecuting
 
-    public init(configService: ConfigurationService = .shared, executor: CommandExecutor = CommandExecutor()) {
+    public init(configService: ConfigurationService = .shared, dryRun: Bool = false) {
+        self.configService = configService
+        self.executor = CommandExecutor(dryRun: dryRun)
+    }
+    
+    public init(configService: ConfigurationService = .shared, executor: any CommandExecuting) {
         self.configService = configService
         self.executor = executor
     }

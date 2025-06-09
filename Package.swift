@@ -32,6 +32,9 @@ let package = Package(
             name: "XProjectTests",
             dependencies: [
                 "XProject"
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
             ]
         )
     ]
