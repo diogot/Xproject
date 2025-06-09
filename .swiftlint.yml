@@ -1,0 +1,158 @@
+# SwiftLint Configuration for XProject
+# Swift CLI tool with Swift Testing framework
+
+# Included and excluded paths
+included:
+  - Sources
+  - Tests
+  - Package.swift
+
+excluded:
+  - .build
+
+# Analyzer rules (require compilation)
+analyzer_rules:
+  - unused_import
+  - unused_declaration
+
+# Enabled opt-in rules
+opt_in_rules:
+  - attributes
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - conditional_returns_on_newline
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - explicit_init
+  - extension_access_modifier
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - file_name
+  - file_name_no_space
+  - first_where
+  - flatmap_over_map_reduce
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_random
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_type_over_type_of_self
+  - private_action
+  - private_outlet
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - reduce_into
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - switch_case_on_newline
+  - toggle_bool
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  - untyped_error_in_catch
+  - unavailable_function
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - yoda_condition
+  - force_unwrapping
+
+# Disabled rules
+disabled_rules:
+  - todo # Allow TODO comments during development
+
+# Rule configurations
+line_length: 140
+
+file_length:
+  warning: 400
+  error: 500
+  ignore_comment_only_lines: true
+
+function_body_length:
+  warning: 50
+  error: 80
+
+type_body_length:
+  warning: 300
+  error: 400
+
+function_parameter_count:
+  warning: 5
+  error: 8
+
+large_tuple:
+  warning: 3
+  error: 4
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 40
+    error: 50
+  excluded:
+    - id
+    - URL
+    - url
+
+type_name:
+  min_length:
+    warning: 3
+    error: 2
+  max_length:
+    warning: 40
+    error: 50
+
+cyclomatic_complexity:
+  warning: 10
+  error: 15
+
+nesting:
+  type_level:
+    warning: 2
+    error: 3
+
+# Custom rules for this project
+custom_rules:
+  # Prefer #expect over XCTAssert in Swift Testing
+  prefer_swift_testing_expect:
+    name: "Prefer #expect over XCTAssert"
+    regex: 'XCTAssert'
+    message: "Use #expect from Swift Testing instead of XCTAssert"
+    severity: warning
+
+
+# File header template (optional)
+file_header:
+  required_pattern: |
+                    \/\/
+                    \/\/ .*\.swift
+                    \/\/ XProject
+                    \/\/
+  forbidden_pattern: |
+                     \/\/
+                     \/\/ .*\.swift
+                     \/\/ Copyright.*
