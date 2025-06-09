@@ -1,9 +1,13 @@
+//
+// XProjectTests.swift
+// XProject
+//
+
 import Testing
 @testable import XProject
 
 @Suite("XProject Core Tests")
 struct XProjectTests {
-
     @Test("XProject version is correct", .tags(.unit, .fast))
     func version() throws {
         #expect(XProject.version == "0.1.0")

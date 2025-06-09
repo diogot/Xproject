@@ -1,3 +1,8 @@
+//
+// ReleaseCommand.swift
+// XProject
+//
+
 import ArgumentParser
 import XProject
 
@@ -7,9 +12,18 @@ struct ReleaseCommand: ParsableCommand {
         abstract: "Create a release build"
     )
 
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
+
     func run() throws {
-        print("🚀 Creating release...")
-        // TODO: Implement release functionality
-        print("✅ Release completed!")
+        if dryRun {
+            print("🚀 Creating release... (dry run)")
+            print("[DRY RUN] Would execute release commands")
+            print("✅ Release completed! (dry run)")
+        } else {
+            print("🚀 Creating release...")
+            // TODO: Implement release functionality
+            print("✅ Release completed!")
+        }
     }
 }

@@ -1,3 +1,8 @@
+//
+// ConfigurationService.swift
+// XProject
+//
+
 import Foundation
 
 // MARK: - Configuration Service
@@ -116,13 +121,17 @@ public extension ConfigurationService {
 
     /// Get absolute path for workspace
     func workspaceURL() throws -> URL? {
-        guard let workspacePath = try workspacePath else { return nil }
+        guard let workspacePath = try workspacePath else {
+            return nil
+        }
         return resolvePath(workspacePath)
     }
 
     /// Get absolute path for project
     func projectURL(for target: String) throws -> URL? {
-        guard let projectPath = try projectPath(for: target) else { return nil }
+        guard let projectPath = try projectPath(for: target) else {
+            return nil
+        }
         return resolvePath(projectPath)
     }
 

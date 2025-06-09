@@ -1,3 +1,8 @@
+//
+// CommandExecutor.swift
+// XProject
+//
+
 import Foundation
 
 // MARK: - Command Execution Protocol
@@ -12,7 +17,7 @@ public extension CommandExecuting {
     func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
         return try execute(command, workingDirectory: workingDirectory, environment: environment)
     }
-    
+
     func executeOrThrow(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
         return try executeOrThrow(command, workingDirectory: workingDirectory, environment: environment)
     }
@@ -22,7 +27,7 @@ public extension CommandExecuting {
 
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let dryRun: Bool
-    
+
     public init(dryRun: Bool = false) {
         self.dryRun = dryRun
     }
@@ -39,9 +44,9 @@ public struct CommandExecutor: CommandExecuting, Sendable {
                 let envVars = environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
                 context += " (env: \(envVars))"
             }
-            
+
             print("[DRY RUN] Would run: \(command)\(context)")
-            
+
             // Return mock successful result for dry run
             return CommandResult(
                 exitCode: 0,
@@ -50,7 +55,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
                 command: command
             )
         }
-        
+
         let process = Process()
 
         // Set command
@@ -98,7 +103,11 @@ public struct CommandExecutor: CommandExecuting, Sendable {
 
     /// Execute a command and throw if it fails
     @discardableResult
-    public func executeOrThrow(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+    public func executeOrThrow(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) throws -> CommandResult {
         let result = try execute(command, workingDirectory: workingDirectory, environment: environment)
 
         if result.exitCode != 0 {
@@ -114,7 +123,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             print("[DRY RUN] Would check if '\(command)' command exists")
             return true // Assume command exists in dry run mode
         }
-        
+
         do {
             let result = try execute("which \(command)")
             return result.exitCode == 0
@@ -156,7 +165,8 @@ public enum CommandError: Error, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .executionFailed(let result):
-            return "Command '\(result.command)' failed with exit code \(result.exitCode): \(result.error.isEmpty ? result.output : result.error)"
+            let errorOutput = result.error.isEmpty ? result.output : result.error
+            return "Command '\(result.command)' failed with exit code \(result.exitCode): \(errorOutput)"
         case .commandNotFound(let command):
             return "Command '\(command)' not found in PATH"
         }

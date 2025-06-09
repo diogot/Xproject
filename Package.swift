@@ -1,3 +1,7 @@
+//
+// Package.swift
+// XProject
+//
 // swift-tools-version: 6.1
 import PackageDescription
 

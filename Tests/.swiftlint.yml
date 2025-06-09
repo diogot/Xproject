@@ -1,0 +1,5 @@
+# SwiftLint configuration for Tests directory
+# Allows force unwrapping in test files
+
+disabled_rules:
+  - force_unwrapping  # Allow force unwrapping in tests for convenience

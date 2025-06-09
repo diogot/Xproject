@@ -1,6 +1,11 @@
+//
+// ConfigCommand.swift
+// XProject
+//
+
 import ArgumentParser
-import XProject
 import Foundation
+import XProject
 
 struct ConfigCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -91,7 +96,6 @@ struct ConfigCommand: ParsableCommand {
                     print("   \(warning)")
                 }
             }
-
         } catch {
             print("❌ Configuration validation failed:")
             print("   \(error.localizedDescription)")

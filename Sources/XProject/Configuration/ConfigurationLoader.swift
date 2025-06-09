@@ -1,3 +1,8 @@
+//
+// ConfigurationLoader.swift
+// XProject
+//
+
 import Foundation
 import Yams
 
@@ -152,13 +157,13 @@ public enum ConfigurationError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .noConfigurationFound(let paths):
+        case let .noConfigurationFound(paths):
             return "No configuration file found. Searched paths: \(paths.joined(separator: ", "))"
-        case .unsupportedFormat(let ext, let supported):
+        case let .unsupportedFormat(ext, supported):
             return "Unsupported configuration format '.\(ext)'. Supported formats: \(supported.joined(separator: ", "))"
-        case .invalidFormat(let format, let file, let error):
+        case let .invalidFormat(format, file, error):
             return "Invalid \(format) format in \(file): \(error.localizedDescription)"
-        case .validation(let file, let error):
+        case let .validation(file, error):
             return "Configuration validation failed in \(file): \(error.localizedDescription)"
         }
     }
