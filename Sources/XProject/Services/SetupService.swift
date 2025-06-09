@@ -1,3 +1,8 @@
+//
+// SetupService.swift
+// XProject
+//
+
 import Foundation
 
 // MARK: - Setup Service
@@ -10,7 +15,7 @@ public final class SetupService: Sendable {
         self.configService = configService
         self.executor = CommandExecutor(dryRun: dryRun)
     }
-    
+
     public init(configService: ConfigurationService = .shared, executor: any CommandExecuting) {
         self.configService = configService
         self.executor = executor
@@ -49,7 +54,9 @@ public final class SetupService: Sendable {
         if let formulas = brewConfig.formulas, !formulas.isEmpty {
             for formula in formulas {
                 do {
-                    let command = "( brew list \(formula) ) && ( brew outdated \(formula) || brew upgrade \(formula) ) || ( brew install \(formula) )"
+                    let command = "( brew list \(formula) ) && " +
+                                  "( brew outdated \(formula) || brew upgrade \(formula) ) || " +
+                                  "( brew install \(formula) )"
                     try executor.executeOrThrow(command)
                 } catch {
                     throw SetupError.brewFormulaFailed(formula: formula, error: error)
@@ -69,7 +76,7 @@ public enum SetupError: Error, LocalizedError, Sendable {
         switch self {
         case .brewNotInstalled:
             return "Homebrew not found. Please install Homebrew first: https://brew.sh"
-        case .brewFormulaFailed(let formula, let error):
+        case let .brewFormulaFailed(formula, error):
             return "Failed to install \(formula): \(error.localizedDescription)"
         }
     }

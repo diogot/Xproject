@@ -1,6 +1,11 @@
+//
+// SetupCommand.swift
+// XProject
+//
+
 import ArgumentParser
-import XProject
 import Foundation
+import XProject
 
 struct SetupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -8,14 +13,25 @@ struct SetupCommand: ParsableCommand {
         abstract: "Setup project dependencies and environment"
     )
 
-    func run() throws {
-        print("🔧 Setting up project...")
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
-        let setupService = SetupService()
+    func run() throws {
+        if dryRun {
+            print("🔧 Setting up project... (dry run)")
+        } else {
+            print("🔧 Setting up project...")
+        }
+
+        let setupService = SetupService(dryRun: dryRun)
 
         do {
             try setupService.runSetup()
-            print("✅ Setup completed!")
+            if dryRun {
+                print("✅ Setup completed! (dry run)")
+            } else {
+                print("✅ Setup completed!")
+            }
         } catch let error as SetupError {
             switch error {
             case .brewNotInstalled:

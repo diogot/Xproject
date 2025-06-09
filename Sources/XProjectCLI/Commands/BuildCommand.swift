@@ -1,3 +1,8 @@
+//
+// BuildCommand.swift
+// XProject
+//
+
 import ArgumentParser
 import XProject
 
@@ -7,9 +12,18 @@ struct BuildCommand: ParsableCommand {
         abstract: "Build the project"
     )
 
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
+
     func run() throws {
-        print("🔨 Building project...")
-        // TODO: Implement build functionality
-        print("✅ Build completed!")
+        if dryRun {
+            print("🔨 Building project... (dry run)")
+            print("[DRY RUN] Would execute build commands")
+            print("✅ Build completed! (dry run)")
+        } else {
+            print("🔨 Building project...")
+            // TODO: Implement build functionality
+            print("✅ Build completed!")
+        }
     }
 }

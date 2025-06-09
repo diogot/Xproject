@@ -1,3 +1,8 @@
+//
+// XProjectConfiguration.swift
+// XProject
+//
+
 import Foundation
 
 // MARK: - Main Configuration
@@ -44,7 +49,9 @@ public extension XProjectConfiguration {
     func isEnabled(_ keyPath: String) -> Bool {
         // Parse keypath like "setup.brew" and check if enabled
         let components = keyPath.split(separator: ".")
-        guard components.count >= 2 else { return false }
+        guard components.count >= 2 else {
+            return false
+        }
 
         switch (components[0], components[1]) {
         case ("setup", "brew"):
@@ -61,9 +68,12 @@ public extension XProjectConfiguration {
         switch components.count {
         case 1:
             switch components[0] {
-            case "app_name": return appName
-            case "workspace_path": return workspacePath
-            default: return nil
+            case "app_name":
+                return appName
+            case "workspace_path":
+                return workspacePath
+            default:
+                return nil
             }
         default:
             return nil
