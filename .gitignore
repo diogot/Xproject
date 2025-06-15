@@ -48,9 +48,6 @@ CLAUDE.local.md
 *.swo
 *~
 
-# Claude Code local settings
-.claude/
-
 # Build outputs
 build/
 reports/
