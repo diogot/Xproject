@@ -368,22 +368,19 @@ struct ConfigurationTests {
 
     // MARK: - Configuration Override Tests
 
-    @Test("Configuration environment overrides work correctly", .tags(.configuration, .unit))
-    func configurationEnvironmentOverrides() throws {
-        // Note: Environment overrides are only applied via loadConfigurationWithOverrides()
-        // The basic loadConfiguration(from:) method does not apply environment overrides
-        // This test is updated to reflect the actual behavior of the ConfigurationLoader
+    @Test("Configuration loader loads base configuration without overrides", .tags(.configuration, .fileSystem, .unit))
+    func configurationLoaderBasicBehavior() throws {
         let loader = ConfigurationLoader()
 
         // Create test configuration
         let yamlContent = """
-        app_name: OriginalApp
+        app_name: BaseApp
         project_path:
           test: Package.swift
         """
 
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("env-test-config.yml")
+            .appendingPathComponent("base-config-test.yml")
 
         try yamlContent.write(to: tempURL, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: tempURL) }
@@ -392,11 +389,8 @@ struct ConfigurationTests {
         let config = try loader.loadConfiguration(from: tempURL)
 
         // Verify base configuration is loaded correctly
-        #expect(config.appName == "OriginalApp")
+        #expect(config.appName == "BaseApp")
         #expect(config.projectPaths["test"] == "Package.swift")
-
-        // Test that applyEnvironmentOverrides is used in loadConfigurationWithOverrides
-        // which is the method that actually applies environment overrides
     }
 
     @Test("Configuration default discovery works correctly", .tags(.configuration, .fileSystem, .integration))
