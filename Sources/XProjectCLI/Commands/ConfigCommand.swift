@@ -7,7 +7,7 @@ import ArgumentParser
 import Foundation
 import XProject
 
-struct ConfigCommand: ParsableCommand {
+struct ConfigCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "config",
         abstract: "Manage project configuration"
@@ -19,7 +19,7 @@ struct ConfigCommand: ParsableCommand {
     @Option(help: "Environment to configure")
     var environment: String?
 
-    func run() throws {
+    func run() async throws {
         let configService = ConfigurationService.shared
 
         switch action {

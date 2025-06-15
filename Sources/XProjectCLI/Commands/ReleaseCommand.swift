@@ -6,7 +6,7 @@
 import ArgumentParser
 import XProject
 
-struct ReleaseCommand: ParsableCommand {
+struct ReleaseCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "release",
         abstract: "Create a release build"
@@ -15,7 +15,7 @@ struct ReleaseCommand: ParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
-    func run() throws {
+    func run() async throws {
         if dryRun {
             print("🚀 Creating release... (dry run)")
             print("[DRY RUN] Would execute release commands")
