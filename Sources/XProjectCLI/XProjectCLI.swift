@@ -5,7 +5,8 @@
 
 import ArgumentParser
 
-struct XProjectCLI: ParsableCommand {
+@main
+struct XProjectCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "xp",
         abstract: "A modern Xcode project build automation tool",
@@ -19,5 +20,3 @@ struct XProjectCLI: ParsableCommand {
         ]
     )
 }
-
-XProjectCLI.main()
