@@ -6,7 +6,7 @@
 import ArgumentParser
 import XProject
 
-struct TestCommand: ParsableCommand {
+struct TestCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "test",
         abstract: "Run project tests"
@@ -15,7 +15,7 @@ struct TestCommand: ParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
-    func run() throws {
+    func run() async throws {
         if dryRun {
             print("🧪 Running tests... (dry run)")
             print("[DRY RUN] Would execute test commands")

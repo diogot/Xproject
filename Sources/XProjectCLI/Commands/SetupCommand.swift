@@ -7,7 +7,7 @@ import ArgumentParser
 import Foundation
 import XProject
 
-struct SetupCommand: ParsableCommand {
+struct SetupCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "setup",
         abstract: "Setup project dependencies and environment"
@@ -16,7 +16,7 @@ struct SetupCommand: ParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
-    func run() throws {
+    func run() async throws {
         if dryRun {
             print("🔧 Setting up project... (dry run)")
         } else {

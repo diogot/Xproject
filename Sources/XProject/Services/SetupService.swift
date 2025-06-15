@@ -40,11 +40,11 @@ public final class SetupService: Sendable {
 
         // Update brew (retry once if it fails)
         do {
-            try executor.executeOrThrow("brew update")
+            _ = try executor.executeOrThrow("brew update")
         } catch {
             do {
                 print("⚠️  brew update failed, retrying...")
-                try executor.executeOrThrow("brew update")
+                _ = try executor.executeOrThrow("brew update")
             } catch {
                 print("⚠️  brew update failed twice, continuing with potentially outdated package list: \(error.localizedDescription)")
             }
@@ -57,7 +57,7 @@ public final class SetupService: Sendable {
                     let command = "( brew list \(formula) ) && " +
                                   "( brew outdated \(formula) || brew upgrade \(formula) ) || " +
                                   "( brew install \(formula) )"
-                    try executor.executeOrThrow(command)
+                    _ = try executor.executeOrThrow(command)
                 } catch {
                     throw SetupError.brewFormulaFailed(formula: formula, error: error)
                 }

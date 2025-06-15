@@ -69,7 +69,9 @@ struct ConfigurationTests {
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["ios": "Package.swift"], // Use existing file
-            setup: nil
+            setup: nil,
+            xcode: nil,
+            danger: nil
         )
 
         #expect(throws: Never.self) {
@@ -81,7 +83,9 @@ struct ConfigurationTests {
             appName: "",
             workspacePath: nil,
             projectPaths: ["ios": "Package.swift"],
-            setup: nil
+            setup: nil,
+            xcode: nil,
+            danger: nil
         )
 
         #expect {
@@ -95,7 +99,9 @@ struct ConfigurationTests {
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: [:],
-            setup: nil
+            setup: nil,
+            xcode: nil,
+            danger: nil
         )
 
         #expect {
@@ -115,12 +121,14 @@ struct ConfigurationTests {
             projectPaths: ["ios": "TestApp.xcodeproj"],
             setup: SetupConfiguration(
                 brew: BrewConfiguration(enabled: false)
-            )
+            ),
+            xcode: nil,
+            danger: nil
         )
 
-        // Test value access
-        #expect(config.value(for: "app_name") as? String == "TestApp")
-        #expect(config.value(for: "workspace_path") as? String == "TestApp.xcworkspace")
+        // Test direct property access
+        #expect(config.appName == "TestApp")
+        #expect(config.workspacePath == "TestApp.xcworkspace")
 
         // Test enabled check
         #expect(!config.isEnabled("setup.brew"))
@@ -334,7 +342,9 @@ struct ConfigurationTests {
             appName: "",
             workspacePath: nil,
             projectPaths: ["test": "Package.swift"],
-            setup: nil
+            setup: nil,
+            xcode: nil,
+            danger: nil
         )
 
         #expect {
@@ -352,7 +362,9 @@ struct ConfigurationTests {
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: [:],
-            setup: nil
+            setup: nil,
+            xcode: nil,
+            danger: nil
         )
 
         #expect {

@@ -5,9 +5,15 @@
 
 import Foundation
 
+// MARK: - Configuration Service Protocol
+
+public protocol ConfigurationProviding: Sendable {
+    var configuration: XProjectConfiguration { get throws }
+}
+
 // MARK: - Configuration Service
 
-public final class ConfigurationService: @unchecked Sendable {
+public final class ConfigurationService: ConfigurationProviding, @unchecked Sendable {
     public static let shared = ConfigurationService()
 
     private let lock = NSLock()
@@ -91,11 +97,6 @@ public extension ConfigurationService {
     /// Check if a feature is enabled
     func isEnabled(_ keyPath: String) throws -> Bool {
         return try configuration.isEnabled(keyPath)
-    }
-
-    /// Get configuration value by keypath
-    func value(for keyPath: String) throws -> Any? {
-        return try configuration.value(for: keyPath)
     }
 
     /// Get setup configuration

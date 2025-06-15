@@ -8,7 +8,7 @@ import PackageDescription
 let package = Package(
     name: "XProject",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v15)
     ],
     products: [
         .executable(name: "xp", targets: ["XProjectCLI"]),
@@ -24,6 +24,9 @@ let package = Package(
             dependencies: [
                 "XProject",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .target(
