@@ -123,7 +123,9 @@ public final class ConfigurationLoader: Sendable {
             appName: override.appName.isEmpty ? base.appName : override.appName,
             workspacePath: override.workspacePath ?? base.workspacePath,
             projectPaths: base.projectPaths.merging(override.projectPaths) { _, new in new },
-            setup: override.setup ?? base.setup
+            setup: override.setup ?? base.setup,
+            xcode: override.xcode ?? base.xcode,
+            danger: override.danger ?? base.danger
         )
     }
 
@@ -137,7 +139,9 @@ public final class ConfigurationLoader: Sendable {
                 appName: appName,
                 workspacePath: config.workspacePath,
                 projectPaths: config.projectPaths,
-                setup: config.setup
+                setup: config.setup,
+                xcode: config.xcode,
+                danger: config.danger
             )
         }
 
