@@ -25,7 +25,9 @@ struct SetupServiceTests {
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": "Package.swift"],
-            setup: setupConfig
+            setup: setupConfig,
+            xcode: nil,
+            danger: nil
         )
 
         // Create a mock config service

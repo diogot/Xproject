@@ -1,5 +1,7 @@
 # SwiftLint configuration for Tests directory
-# Allows force unwrapping in test files
+# Allows force unwrapping in test files and relaxed file length limits
 
 disabled_rules:
   - force_unwrapping  # Allow force unwrapping in tests for convenience
+  - type_body_length  # Allow longer test classes
+  - file_length       # Allow longer test files

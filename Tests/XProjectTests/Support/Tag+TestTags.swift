@@ -37,4 +37,7 @@ extension Tag {
 
     /// Tests that may be flaky or have timing dependencies
     @Tag static var flaky: Self
+
+    /// Tests that verify build service functionality
+    @Tag static var buildService: Self
 }
