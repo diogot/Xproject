@@ -21,16 +21,16 @@ public extension CommandExecuting {
 
     func executeOrThrow(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
         let result = try execute(command, workingDirectory: workingDirectory, environment: environment)
-        
+
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)
         }
-        
+
         return result
     }
 
     func executeReadOnly(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
-        return try executeReadOnly(command, workingDirectory: workingDirectory, environment: environment)
+        return try execute(command, workingDirectory: workingDirectory, environment: environment)
     }
 }
 
