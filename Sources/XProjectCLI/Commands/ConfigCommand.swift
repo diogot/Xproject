@@ -13,6 +13,8 @@ struct ConfigCommand: AsyncParsableCommand {
         abstract: "Manage project configuration"
     )
 
+    @OptionGroup var globalOptions: GlobalOptions
+
     @Argument(help: "Configuration action (show, validate, generate)")
     var action: String
 
@@ -20,7 +22,7 @@ struct ConfigCommand: AsyncParsableCommand {
     var environment: String?
 
     func run() async throws {
-        let configService = ConfigurationService.shared
+        let configService = ConfigurationService(customConfigPath: globalOptions.config)
 
         switch action {
         case "show":
@@ -90,6 +92,9 @@ struct ConfigCommand: AsyncParsableCommand {
                 }
             }
 
+            // Check for missing optional configurations
+            warnings.append(contentsOf: validateXcodeConfiguration(config: config))
+
             if !warnings.isEmpty {
                 print("\n⚠️  Warnings:")
                 for warning in warnings {
@@ -101,5 +106,29 @@ struct ConfigCommand: AsyncParsableCommand {
             print("   \(error.localizedDescription)")
             throw ExitCode.failure
         }
+    }
+
+    private func validateXcodeConfiguration(config: XProjectConfiguration) -> [String] {
+        var warnings: [String] = []
+
+        guard let xcode = config.xcode else {
+            warnings.append("No xcode configuration found. Add an 'xcode' section to use build/test commands")
+            return warnings
+        }
+
+        guard let testsConfig = xcode.tests else {
+            warnings.append("No test configuration found. Add 'tests' section under 'xcode' to run tests")
+            return warnings
+        }
+
+        if testsConfig.schemes.isEmpty {
+            warnings.append("Test configuration has no schemes defined")
+        } else {
+            for schemeConfig in testsConfig.schemes where schemeConfig.testDestinations.isEmpty {
+                warnings.append("Test scheme '\(schemeConfig.scheme)' has no test destinations")
+            }
+        }
+
+        return warnings
     }
 }

@@ -5,6 +5,14 @@
 
 import ArgumentParser
 
+struct GlobalOptions: ParsableArguments {
+    @Option(
+        name: [.short, .long],
+        help: "Path to configuration file (default: auto-discover XProject.yml, rake-config.yml)"
+    )
+    var config: String?
+}
+
 @main
 struct XProjectCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -19,4 +27,6 @@ struct XProjectCLI: AsyncParsableCommand {
             ConfigCommand.self
         ]
     )
+
+    @OptionGroup var globalOptions: GlobalOptions
 }

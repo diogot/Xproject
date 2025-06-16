@@ -12,6 +12,8 @@ struct ReleaseCommand: AsyncParsableCommand {
         abstract: "Create a release build"
     )
 
+    @OptionGroup var globalOptions: GlobalOptions
+
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 

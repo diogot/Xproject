@@ -9,6 +9,7 @@ import Foundation
 
 public protocol ConfigurationProviding: Sendable {
     var configuration: XProjectConfiguration { get throws }
+    var configurationFilePath: String? { get throws }
 }
 
 // MARK: - Configuration Service
@@ -18,10 +19,13 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
 
     private let lock = NSLock()
     private var _configuration: XProjectConfiguration?
+    private var _configurationFilePath: String?
     private let loader: ConfigurationLoader
+    private let customConfigPath: String?
 
-    public init(loader: ConfigurationLoader = ConfigurationLoader()) {
+    public init(loader: ConfigurationLoader = ConfigurationLoader(), customConfigPath: String? = nil) {
         self.loader = loader
+        self.customConfigPath = customConfigPath
     }
 
     /// Get the current configuration, loading it if necessary
@@ -34,8 +38,15 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
                 return config
             }
 
-            let config = try loader.loadConfigurationWithOverrides()
+            let (config, filePath) = try {
+                if let customConfigPath = customConfigPath {
+                    return try loader.loadConfigurationWithOverrides(from: customConfigPath)
+                } else {
+                    return try loader.loadConfigurationWithOverridesAndPath()
+                }
+            }()
             _configuration = config
+            _configurationFilePath = filePath
             return config
         }
     }
@@ -45,7 +56,15 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
         lock.lock()
         defer { lock.unlock() }
 
-        _configuration = try loader.loadConfigurationWithOverrides()
+        let (config, filePath) = try {
+            if let customConfigPath = customConfigPath {
+                return try loader.loadConfigurationWithOverrides(from: customConfigPath)
+            } else {
+                return try loader.loadConfigurationWithOverridesAndPath()
+            }
+        }()
+        _configuration = config
+        _configurationFilePath = filePath
     }
 
     /// Check if configuration is loaded
@@ -62,6 +81,22 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
         defer { lock.unlock() }
 
         _configuration = nil
+        _configurationFilePath = nil
+    }
+
+    /// Get the path of the currently loaded configuration file
+    public var configurationFilePath: String? {
+        get throws {
+            lock.lock()
+            defer { lock.unlock() }
+
+            if _configuration == nil {
+                // Trigger loading to get the file path
+                _ = try configuration
+            }
+
+            return _configurationFilePath
+        }
     }
 }
 

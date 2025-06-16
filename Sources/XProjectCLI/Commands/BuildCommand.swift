@@ -16,6 +16,8 @@ struct BuildCommand: AsyncParsableCommand {
             """
     )
 
+    @OptionGroup var globalOptions: GlobalOptions
+
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
@@ -29,22 +31,22 @@ struct BuildCommand: AsyncParsableCommand {
     var destination: String?
 
     func run() async throws {
+        let configService = ConfigurationService(customConfigPath: globalOptions.config)
         let buildService = BuildService(
+            configurationProvider: configService,
             commandExecutor: CommandExecutor(dryRun: dryRun)
         )
 
         do {
-            try await runBuild(buildService: buildService)
+            try await runBuild(buildService: buildService, configService: configService)
         } catch {
             print("❌ Build failed: \(error.localizedDescription)")
             throw ExitCode.failure
         }
     }
 
-    private func runBuild(buildService: BuildService) async throws {
+    private func runBuild(buildService: BuildService, configService: ConfigurationService) async throws {
         print("🔨 Building project...")
-
-        let configService = ConfigurationService.shared
         let config = try configService.configuration
 
         guard let xcodeConfig = config.xcode,
