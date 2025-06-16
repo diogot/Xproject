@@ -40,4 +40,7 @@ extension Tag {
 
     /// Tests that verify build service functionality
     @Tag static var buildService: Self
+
+    /// Tests that verify test service functionality
+    @Tag static var testService: Self
 }
