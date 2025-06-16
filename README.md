@@ -27,8 +27,8 @@ A modern Swift command line tool for Xcode project build automation.
    # Setup project
    swift run xp setup
 
-   # Build project
-   swift run xp build --scheme MyApp --configuration Release
+   # Build project for testing
+   swift run xp build --scheme MyApp --clean
 
    # Run tests
    swift run xp test --scheme MyApp --clean
@@ -49,10 +49,35 @@ A modern Swift command line tool for Xcode project build automation.
 ### Available Commands
 
 - `xp setup` - Setup project dependencies and environment
-- `xp build` - Build the Xcode project
-- `xp test` - Run unit tests
-- `xp release` - Create a release build (archive + IPA)
-- `xp config` - Manage project configuration
+- `xp build` - Build the Xcode project for testing
+- `xp test` - Run unit tests with multi-destination support
+- `xp release` - Create a release build (TODO: Not yet implemented)
+- `xp config` - Manage and validate project configuration
+
+### Global Options
+
+All commands support the following global options:
+- `--config <path>` - Specify custom configuration file (default: auto-discover XProject.yml, rake-config.yml)
+- `--dry-run` - Show what would be done without executing (available on most commands)
+
+### Command Examples
+
+```bash
+# Use custom configuration file
+xp test --config my-project.yml --dry-run
+
+# Run tests with specific options
+xp test --scheme MyApp --clean --destination "platform=iOS Simulator,OS=18.5,name=iPhone 16 Pro"
+
+# Setup with dry-run preview
+xp setup --dry-run
+
+# Validate configuration
+xp config validate
+
+# Show current configuration
+xp config show
+```
 
 ### Integration with Existing Projects
 
@@ -69,7 +94,7 @@ swift run xp setup
 ```bash
 #!/bin/bash
 cd Tools/XProject
-swift run xp build --scheme "$1" --configuration Release
+swift run xp build --scheme "$1" --clean
 ```
 
 This approach ensures:
@@ -91,3 +116,19 @@ swift build
 # Run in development
 swift run xp --help
 ```
+
+## Features
+
+### ✅ Completed
+- **Multi-scheme and multi-destination testing** - Run tests across multiple iOS simulators
+- **Custom configuration files** - Use `--config` option to specify project-specific configs
+- **Dry-run mode** - Preview operations without executing them (`--dry-run`)
+- **Enhanced error handling** - Clear error messages with config file context
+- **Legacy compatibility** - Works with existing rake-config.yml files
+- **Type-safe configuration** - Swift Codable structs with validation
+- **Homebrew integration** - Automated tool installation and updates
+- **Clean architecture** - Separated CLI and business logic
+
+### 🚧 In Development
+- **Release command** - Archive creation, IPA generation, App Store upload
+- **Environment management** - Support for different deployment environments
