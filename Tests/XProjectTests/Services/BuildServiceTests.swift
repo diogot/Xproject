@@ -192,14 +192,22 @@ struct BuildServiceTests {
 
 struct MockConfigurationProvider: ConfigurationProviding {
     private let mockConfiguration: XProjectConfiguration
+    private let mockFilePath: String?
 
-    init(config: XProjectConfiguration) {
+    init(config: XProjectConfiguration, filePath: String? = "mock-config.yml") {
         self.mockConfiguration = config
+        self.mockFilePath = filePath
     }
 
     var configuration: XProjectConfiguration {
         get throws {
             return mockConfiguration
+        }
+    }
+
+    var configurationFilePath: String? {
+        get throws {
+            return mockFilePath
         }
     }
 }

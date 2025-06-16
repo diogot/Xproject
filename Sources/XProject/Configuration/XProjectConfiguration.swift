@@ -105,6 +105,10 @@ public extension XProjectConfiguration {
     }
 
     func validate() throws {
+        try validate(baseDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+    }
+
+    func validate(baseDirectory: URL) throws {
         if appName.isEmpty {
             throw ValidationError(message: "app_name cannot be empty")
         }
@@ -115,7 +119,13 @@ public extension XProjectConfiguration {
 
         // Validate project paths exist
         for (target, path) in projectPaths {
-            let url = URL(fileURLWithPath: path)
+            let url: URL
+            if path.hasPrefix("/") {
+                url = URL(fileURLWithPath: path)
+            } else {
+                url = baseDirectory.appendingPathComponent(path)
+            }
+
             if !FileManager.default.fileExists(atPath: url.path) {
                 throw ValidationError(message: "project path for '\(target)' not found: \(path)")
             }
@@ -123,7 +133,13 @@ public extension XProjectConfiguration {
 
         // Validate workspace path if specified
         if let workspacePath = workspacePath {
-            let url = URL(fileURLWithPath: workspacePath)
+            let url: URL
+            if workspacePath.hasPrefix("/") {
+                url = URL(fileURLWithPath: workspacePath)
+            } else {
+                url = baseDirectory.appendingPathComponent(workspacePath)
+            }
+
             if !FileManager.default.fileExists(atPath: url.path) {
                 throw ValidationError(message: "workspace not found: \(workspacePath)")
             }

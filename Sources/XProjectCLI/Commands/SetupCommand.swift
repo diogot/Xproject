@@ -13,6 +13,8 @@ struct SetupCommand: AsyncParsableCommand {
         abstract: "Setup project dependencies and environment"
     )
 
+    @OptionGroup var globalOptions: GlobalOptions
+
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
@@ -23,7 +25,8 @@ struct SetupCommand: AsyncParsableCommand {
             print("🔧 Setting up project...")
         }
 
-        let setupService = SetupService(dryRun: dryRun)
+        let configService = ConfigurationService(customConfigPath: globalOptions.config)
+        let setupService = SetupService(configService: configService, dryRun: dryRun)
 
         do {
             try setupService.runSetup()

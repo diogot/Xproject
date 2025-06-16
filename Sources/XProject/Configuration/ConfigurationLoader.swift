@@ -48,6 +48,12 @@ public final class ConfigurationLoader: Sendable {
 
     /// Load configuration from default locations
     public func loadConfiguration() throws -> XProjectConfiguration {
+        let (config, _) = try loadConfigurationWithPath()
+        return config
+    }
+
+    /// Load configuration from default locations, returning both config and file path
+    public func loadConfigurationWithPath() throws -> (XProjectConfiguration, String) {
         let possiblePaths = [
             "XProject.yml",
             "XProject.yaml",
@@ -58,7 +64,8 @@ public final class ConfigurationLoader: Sendable {
         for path in possiblePaths {
             let url = URL(fileURLWithPath: path)
             if FileManager.default.fileExists(atPath: url.path) {
-                return try loadConfiguration(from: url)
+                let config = try loadConfiguration(from: url)
+                return (config, path)
             }
         }
 
@@ -78,7 +85,7 @@ public final class ConfigurationLoader: Sendable {
 
         do {
             let configuration = try format.load(from: url)
-            try configuration.validate()
+            try configuration.validate(baseDirectory: url.deletingLastPathComponent())
             return configuration
         } catch let error as XProjectConfiguration.ValidationError {
             throw ConfigurationError.validation(file: url.path, error: error)
@@ -89,7 +96,14 @@ public final class ConfigurationLoader: Sendable {
 
     /// Load configuration with layered overrides
     public func loadConfigurationWithOverrides() throws -> XProjectConfiguration {
-        var configuration = try loadConfiguration()
+        let (config, _) = try loadConfigurationWithOverridesAndPath()
+        return config
+    }
+
+    /// Load configuration with layered overrides, returning both config and file path
+    public func loadConfigurationWithOverridesAndPath() throws -> (XProjectConfiguration, String) {
+        let (baseConfig, configPath) = try loadConfigurationWithPath()
+        var configuration = baseConfig
 
         // Try to load local overrides
         let localPaths = [
@@ -110,9 +124,46 @@ public final class ConfigurationLoader: Sendable {
         configuration = applyEnvironmentOverrides(to: configuration)
 
         // Final validation
-        try configuration.validate()
+        let configURL = URL(fileURLWithPath: configPath)
+        try configuration.validate(baseDirectory: configURL.deletingLastPathComponent())
 
-        return configuration
+        return (configuration, configPath)
+    }
+
+    /// Load configuration from specific file with layered overrides
+    public func loadConfigurationWithOverrides(from configPath: String) throws -> (XProjectConfiguration, String) {
+        let url = URL(fileURLWithPath: configPath)
+
+        // Check if file exists first
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw ConfigurationError.noConfigurationFound(searchPaths: [configPath])
+        }
+
+        var configuration = try loadConfiguration(from: url)
+
+        // Try to load local overrides relative to the custom config
+        let configDirectory = url.deletingLastPathComponent()
+        let localPaths = [
+            "XProject.local.yml",
+            "XProject.local.yaml"
+        ]
+
+        for path in localPaths {
+            let localURL = configDirectory.appendingPathComponent(path)
+            if FileManager.default.fileExists(atPath: localURL.path) {
+                let localConfig = try loadConfiguration(from: localURL)
+                configuration = try merge(base: configuration, override: localConfig)
+                break
+            }
+        }
+
+        // Apply environment variable overrides
+        configuration = applyEnvironmentOverrides(to: configuration)
+
+        // Final validation
+        try configuration.validate(baseDirectory: url.deletingLastPathComponent())
+
+        return (configuration, configPath)
     }
 
     /// Merge two configurations, with override taking precedence

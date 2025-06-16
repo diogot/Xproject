@@ -1,0 +1,3 @@
+app_name: MinimalTestApp
+project_path:
+  test: Package.swift

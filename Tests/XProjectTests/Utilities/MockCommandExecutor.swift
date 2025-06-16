@@ -138,6 +138,15 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         return result
     }
 
+    public func executeReadOnly(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) throws -> CommandResult {
+        // For testing, executeReadOnly behaves the same as execute
+        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+    }
+
     public func commandExists(_ command: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -153,6 +162,20 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 // MARK: - Test Helper Extensions
 
 public extension MockCommandExecutor {
+    /// Creates a MockCommandExecutor with common brew setup for successful operations
+    static func withBrewSetup() -> MockCommandExecutor {
+        let executor = MockCommandExecutor()
+        executor.setupBrewMocks()
+        return executor
+    }
+
+    /// Creates a MockCommandExecutor with brew failure scenarios
+    static func withBrewFailure() -> MockCommandExecutor {
+        let executor = MockCommandExecutor()
+        executor.setupBrewFailureMocks()
+        return executor
+    }
+
     /// Set up common brew command responses for setup testing
     func setupBrewMocks() {
         setCommandExists("brew", exists: true)
@@ -169,5 +192,16 @@ public extension MockCommandExecutor {
         setResponse(for: "brew update", response: MockResponse(exitCode: 1, error: "Network error"))
         setResponse(for: "( brew list swiftgen ) && ( brew outdated swiftgen || brew upgrade swiftgen ) || ( brew install swiftgen )",
                     response: MockResponse(exitCode: 1, error: "Formula not found"))
+    }
+
+    /// Asserts that expected brew commands were executed
+    func expectBrewCommands() {
+        assert(wasCommandExecuted("which brew"), "Expected 'which brew' to be executed")
+        assert(wasCommandExecuted("brew update"), "Expected 'brew update' to be executed")
+    }
+
+    /// Asserts that a formula installation command was executed
+    func expectFormulaInstalled(_ formula: String) {
+        assert(executedCommands.contains { $0.command.contains(formula) }, "Expected \(formula) installation command to be executed")
     }
 }

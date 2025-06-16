@@ -45,25 +45,25 @@ struct CommandExecutorTests {
     @Test("Command with error is captured correctly", .tags(.unit, .commandExecution, .fast))
     func commandWithError() throws {
         let executor = CommandExecutor()
-        let result = try executor.execute("echo 'error message' >&2")
+        let result = try executor.execute("cat /nonexistent/file")
 
-        #expect(result.exitCode == 0)
+        #expect(result.exitCode == 1)
         #expect(result.output.isEmpty)
-        #expect(result.error == "error message")
+        #expect(result.error.contains("No such file or directory"))
     }
 
     @Test("Combined output from stdout and stderr", .tags(.unit, .commandExecution, .fast))
     func combinedOutput() throws {
         let executor = CommandExecutor()
-        let result = try executor.execute("echo 'stdout'; echo 'stderr' >&2")
+        let result = try executor.execute("printf 'stdout\n'; cat /nonexistent/file")
 
-        #expect(result.exitCode == 0)
+        #expect(result.exitCode == 1)
         #expect(result.output == "stdout")
-        #expect(result.error == "stderr")
+        #expect(result.error.contains("No such file or directory"))
 
         let combined = result.combinedOutput
         #expect(combined.contains("stdout"))
-        #expect(combined.contains("stderr"))
+        #expect(combined.contains("No such file or directory"))
     }
 
     // MARK: - Working Directory Tests

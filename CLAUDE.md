@@ -20,6 +20,11 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Swift Package Manager structure**: Package.swift with XProject library and XProjectCLI executable
 - ✅ **Type-safe configuration system**: YAML loading with Codable structs, validation, and layered overrides
 - ✅ **Setup command**: Homebrew formula installation (deprecated bundler/cocoapods/submodules removed)
+- ✅ **Build command**: Complete implementation for building Xcode projects for testing
+- ✅ **Test command**: Full test orchestration with multi-scheme and multi-destination support
+- ✅ **Global --config option**: Custom configuration file support across all commands
+- ✅ **Enhanced error handling**: Informative error messages with config file context
+- ✅ **Dry-run functionality**: Safe preview mode for all commands with executeReadOnly for discovery operations
 - ✅ **Command execution utilities**: Safe shell command execution with proper error handling
 - ✅ **Clean architecture**: Separated CLI concerns from business logic
 
@@ -30,18 +35,30 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `XProjectTests`: Test suite for core library
 
 **Key Services:**
-- `ConfigurationService`: Thread-safe singleton for loading and caching YAML configs
+- `ConfigurationService`: Thread-safe singleton for loading and caching YAML configs with custom config file support
 - `SetupService`: Handles project setup (currently Homebrew only)
-- `CommandExecutor`: Utility for executing shell commands safely
+- `BuildService`: Handles building for tests, archiving, IPA generation, and uploads with Xcode discovery
+- `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
+- `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
 
 ### Available Commands
 ```bash
+# Global options available on all commands
+--config <path>    # Specify custom configuration file (auto-discovers XProject.yml, rake-config.yml by default)
+--dry-run          # Show what would be done without executing (available on most commands)
+
+# Core commands
 xp setup           # Install/update Homebrew formulas from config
 xp config show     # Display current configuration
-xp config validate # Validate configuration files
-xp build           # TODO: Implement build functionality
-xp test            # TODO: Implement test functionality
+xp config validate # Validate configuration files with comprehensive checks
+xp build           # Build for testing (supports --scheme, --clean, --destination)
+xp test            # Run tests (supports --scheme, --clean, --skip-build, --destination)
 xp release         # TODO: Implement release functionality
+
+# Examples
+xp test --config my-config.yml --scheme MyApp --clean --dry-run
+xp setup --dry-run
+xp config --config custom.yml validate
 ```
 
 ## Current System Overview (Reference Only)
@@ -173,7 +190,18 @@ rake swiftgen:strings       # Generate localized strings
 
 ### Next Steps
 Priority order for implementing remaining features:
-1. Build command (migrate from xcode.rake)
-2. Test command (migrate from xcode.rake)
-3. Release command (migrate from xcode.rake)
-4. Environment management features
+1. ✅ ~~Build command~~ - **COMPLETED**: Full implementation with scheme selection, clean builds, and custom destinations
+2. ✅ ~~Test command~~ - **COMPLETED**: Complete test orchestration with multi-scheme and multi-destination support
+3. ✅ ~~Global --config option~~ - **COMPLETED**: Custom configuration file support across all commands
+4. ✅ ~~Enhanced error handling~~ - **COMPLETED**: Informative error messages with config file context
+5. ✅ ~~Dry-run functionality~~ - **COMPLETED**: Safe preview mode with executeReadOnly for discovery operations
+
+**Remaining Work:**
+1. Release command (migrate from xcode.rake) - Archive, IPA generation, and App Store upload
+2. Environment management features - Support for different deployment environments
+
+### Future Enhancements
+- Add Danger integration support for test command (--run-danger flag)
+- Implement pre-test, build, test, and post-test Danger phases
+- Support for additional configuration formats (TOML, Swift configs)
+- Plugin-based architecture for extensibility
