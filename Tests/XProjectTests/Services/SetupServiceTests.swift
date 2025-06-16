@@ -7,6 +7,26 @@ import Foundation
 import Testing
 @testable import XProject
 
+// MARK: - Test Helpers
+
+private struct ConfigurationTestHelper {
+    static func createTestConfigurationService() -> ConfigurationService {
+        let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
+        return ConfigurationService(customConfigPath: configPath)
+    }
+
+    static func createValidTestConfiguration(projectPath: String) -> XProjectConfiguration {
+        return XProjectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": projectPath],
+            setup: nil,
+            xcode: nil,
+            danger: nil
+        )
+    }
+}
+
 @Suite("Setup Service Tests")
 struct SetupServiceTests {
     @Test("Setup service can be created", .tags(.unit, .fast))
@@ -20,18 +40,11 @@ struct SetupServiceTests {
     func setupServiceWithConfiguration() throws {
         // Create a test configuration
         let brewConfig = BrewConfiguration(enabled: true, formulas: ["test-formula"])
-        let setupConfig = SetupConfiguration(brew: brewConfig)
-        _ = XProjectConfiguration(
-            appName: "TestApp",
-            workspacePath: nil,
-            projectPaths: ["test": "Package.swift"],
-            setup: setupConfig,
-            xcode: nil,
-            danger: nil
-        )
+        _ = SetupConfiguration(brew: brewConfig)
+        _ = ConfigurationTestHelper.createValidTestConfiguration(projectPath: "Tests/XProjectTests/Support/DummyProject.xcodeproj")
 
         // Create a mock config service
-        let configService = ConfigurationService()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService)
 
         // We can't easily test the full setup without brew being installed,
@@ -45,7 +58,7 @@ struct SetupServiceTests {
         let brewError = SetupError.brewNotInstalled
         #expect(brewError.localizedDescription.contains("Homebrew not found"))
 
-        let formulaError = SetupError.brewFormulaFailed(formula: "test-formula", error: TestError.generic)
+        let formulaError = SetupError.brewFormulaFailed(formula: "test-formula", error: MockTestError.generic)
         #expect(formulaError.localizedDescription.contains("Failed to install test-formula"))
     }
 
@@ -53,10 +66,8 @@ struct SetupServiceTests {
 
     @Test("Setup service complete workflow with mocked commands", .tags(.integration, .commandExecution))
     func setupServiceCompleteWorkflow() throws {
-        let mockExecutor = MockCommandExecutor()
-        mockExecutor.setupBrewMocks()
-
-        let configService = ConfigurationService()
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Run setup
@@ -83,7 +94,7 @@ struct SetupServiceTests {
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: false)
 
-        let configService = ConfigurationService()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should throw SetupError.brewNotInstalled
@@ -103,7 +114,7 @@ struct SetupServiceTests {
         // Set first brew update to fail, second to succeed
         mockExecutor.setResponse(for: "brew update", response: MockCommandExecutor.MockResponse(exitCode: 1, error: "Network error"))
 
-        let configService = ConfigurationService()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should complete setup despite initial brew update failure
@@ -128,7 +139,7 @@ struct SetupServiceTests {
         mockExecutor.setResponse(for: failingFormulaCommand,
                                  response: MockCommandExecutor.MockResponse(exitCode: 1, error: "Formula not found"))
 
-        let configService = ConfigurationService()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should throw SetupError.brewFormulaFailed
@@ -139,7 +150,8 @@ struct SetupServiceTests {
 
     @Test("Setup service works in dry run mode", .tags(.integration, .dryRun))
     func setupServiceWithDryRun() throws {
-        let service = SetupService(dryRun: true)
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
+        let service = SetupService(configService: configService, dryRun: true)
 
         // Should complete without error in dry run mode
         #expect(throws: Never.self) {
@@ -152,6 +164,6 @@ struct SetupServiceTests {
 }
 
 // Helper error for testing
-enum TestError: Error {
+enum MockTestError: Error {
     case generic
 }
