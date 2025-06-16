@@ -226,15 +226,15 @@ public final class BuildService: BuildServiceProtocol, Sendable {
     }
 
     private func findInstalledXcodes() async throws -> [String] {
-        // Try mdfind first
-        let mdfindResult = try? commandExecutor.execute("mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null")
+        // Try mdfind first - use executeReadOnly since this is discovery
+        let mdfindResult = try? commandExecutor.executeReadOnly("mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null")
 
         if let result = mdfindResult, result.isSuccess, !result.output.isEmpty {
             return result.output.split(separator: "\n").map(String.init)
         }
 
-        // Fallback to find in /Applications
-        let findResult = try commandExecutor.execute("""
+        // Fallback to find in /Applications - use executeReadOnly since this is discovery
+        let findResult = try commandExecutor.executeReadOnly("""
             find /Applications -name '*.app' -type d -maxdepth 1 -exec sh -c \
             'if [ "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" \
             "{}/Contents/Info.plist" 2>/dev/null)" == "com.apple.dt.Xcode" ]; then echo "{}"; fi' ';'
@@ -249,7 +249,7 @@ public final class BuildService: BuildServiceProtocol, Sendable {
 
     private func fetchXcodeVersion(path: String) throws -> String {
         let command = "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"\(path)/Contents/Info.plist\""
-        let result = try commandExecutor.execute(command)
+        let result = try commandExecutor.executeReadOnly(command)
 
         guard result.isSuccess, !result.output.isEmpty else {
             return "0.0"

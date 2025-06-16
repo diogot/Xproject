@@ -10,6 +10,7 @@ import Foundation
 public protocol CommandExecuting: Sendable {
     func execute(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
     func executeOrThrow(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
+    func executeReadOnly(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
     func commandExists(_ command: String) -> Bool
 }
 
@@ -20,6 +21,10 @@ public extension CommandExecuting {
 
     func executeOrThrow(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
         return try executeOrThrow(command, workingDirectory: workingDirectory, environment: environment)
+    }
+
+    func executeReadOnly(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+        return try executeReadOnly(command, workingDirectory: workingDirectory, environment: environment)
     }
 }
 
@@ -115,6 +120,59 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         }
 
         return result
+    }
+
+    /// Execute a read-only command that bypasses dry-run mode (for discovery operations)
+    @discardableResult
+    public func executeReadOnly(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) throws -> CommandResult {
+        // Read-only commands always execute, even in dry-run mode
+        let process = Process()
+
+        // Set command
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
+
+        // Set working directory
+        if let workingDirectory = workingDirectory {
+            process.currentDirectoryURL = workingDirectory
+        }
+
+        // Set environment
+        if let environment = environment {
+            var processEnvironment = ProcessInfo.processInfo.environment
+            for (key, value) in environment {
+                processEnvironment[key] = value
+            }
+            process.environment = processEnvironment
+        }
+
+        // Setup output capture
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        // Execute
+        try process.run()
+        process.waitUntilExit()
+
+        // Capture output
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let error = String(data: errorData, encoding: .utf8) ?? ""
+
+        return CommandResult(
+            exitCode: process.terminationStatus,
+            output: output.trimmingCharacters(in: .whitespacesAndNewlines),
+            error: error.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: command
+        )
     }
 
     /// Check if a command exists in PATH
