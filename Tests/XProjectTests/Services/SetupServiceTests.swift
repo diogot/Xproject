@@ -12,6 +12,17 @@ import Testing
 private struct ConfigurationTestHelper {
     static func createTestConfigurationService() -> ConfigurationService {
         let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
+        let configURL = URL(fileURLWithPath: configPath)
+        let configDir = configURL.deletingLastPathComponent()
+        
+        // Ensure DummyProject.xcodeproj exists in the same directory as the config
+        let dummyProjectPath = configDir.appendingPathComponent("DummyProject.xcodeproj")
+        if !FileManager.default.fileExists(atPath: dummyProjectPath.path) {
+            // Create the dummy project file if it doesn't exist
+            let dummyContent = "// Dummy project file for testing\n// This file exists solely to provide a valid project path for tests\n// that need to reference an existing file during test execution"
+            try? dummyContent.write(to: dummyProjectPath, atomically: true, encoding: .utf8)
+        }
+        
         return ConfigurationService(customConfigPath: configPath)
     }
 
