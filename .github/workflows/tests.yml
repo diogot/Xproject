@@ -20,6 +20,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Print Swift Information
+      run: |
+        echo "Swift version:"
+        swift --version
+        echo ""
+        echo "Swift package manager version:"
+        swift package --version
+        echo ""
+        echo "Xcode version:"
+        xcodebuild -version
+        echo ""
+        echo "Available SDKs:"
+        xcodebuild -showsdks
+        echo ""
+        echo "macOS version:"
+        sw_vers
+        
     - name: Cache Swift Package Manager
       uses: actions/cache@v4
       with:
