@@ -20,6 +20,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Set up Xcode 16.4
+      run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+        
     - name: Print Swift Information
       run: |
         echo "Swift version:"
