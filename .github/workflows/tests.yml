@@ -14,7 +14,7 @@ concurrency:
 jobs:
   lint-and-test:
     name: SwiftLint + Tests
-    runs-on: macos-latest
+    runs-on: macos-15
     
     steps:
     - name: Checkout code
