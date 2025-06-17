@@ -9,46 +9,14 @@ import Testing
 
 // MARK: - Test Helpers
 
-private struct TestFileHelper {
-    static func withTemporaryFile<T>(
-        content: String,
-        fileName: String? = nil,
-        fileExtension: String = "yml",
-        perform: (URL) throws -> T
-    ) throws -> T {
-        let fileName = fileName ?? UUID().uuidString
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("\(fileName).\(fileExtension)")
-
-        try content.write(to: tempURL, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: tempURL) }
-
-        return try perform(tempURL)
-    }
-
-    static func withTemporaryDirectory<T>(
-        perform: (URL) throws -> T
-    ) throws -> T {
-        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent(UUID().uuidString)
-
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-
-        return try perform(tempDir)
-    }
-
-    @discardableResult
-    static func createDummyProject(in directory: URL, name: String) throws -> URL {
-        let projectURL = directory.appendingPathComponent("\(name).xcodeproj")
-        try "dummy project".write(to: projectURL, atomically: true, encoding: .utf8)
-        return projectURL
-    }
-}
-
 private struct ConfigurationTestHelper {
     static func createTestConfigurationService() -> ConfigurationService {
         let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
+        let configURL = URL(fileURLWithPath: configPath)
+        let configDir = configURL.deletingLastPathComponent()
+
+        // Ensure DummyProject.xcodeproj exists in the same directory as the config
+        TestFileHelper.ensureDummyProject(at: configDir)
         return ConfigurationService(customConfigPath: configPath)
     }
 
@@ -402,21 +370,16 @@ struct ConfigurationTests {
         malformed structure
         """
 
-        // Create temporary file with invalid YAML
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("invalid-config.yml")
-
-        try invalidYAML.write(to: tempURL, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: tempURL) }
-
-        #expect {
-            try loader.loadConfiguration(from: tempURL)
-        } throws: { error in
-            guard case ConfigurationError.invalidFormat = error else {
-                Issue.record("Expected ConfigurationError.invalidFormat, got \(error)")
-                return false
+        _ = try TestFileHelper.withTemporaryFile(content: invalidYAML, fileName: "invalid-config") { tempURL in
+            #expect {
+                try loader.loadConfiguration(from: tempURL)
+            } throws: { error in
+                guard case ConfigurationError.invalidFormat = error else {
+                    Issue.record("Expected ConfigurationError.invalidFormat, got \(error)")
+                    return false
+                }
+                return true
             }
-            return true
         }
     }
 

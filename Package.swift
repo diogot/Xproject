@@ -1,8 +1,8 @@
+// swift-tools-version: 6.1
 //
 // Package.swift
 // XProject
 //
-// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(

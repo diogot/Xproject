@@ -12,6 +12,11 @@ import Testing
 private struct ConfigurationTestHelper {
     static func createTestConfigurationService() -> ConfigurationService {
         let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
+        let configURL = URL(fileURLWithPath: configPath)
+        let configDir = configURL.deletingLastPathComponent()
+
+        // Ensure DummyProject.xcodeproj exists in the same directory as the config
+        TestFileHelper.ensureDummyProject(at: configDir)
         return ConfigurationService(customConfigPath: configPath)
     }
 
