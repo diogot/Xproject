@@ -273,22 +273,14 @@ struct ConfigurationTests {
     func configurationServiceThreadSafety() async throws {
         let service = ConfigurationTestHelper.createTestConfigurationService()
 
-        // Test concurrent access to configuration with adaptive behavior for CI
-        let taskCount = TestEnvironment.concurrencyTaskCount(local: 10, ci: 5)
-        let delay = TestEnvironment.stabilityDelay(local: 0.001, ci: 0.002)
-
-        try await TestEnvironment.withTimeout(seconds: TestEnvironment.operationTimeout()) {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for _ in 0..<taskCount {
-                    group.addTask {
-                        _ = try service.configuration
-                        // Small delay to reduce contention
-                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    }
+        // Test concurrent access to configuration
+        await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 {
+                group.addTask {
+                    _ = try service.configuration
                 }
-
-                try await group.waitForAll()
             }
+            // Automatically waits for all tasks to complete
         }
     }
 
@@ -299,22 +291,14 @@ struct ConfigurationTests {
         // Load initial configuration
         _ = try service.configuration
 
-        // Test concurrent reload operations with adaptive behavior for CI
-        let taskCount = TestEnvironment.concurrencyTaskCount(local: 5, ci: 3)
-        let delay = TestEnvironment.stabilityDelay(local: 0.002, ci: 0.005)
-
-        try await TestEnvironment.withTimeout(seconds: TestEnvironment.operationTimeout()) {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for _ in 0..<taskCount {
-                    group.addTask {
-                        try service.reload()
-                        // Small delay to reduce contention
-                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    }
+        // Test concurrent reload operations
+        await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<10 {
+                group.addTask {
+                    try service.reload()
                 }
-
-                try await group.waitForAll()
             }
+            // Automatically waits for all tasks to complete
         }
     }
 

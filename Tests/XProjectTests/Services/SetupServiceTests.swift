@@ -70,8 +70,8 @@ struct SetupServiceTests {
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
-        // Run setup with adaptive retry logic for CI stability
-        try TestEnvironment.withRetry(attempts: 3, delay: 0.01) {
+        // Run setup
+        #expect(throws: Never.self) {
             try service.runSetup()
         }
 
@@ -117,9 +117,6 @@ struct SetupServiceTests {
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
-        // Add delay for CI stability
-        Thread.sleep(forTimeInterval: TestEnvironment.stabilityDelay())
-
         // Should complete setup despite initial brew update failure
         #expect(throws: Never.self) {
             try service.runSetup()
@@ -144,9 +141,6 @@ struct SetupServiceTests {
 
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
-
-        // Add delay for CI stability
-        Thread.sleep(forTimeInterval: TestEnvironment.stabilityDelay())
 
         // Should throw SetupError.brewFormulaFailed
         #expect(throws: SetupError.self) {
