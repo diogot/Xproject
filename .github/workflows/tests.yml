@@ -37,13 +37,13 @@ jobs:
         echo "macOS version:"
         sw_vers
         
-    - name: Cache Swift Package Manager
-      uses: actions/cache@v4
-      with:
-        path: .build
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-        restore-keys: |
-          ${{ runner.os }}-spm-
+    # - name: Cache Swift Package Manager
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: .build
+    #     key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-spm-
           
     - name: Install SwiftLint
       run: |
