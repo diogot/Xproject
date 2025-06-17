@@ -44,6 +44,20 @@ private struct TestFileHelper {
         try "dummy project".write(to: projectURL, atomically: true, encoding: .utf8)
         return projectURL
     }
+
+    @discardableResult
+    static func ensureDummyProject(at path: URL, name: String = "DummyProject") -> URL {
+        let projectURL = path.appendingPathComponent("\(name).xcodeproj")
+        if !FileManager.default.fileExists(atPath: projectURL.path) {
+            let dummyContent = """
+                // Dummy project file for testing
+                // This file exists solely to provide a valid project path for tests
+                // that need to reference an existing file during test execution
+                """
+            try? dummyContent.write(to: projectURL, atomically: true, encoding: .utf8)
+        }
+        return projectURL
+    }
 }
 
 private struct ConfigurationTestHelper {
@@ -51,15 +65,9 @@ private struct ConfigurationTestHelper {
         let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
         let configURL = URL(fileURLWithPath: configPath)
         let configDir = configURL.deletingLastPathComponent()
-        
+
         // Ensure DummyProject.xcodeproj exists in the same directory as the config
-        let dummyProjectPath = configDir.appendingPathComponent("DummyProject.xcodeproj")
-        if !FileManager.default.fileExists(atPath: dummyProjectPath.path) {
-            // Create the dummy project file if it doesn't exist
-            let dummyContent = "// Dummy project file for testing\n// This file exists solely to provide a valid project path for tests\n// that need to reference an existing file during test execution"
-            try? dummyContent.write(to: dummyProjectPath, atomically: true, encoding: .utf8)
-        }
-        
+        TestFileHelper.ensureDummyProject(at: configDir)
         return ConfigurationService(customConfigPath: configPath)
     }
 
