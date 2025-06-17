@@ -116,6 +116,12 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         // Get response for this command
         let response = _responses[command] ?? _defaultResponse
 
+        // Add a small delay to simulate real command execution and reduce race conditions
+        // This helps stabilize tests under high concurrency
+        if !ProcessInfo.processInfo.environment.keys.contains("XPROJECT_FAST_TESTS") {
+            Thread.sleep(forTimeInterval: 0.001) // 1ms delay
+        }
+
         return CommandResult(
             exitCode: response.exitCode,
             output: response.output,
