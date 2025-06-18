@@ -40,6 +40,9 @@ let package = Package(
             dependencies: [
                 "XProject"
             ],
+            exclude: [
+                "TestHelperGuide.md"
+            ],
             resources: [
                 .copy("Support")
             ],

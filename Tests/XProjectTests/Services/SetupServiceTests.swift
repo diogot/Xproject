@@ -7,31 +7,6 @@ import Foundation
 import Testing
 @testable import XProject
 
-// MARK: - Test Helpers
-
-private struct ConfigurationTestHelper {
-    static func createTestConfigurationService() -> ConfigurationService {
-        let configPath = Bundle.module.path(forResource: "test-config", ofType: "yml", inDirectory: "Support")!
-        let configURL = URL(fileURLWithPath: configPath)
-        let configDir = configURL.deletingLastPathComponent()
-
-        // Ensure DummyProject.xcodeproj exists in the same directory as the config
-        TestFileHelper.ensureDummyProject(at: configDir)
-        return ConfigurationService(customConfigPath: configPath)
-    }
-
-    static func createValidTestConfiguration(projectPath: String) -> XProjectConfiguration {
-        return XProjectConfiguration(
-            appName: "TestApp",
-            workspacePath: nil,
-            projectPaths: ["test": projectPath],
-            setup: nil,
-            xcode: nil,
-            danger: nil
-        )
-    }
-}
-
 @Suite("Setup Service Tests")
 struct SetupServiceTests {
     @Test("Setup service can be created", .tags(.unit, .fast))
