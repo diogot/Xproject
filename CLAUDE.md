@@ -188,6 +188,11 @@ rake swiftgen:strings       # Generate localized strings
 ### Code Quality Guidelines
 - Swift files should have less up to 300 lines
 
+### Test Organization Guidelines
+- Test directory structure must mirror source directory structure
+- For example: if source file is at `Sources/XProject/Utilities/CommandExecutor.swift`, test file should be at `Tests/XProjectTests/Utilities/CommandExecutorTests.swift`
+- This ensures consistent organization and makes tests easy to locate
+
 ### Next Steps
 Priority order for implementing remaining features:
 1. ✅ ~~Build command~~ - **COMPLETED**: Full implementation with scheme selection, clean builds, and custom destinations
