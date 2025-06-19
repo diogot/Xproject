@@ -32,26 +32,26 @@ struct BuildCommand: AsyncParsableCommand {
 
     func run() async throws {
         let configService = ConfigurationService(customConfigPath: globalOptions.config)
-        let buildService = BuildService(
+        let xcodeClient = XcodeClient(
             configurationProvider: configService,
             commandExecutor: CommandExecutor(dryRun: dryRun)
         )
 
         do {
-            try await runBuild(buildService: buildService, configService: configService)
+            try await runBuild(xcodeClient: xcodeClient, configService: configService)
         } catch {
             print("❌ Build failed: \(error.localizedDescription)")
             throw ExitCode.failure
         }
     }
 
-    private func runBuild(buildService: BuildService, configService: ConfigurationService) async throws {
+    private func runBuild(xcodeClient: XcodeClient, configService: ConfigurationService) async throws {
         print("🔨 Building project...")
         let config = try configService.configuration
 
         guard let xcodeConfig = config.xcode,
               let testsConfig = xcodeConfig.tests else {
-            throw BuildError.configurationError("No xcode.tests configuration found")
+            throw XcodeClientError.configurationError("No xcode.tests configuration found")
         }
 
         let schemes = testsConfig.schemes
@@ -59,13 +59,13 @@ struct BuildCommand: AsyncParsableCommand {
         if let specificScheme = scheme {
             // Build specific scheme
             guard let schemeConfig = schemes.first(where: { $0.scheme == specificScheme }) else {
-                throw BuildError.configurationError("Scheme '\(specificScheme)' not found in configuration")
+                throw XcodeClientError.configurationError("Scheme '\(specificScheme)' not found in configuration")
             }
 
             let buildDest = destination ?? schemeConfig.buildDestination
 
             print("Building scheme: \(specificScheme)")
-            try await buildService.buildForTesting(
+            try await xcodeClient.buildForTesting(
                 scheme: specificScheme,
                 clean: clean,
                 buildDestination: buildDest
@@ -78,7 +78,7 @@ struct BuildCommand: AsyncParsableCommand {
                 let buildDest = destination ?? schemeConfig.buildDestination
 
                 print("Building scheme: \(schemeConfig.scheme)")
-                try await buildService.buildForTesting(
+                try await xcodeClient.buildForTesting(
                     scheme: schemeConfig.scheme,
                     clean: clean,
                     buildDestination: buildDest

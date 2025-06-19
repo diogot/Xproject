@@ -46,7 +46,7 @@ struct TestCommand: AsyncParsableCommand {
         let configService = ConfigurationService(customConfigPath: globalOptions.config)
         let testService = TestService(
             configurationProvider: configService,
-            buildService: BuildService(
+            xcodeClient: XcodeClient(
                 configurationProvider: configService,
                 commandExecutor: CommandExecutor(dryRun: dryRun)
             )
