@@ -8,15 +8,15 @@ import Foundation
 
 /// Mock implementation of ConfigurationProviding for testing
 public struct MockConfigurationProvider: ConfigurationProviding {
-    private let mockConfiguration: XProjectConfiguration
+    private let mockConfiguration: XprojectConfiguration
     private let mockFilePath: String?
 
-    public init(config: XProjectConfiguration, filePath: String? = "mock-config.yml") {
+    public init(config: XprojectConfiguration, filePath: String? = "mock-config.yml") {
         self.mockConfiguration = config
         self.mockFilePath = filePath
     }
 
-    public var configuration: XProjectConfiguration {
+    public var configuration: XprojectConfiguration {
         get throws {
             return mockConfiguration
         }

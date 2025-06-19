@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Intent
 
-This repository is undergoing a migration from Ruby Rake to a modern Swift command line tool called **XProject**. The existing Ruby rakelib serves as a reference implementation that we are incrementally migrating to Swift, taking the opportunity to:
+This repository is undergoing a migration from Ruby Rake to a modern Swift command line tool called **Xproject**. The existing Ruby rakelib serves as a reference implementation that we are incrementally migrating to Swift, taking the opportunity to:
 
 - **Modernize configuration**: Move from YAML to more flexible formats (TOML, Swift configs)
 - **Improve type safety**: Leverage Swift's type system for compile-time validation
@@ -12,12 +12,12 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - **Better developer experience**: Create more intuitive commands and helpful error messages
 - **Reduce dependencies**: Eliminate Ruby/gem dependencies for easier CI/CD setup
 
-**Important**: The current Ruby rakelib should be used only as reference for understanding existing functionality. All new development should focus on the Swift XProject tool, migrating features one by one while improving upon the original design.
+**Important**: The current Ruby rakelib should be used only as reference for understanding existing functionality. All new development should focus on the Swift Xproject tool, migrating features one by one while improving upon the original design.
 
 ## Current Implementation Status
 
 ### Completed Features
-- ✅ **Swift Package Manager structure**: Package.swift with XProject library and XProjectCLI executable
+- ✅ **Swift Package Manager structure**: Package.swift with Xproject library and XprojectCLI executable
 - ✅ **Type-safe configuration system**: YAML loading with Codable structs, validation, and layered overrides
 - ✅ **Setup command**: Homebrew formula installation (deprecated bundler/cocoapods/submodules removed)
 - ✅ **Build command**: Complete implementation for building Xcode projects for testing
@@ -30,9 +30,9 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 
 ### Architecture Overview
 **Targets:**
-- `XProjectCLI`: CLI layer using ArgumentParser, calls into XProject library
-- `XProject`: Core business logic library (configuration, services, utilities) - no CLI dependencies
-- `XProjectTests`: Test suite for core library
+- `XprojectCLI`: CLI layer using ArgumentParser, calls into Xproject library
+- `Xproject`: Core business logic library (configuration, services, utilities) - no CLI dependencies
+- `XprojectTests`: Test suite for core library
 
 **Key Services:**
 - `ConfigurationService`: Thread-safe singleton for loading and caching YAML configs with custom config file support
@@ -44,7 +44,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 ### Available Commands
 ```bash
 # Global options available on all commands
---config <path>    # Specify custom configuration file (auto-discovers XProject.yml, rake-config.yml by default)
+--config <path>    # Specify custom configuration file (auto-discovers Xproject.yml, rake-config.yml by default)
 --dry-run          # Show what would be done without executing (available on most commands)
 
 # Core commands
@@ -177,7 +177,7 @@ rake swiftgen:strings       # Generate localized strings
 ## Important Development Guidelines
 
 ### Architecture Decisions Made
-1. **No CLI dependencies in core library**: XProject library must remain free of ArgumentParser or other CLI frameworks
+1. **No CLI dependencies in core library**: Xproject library must remain free of ArgumentParser or other CLI frameworks
 2. **Deprecated dependency managers**: Do not implement bundler, cocoapods, submodules, or carthage - these are deprecated
 3. **Service-based architecture**: Business logic should be in services that CLI commands call into
 4. **Swift 6.1 compliance**: Project uses Swift 6.1 with strict concurrency checking
@@ -190,7 +190,7 @@ rake swiftgen:strings       # Generate localized strings
 
 ### Test Organization Guidelines
 - Test directory structure must mirror source directory structure
-- For example: if source file is at `Sources/XProject/Utilities/CommandExecutor.swift`, test file should be at `Tests/XProjectTests/Utilities/CommandExecutorTests.swift`
+- For example: if source file is at `Sources/Xproject/Utilities/CommandExecutor.swift`, test file should be at `Tests/XprojectTests/Utilities/CommandExecutorTests.swift`
 - This ensures consistent organization and makes tests easy to locate
 
 ### Next Steps

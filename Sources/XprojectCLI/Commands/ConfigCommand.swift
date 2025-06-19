@@ -108,7 +108,7 @@ struct ConfigCommand: AsyncParsableCommand {
         }
     }
 
-    private func validateXcodeConfiguration(config: XProjectConfiguration) -> [String] {
+    private func validateXcodeConfiguration(config: XprojectConfiguration) -> [String] {
         var warnings: [String] = []
 
         guard let xcode = config.xcode else {

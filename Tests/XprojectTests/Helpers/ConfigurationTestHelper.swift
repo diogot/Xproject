@@ -20,8 +20,8 @@ public struct ConfigurationTestHelper {
     }
 
     /// Creates a valid test configuration with the specified project path
-    public static func createValidTestConfiguration(projectPath: String) -> XProjectConfiguration {
-        return XProjectConfiguration(
+    public static func createValidTestConfiguration(projectPath: String) -> XprojectConfiguration {
+        return XprojectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": projectPath],
@@ -71,7 +71,7 @@ public struct ConfigurationTestHelper {
     }
 
     /// Creates a test configuration with full Xcode settings
-    public static func createTestConfigurationWithXcode() -> XProjectConfiguration {
+    public static func createTestConfigurationWithXcode() -> XprojectConfiguration {
         let testsConfig = TestsConfiguration(schemes: [
             TestSchemeConfiguration(
                 scheme: "Nebula",
@@ -90,7 +90,7 @@ public struct ConfigurationTestHelper {
             )
         ])
 
-        return XProjectConfiguration(
+        return XprojectConfiguration(
             appName: "TestApp",
             workspacePath: "TestApp.xcworkspace",
             projectPaths: ["ios": "TestApp.xcodeproj"],
@@ -111,7 +111,7 @@ public struct ConfigurationTestHelper {
 public struct WorkingDirectoryHelper {
     public static func withTemporaryWorkingDirectory<T>(
         configFileName: String = "Xproject.yml",
-        appName: String = "XProject",
+        appName: String = "Xproject",
         projectName: String = "TestProject",
         perform: () throws -> T
     ) throws -> T {

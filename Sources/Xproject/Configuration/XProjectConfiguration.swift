@@ -7,7 +7,7 @@ import Foundation
 
 // MARK: - Main Configuration
 
-public struct XProjectConfiguration: Codable, Sendable {
+public struct XprojectConfiguration: Codable, Sendable {
     public let appName: String
     public let workspacePath: String?
     public let projectPaths: [String: String]
@@ -43,7 +43,7 @@ public struct BrewConfiguration: Codable, Sendable {
 
 // MARK: - Configuration Extensions
 
-public extension XProjectConfiguration {
+public extension XprojectConfiguration {
     /// Get project path for a specific target
     func projectPath(for target: String) -> String? {
         return projectPaths[target]
@@ -95,7 +95,7 @@ public extension XProjectConfiguration {
 
 // MARK: - Validation
 
-public extension XProjectConfiguration {
+public extension XprojectConfiguration {
     struct ValidationError: Error, LocalizedError, Sendable {
         let message: String
 

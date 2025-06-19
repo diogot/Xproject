@@ -9,7 +9,7 @@ import Yams
 // MARK: - Configuration Format Protocol
 
 public protocol ConfigurationFormat: Sendable {
-    func load(from url: URL) throws -> XProjectConfiguration
+    func load(from url: URL) throws -> XprojectConfiguration
     var supportedExtensions: [String] { get }
 }
 
@@ -20,13 +20,13 @@ public struct YAMLConfigurationFormat: ConfigurationFormat {
 
     public init() {}
 
-    public func load(from url: URL) throws -> XProjectConfiguration {
+    public func load(from url: URL) throws -> XprojectConfiguration {
         let data = try Data(contentsOf: url)
         let yamlString = String(data: data, encoding: .utf8) ?? ""
 
         do {
             let decoder = YAMLDecoder()
-            return try decoder.decode(XProjectConfiguration.self, from: yamlString)
+            return try decoder.decode(XprojectConfiguration.self, from: yamlString)
         } catch {
             throw ConfigurationError.invalidFormat(
                 format: "YAML",
@@ -47,13 +47,13 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Load configuration from default locations
-    public func loadConfiguration() throws -> XProjectConfiguration {
+    public func loadConfiguration() throws -> XprojectConfiguration {
         let (config, _) = try loadConfigurationWithPath()
         return config
     }
 
     /// Load configuration from default locations, returning both config and file path
-    public func loadConfigurationWithPath() throws -> (XProjectConfiguration, String) {
+    public func loadConfigurationWithPath() throws -> (XprojectConfiguration, String) {
         let possiblePaths = [
             "Xproject.yml",
             "Xproject.yaml",
@@ -73,7 +73,7 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Load configuration from specific file
-    public func loadConfiguration(from url: URL) throws -> XProjectConfiguration {
+    public func loadConfiguration(from url: URL) throws -> XprojectConfiguration {
         let fileExtension = url.pathExtension.lowercased()
 
         guard let format = formats.first(where: { $0.supportedExtensions.contains(fileExtension) }) else {
@@ -87,7 +87,7 @@ public final class ConfigurationLoader: Sendable {
             let configuration = try format.load(from: url)
             try configuration.validate(baseDirectory: url.deletingLastPathComponent())
             return configuration
-        } catch let error as XProjectConfiguration.ValidationError {
+        } catch let error as XprojectConfiguration.ValidationError {
             throw ConfigurationError.validation(file: url.path, error: error)
         } catch {
             throw error
@@ -95,13 +95,13 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Load configuration with layered overrides
-    public func loadConfigurationWithOverrides() throws -> XProjectConfiguration {
+    public func loadConfigurationWithOverrides() throws -> XprojectConfiguration {
         let (config, _) = try loadConfigurationWithOverridesAndPath()
         return config
     }
 
     /// Load configuration with layered overrides, returning both config and file path
-    public func loadConfigurationWithOverridesAndPath() throws -> (XProjectConfiguration, String) {
+    public func loadConfigurationWithOverridesAndPath() throws -> (XprojectConfiguration, String) {
         let (baseConfig, configPath) = try loadConfigurationWithPath()
         var configuration = baseConfig
 
@@ -131,7 +131,7 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Load configuration from specific file with layered overrides
-    public func loadConfigurationWithOverrides(from configPath: String) throws -> (XProjectConfiguration, String) {
+    public func loadConfigurationWithOverrides(from configPath: String) throws -> (XprojectConfiguration, String) {
         let url = URL(fileURLWithPath: configPath)
 
         // Check if file exists first
@@ -167,10 +167,10 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Merge two configurations, with override taking precedence
-    private func merge(base: XProjectConfiguration, override: XProjectConfiguration) throws -> XProjectConfiguration {
+    private func merge(base: XprojectConfiguration, override: XprojectConfiguration) throws -> XprojectConfiguration {
         // For now, we'll do a simple override replacement
         // In the future, this could be more sophisticated (deep merging)
-        return XProjectConfiguration(
+        return XprojectConfiguration(
             appName: override.appName.isEmpty ? base.appName : override.appName,
             workspacePath: override.workspacePath ?? base.workspacePath,
             projectPaths: base.projectPaths.merging(override.projectPaths) { _, new in new },
@@ -181,12 +181,12 @@ public final class ConfigurationLoader: Sendable {
     }
 
     /// Apply environment variable overrides
-    private func applyEnvironmentOverrides(to configuration: XProjectConfiguration) -> XProjectConfiguration {
+    private func applyEnvironmentOverrides(to configuration: XprojectConfiguration) -> XprojectConfiguration {
         var config = configuration
 
         // Override with environment variables using XPROJECT_ prefix
         if let appName = ProcessInfo.processInfo.environment["XPROJECT_APP_NAME"] {
-            config = XProjectConfiguration(
+            config = XprojectConfiguration(
                 appName: appName,
                 workspacePath: config.workspacePath,
                 projectPaths: config.projectPaths,
@@ -208,7 +208,7 @@ public enum ConfigurationError: Error, LocalizedError, Sendable {
     case noConfigurationFound(searchPaths: [String])
     case unsupportedFormat(extension: String, supportedExtensions: [String])
     case invalidFormat(format: String, file: String, underlyingError: Error)
-    case validation(file: String, error: XProjectConfiguration.ValidationError)
+    case validation(file: String, error: XprojectConfiguration.ValidationError)
 
     public var errorDescription: String? {
         switch self {

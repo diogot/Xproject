@@ -7,13 +7,13 @@ import Foundation
 import Testing
 @testable import Xproject
 
-@Suite("XProjectConfiguration Tests")
-struct XProjectConfigurationTests {
+@Suite("XprojectConfiguration Tests")
+struct XprojectConfigurationTests {
     @Test("Configuration validation works correctly", .tags(.configuration, .errorHandling, .unit))
     func configurationValidation() throws {
         try ConfigurationTestHelper.withValidationTestFiles { projectPath in
             // Valid configuration
-            let validConfig = XProjectConfiguration(
+            let validConfig = XprojectConfiguration(
                 appName: "TestApp",
                 workspacePath: nil,
                 projectPaths: ["ios": projectPath],
@@ -27,7 +27,7 @@ struct XProjectConfigurationTests {
             }
 
             // Invalid configuration - empty app name
-            let invalidConfig1 = XProjectConfiguration(
+            let invalidConfig1 = XprojectConfiguration(
                 appName: "",
                 workspacePath: nil,
                 projectPaths: ["ios": projectPath],
@@ -43,7 +43,7 @@ struct XProjectConfigurationTests {
             }
 
             // Invalid configuration - no projects
-            let invalidConfig2 = XProjectConfiguration(
+            let invalidConfig2 = XprojectConfiguration(
                 appName: "TestApp",
                 workspacePath: nil,
                 projectPaths: [:],
@@ -64,7 +64,7 @@ struct XProjectConfigurationTests {
 
     @Test("Configuration key path access methods work", .tags(.configuration, .unit))
     func configurationKeyPathAccess() throws {
-        let config = XProjectConfiguration(
+        let config = XprojectConfiguration(
             appName: "TestApp",
             workspacePath: "TestApp.xcworkspace",
             projectPaths: ["ios": "TestApp.xcodeproj"],
@@ -94,7 +94,7 @@ struct XProjectConfigurationTests {
             projectName: "ValidationErrorTestProject"
         ) { projectPath in
             // Test empty app name validation
-            let invalidConfig1 = XProjectConfiguration(
+            let invalidConfig1 = XprojectConfiguration(
                 appName: "",
                 workspacePath: nil,
                 projectPaths: ["test": projectPath],
@@ -106,7 +106,7 @@ struct XProjectConfigurationTests {
             #expect {
                 try invalidConfig1.validate()
             } throws: { error in
-                guard let validationError = error as? XProjectConfiguration.ValidationError else {
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
                     return false
                 }
@@ -114,7 +114,7 @@ struct XProjectConfigurationTests {
             }
 
             // Test empty project paths validation
-            let invalidConfig2 = XProjectConfiguration(
+            let invalidConfig2 = XprojectConfiguration(
                 appName: "TestApp",
                 workspacePath: nil,
                 projectPaths: [:],
@@ -126,7 +126,7 @@ struct XProjectConfigurationTests {
             #expect {
                 try invalidConfig2.validate()
             } throws: { error in
-                guard let validationError = error as? XProjectConfiguration.ValidationError else {
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
                     return false
                 }

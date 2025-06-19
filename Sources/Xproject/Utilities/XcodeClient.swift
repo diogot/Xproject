@@ -163,7 +163,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
     // MARK: - Private Methods
 
-    private func buildXcodeArgs(config: XProjectConfiguration, scheme: String, buildDestination: String) -> [String] {
+    private func buildXcodeArgs(config: XprojectConfiguration, scheme: String, buildDestination: String) -> [String] {
         return [
             "CODE_SIGNING_REQUIRED=NO",
             "CODE_SIGN_IDENTITY=",
@@ -175,7 +175,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         ]
     }
 
-    private func executeXcodeBuild(args: [String], reportName: String, config: XProjectConfiguration) async throws {
+    private func executeXcodeBuild(args: [String], reportName: String, config: XprojectConfiguration) async throws {
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
 
@@ -203,7 +203,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         _ = try commandExecutor.executeOrThrow(buildCommand)
     }
 
-    private func getXcodeVersion(config: XProjectConfiguration) async throws -> String {
+    private func getXcodeVersion(config: XprojectConfiguration) async throws -> String {
         guard let targetVersion = config.xcode?.version else {
             return "" // Use default Xcode
         }
@@ -258,7 +258,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         return result.output.split(separator: "\n").first.map(String.init) ?? "0.0"
     }
 
-    private func createDirectoriesIfNeeded(config: XProjectConfiguration) throws {
+    private func createDirectoriesIfNeeded(config: XprojectConfiguration) throws {
         let fileManager = fileManagerBuilder()
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
@@ -267,11 +267,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         try fileManager.createDirectory(atPath: reportsPath, withIntermediateDirectories: true)
     }
 
-    private func archivePath(filename: String, config: XProjectConfiguration) -> String {
+    private func archivePath(filename: String, config: XprojectConfiguration) -> String {
         return "\(config.buildPath())/\(filename).xcarchive"
     }
 
-    private func exportPath(filename: String, config: XProjectConfiguration) -> String {
+    private func exportPath(filename: String, config: XprojectConfiguration) -> String {
         return "\(config.buildPath())/\(filename)-ipa"
     }
 
@@ -308,7 +308,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         return scheme.replacingOccurrences(of: "\\s+", with: "_", options: .regularExpression)
     }
 
-    private func createExportPlist(signingConfiguration: SigningConfiguration?, config: XProjectConfiguration) throws -> String {
+    private func createExportPlist(signingConfiguration: SigningConfiguration?, config: XprojectConfiguration) throws -> String {
         var plistDict: [String: Any] = ["method": "app-store-connect"]
 
         if let signing = signingConfiguration {

@@ -146,7 +146,7 @@ struct ConfigurationLoaderTests {
     func configurationDefaultDiscovery() throws {
         try WorkingDirectoryHelper.withTemporaryWorkingDirectory(
             configFileName: "Xproject.yml",
-            appName: "XProject",
+            appName: "Xproject",
             projectName: "TestDiscoveryProject"
         ) {
             let loader = ConfigurationLoader()
@@ -157,7 +157,7 @@ struct ConfigurationLoaderTests {
             }
 
             let config = try loader.loadConfiguration()
-            #expect(config.appName == "XProject")
+            #expect(config.appName == "Xproject")
         }
     }
 }

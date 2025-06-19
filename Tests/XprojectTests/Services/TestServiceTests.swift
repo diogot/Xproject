@@ -206,7 +206,7 @@ struct TestServiceTests {
     func testMissingTestConfiguration() async throws {
         // Given
         let mockXcodeClient = MockXcodeClient()
-        let config = XProjectConfiguration(
+        let config = XprojectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": "Test.xcodeproj"],
@@ -266,6 +266,6 @@ struct TestServiceTests {
     }
 }
 
-private func createTestConfiguration() -> XProjectConfiguration {
+private func createTestConfiguration() -> XprojectConfiguration {
     return ConfigurationTestHelper.createTestConfigurationWithXcode()
 }

@@ -21,7 +21,7 @@ struct SetupServiceTests {
         // Create a test configuration
         let brewConfig = BrewConfiguration(enabled: true, formulas: ["test-formula"])
         _ = SetupConfiguration(brew: brewConfig)
-        _ = ConfigurationTestHelper.createValidTestConfiguration(projectPath: "Tests/XProjectTests/Support/DummyProject.xcodeproj")
+        _ = ConfigurationTestHelper.createValidTestConfiguration(projectPath: "Tests/XprojectTests/Support/DummyProject.xcodeproj")
 
         // Create a mock config service
         let configService = ConfigurationTestHelper.createTestConfigurationService()

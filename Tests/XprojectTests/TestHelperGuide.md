@@ -1,11 +1,11 @@
-# XProject Test Helper Guide
+# Xproject Test Helper Guide
 
-This guide explains the test helpers, mocks, and utilities available for writing tests in XProject.
+This guide explains the test helpers, mocks, and utilities available for writing tests in Xproject.
 
 ## Directory Structure
 
 ```
-Tests/XProjectTests/
+Tests/XprojectTests/
 ├── Helpers/
 │   ├── ConfigurationTestHelper.swift    # Configuration-related test utilities
 │   ├── TestAssertions.swift             # Common assertion helpers
@@ -207,7 +207,7 @@ let appName = TestConstants.TestData.defaultAppName
 
 ```swift
 import Testing
-@testable import XProject
+@testable import Xproject
 
 @Suite("MyService Tests", .tags(TestConstants.Tags.unit, TestConstants.Tags.fast))
 struct MyServiceTests {

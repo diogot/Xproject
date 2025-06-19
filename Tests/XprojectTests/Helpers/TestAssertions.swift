@@ -7,7 +7,7 @@ import Foundation
 import Testing
 @testable import Xproject
 
-/// Common test assertions for XProject tests
+/// Common test assertions for Xproject tests
 public struct TestAssertions {
     /// Asserts that a specific error type is thrown with an optional message check
     public static func assertThrows<E: Error>(

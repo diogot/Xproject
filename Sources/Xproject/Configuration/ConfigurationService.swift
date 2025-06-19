@@ -8,7 +8,7 @@ import Foundation
 // MARK: - Configuration Service Protocol
 
 public protocol ConfigurationProviding: Sendable {
-    var configuration: XProjectConfiguration { get throws }
+    var configuration: XprojectConfiguration { get throws }
     var configurationFilePath: String? { get throws }
 }
 
@@ -18,7 +18,7 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
     public static let shared = ConfigurationService()
 
     private let lock = NSLock()
-    private var _configuration: XProjectConfiguration?
+    private var _configuration: XprojectConfiguration?
     private var _configurationFilePath: String?
     private let loader: ConfigurationLoader
     private let customConfigPath: String?
@@ -29,7 +29,7 @@ public final class ConfigurationService: ConfigurationProviding, @unchecked Send
     }
 
     /// Get the current configuration, loading it if necessary
-    public var configuration: XProjectConfiguration {
+    public var configuration: XprojectConfiguration {
         get throws {
             lock.lock()
             defer { lock.unlock() }

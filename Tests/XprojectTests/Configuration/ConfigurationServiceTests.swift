@@ -82,7 +82,7 @@ struct ConfigurationServiceTests {
 
         // Test convenience methods
         let appName = try service.appName
-        #expect(appName == "XProject")
+        #expect(appName == "Xproject")
 
         let projectPaths = try service.projectPaths
         #expect(projectPaths["cli"] == "DummyProject.xcodeproj")

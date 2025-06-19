@@ -14,7 +14,7 @@ struct XcodeClientTests {
         // Given
         let mockExecutor = MockCommandExecutor()
         let mockConfigProvider = MockConfigurationProvider(
-            config: XProjectConfiguration(
+            config: XprojectConfiguration(
                 appName: "TestApp",
                 workspacePath: nil,
                 projectPaths: ["test": "Test.xcodeproj"],
@@ -41,7 +41,7 @@ struct XcodeClientTests {
         let mockFileManager = MockFileManager()
 
         // Mock configuration with build paths
-        let config = XProjectConfiguration(
+        let config = XprojectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": "Test.xcodeproj"],
@@ -78,7 +78,7 @@ struct XcodeClientTests {
         let mockExecutor = MockCommandExecutor()
 
         // Mock configuration without xcode configuration
-        let config = XProjectConfiguration(
+        let config = XprojectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": "Test.xcodeproj"],
@@ -111,7 +111,7 @@ struct XcodeClientTests {
         let mockFileManager = MockFileManager()
 
         // Mock configuration with build paths
-        let config = XProjectConfiguration(
+        let config = XprojectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
             projectPaths: ["test": "Test.xcodeproj"],

@@ -36,11 +36,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Local configuration overrides
-XProject.local.yml
-XProject.local.yaml
-CLAUDE.local.md
-
 # Editor files
 .vscode/
 .idea/

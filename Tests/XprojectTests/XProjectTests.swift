@@ -6,16 +6,16 @@
 import Testing
 @testable import Xproject
 
-@Suite("XProject Core Tests")
-struct XProjectTests {
-    @Test("XProject version is correct", .tags(.unit, .fast))
+@Suite("Xproject Core Tests")
+struct XprojectTests {
+    @Test("Xproject version is correct", .tags(.unit, .fast))
     func version() throws {
-        #expect(XProject.version == "0.1.0")
+        #expect(Xproject.version == "0.1.0")
     }
 
-    @Test("XProject can be instantiated", .tags(.unit, .fast))
+    @Test("Xproject can be instantiated", .tags(.unit, .fast))
     func instantiation() throws {
-        let core = XProject()
+        let core = Xproject()
         // Simply verify instantiation succeeded (no assertion needed for non-optional)
         _ = core
     }
