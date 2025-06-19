@@ -39,7 +39,7 @@ struct ConfigCommand: AsyncParsableCommand {
     }
 
     private func showConfiguration(_ service: ConfigurationService) throws {
-        print("📋 XProject Configuration")
+        print("📋 Xproject Configuration")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         let config = try service.configuration

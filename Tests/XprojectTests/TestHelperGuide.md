@@ -17,7 +17,7 @@ Tests/XprojectTests/
 │   ├── MockConfigurationProvider.swift  # Mock implementation of ConfigurationProviding
 │   └── MockFileManager.swift            # Mock FileManager for testing
 └── Builders/
-    ├── XProjectConfigurationBuilder.swift    # Builder for XProjectConfiguration
+    ├── XprojectConfigurationBuilder.swift    # Builder for XprojectConfiguration
     ├── XcodeConfigurationBuilder.swift       # Builder for XcodeConfiguration
     └── TestSchemeConfigurationBuilder.swift  # Builder for test schemes
 ```
@@ -79,7 +79,7 @@ try WorkingDirectoryHelper.withTemporaryWorkingDirectory {
 ### MockConfigurationProvider
 
 ```swift
-let config = XProjectConfigurationBuilder.minimal()
+let config = XprojectConfigurationBuilder.minimal()
 let mockProvider = MockConfigurationProvider(config: config)
 let service = BuildService(configurationProvider: mockProvider)
 ```
@@ -110,21 +110,21 @@ mockExecutor.setCommandExists("brew", exists: true)
 
 ## Using Builders
 
-### XProjectConfigurationBuilder
+### XprojectConfigurationBuilder
 
 ```swift
 // Minimal configuration
-let config = XProjectConfigurationBuilder.minimal()
+let config = XprojectConfigurationBuilder.minimal()
 
 // Custom configuration
-let config = XProjectConfigurationBuilder()
+let config = XprojectConfigurationBuilder()
     .withAppName("MyApp")
     .withProjectPath(key: "ios", path: "iOS/MyApp.xcodeproj")
     .withBrewSetup(enabled: true, formulas: ["swiftgen"])
     .build()
 
 // Full test setup
-let config = XProjectConfigurationBuilder.fullTestSetup()
+let config = XprojectConfigurationBuilder.fullTestSetup()
 ```
 
 ### TestSchemeConfigurationBuilder
@@ -217,7 +217,7 @@ struct MyServiceTests {
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setResponse(for: "echo test", response: .success)
         
-        let config = XProjectConfigurationBuilder.minimal()
+        let config = XprojectConfigurationBuilder.minimal()
         let mockProvider = MockConfigurationProvider(config: config)
         
         let service = MyService(

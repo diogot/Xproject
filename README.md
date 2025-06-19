@@ -11,12 +11,12 @@ A modern Swift command line tool for Xcode project build automation.
 1. **Clone or add as git submodule:**
    ```bash
    # Option 1: Clone directly
-   git clone https://github.com/diogot/XProject.git
-   cd XProject
+   git clone https://github.com/diogot/Xproject.git
+   cd Xproject
 
    # Option 2: Add as submodule to your project
-   git submodule add https://github.com/diogot/XProject.git Tools/XProject
-   cd Tools/XProject
+   git submodule add https://github.com/diogot/Xproject.git Tools/Xproject
+   cd Tools/Xproject
    ```
 
 2. **Run directly with Swift:**
@@ -86,14 +86,14 @@ Add Xproject as a git submodule and create a simple script:
 **setup.sh:**
 ```bash
 #!/bin/bash
-cd Tools/XProject
+cd Tools/Xproject
 swift run xp setup
 ```
 
 **build.sh:**
 ```bash
 #!/bin/bash
-cd Tools/XProject
+cd Tools/Xproject
 swift run xp build --scheme "$1" --clean
 ```
 
