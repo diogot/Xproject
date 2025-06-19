@@ -1,13 +1,13 @@
 //
-// MockBuildService.swift
+// MockXcodeClient.swift
 // XProject
 //
 
 import Foundation
 @testable import XProject
 
-/// Mock implementation of BuildServiceProtocol for testing
-public actor MockBuildService: BuildServiceProtocol {
+/// Mock implementation of XcodeClientProtocol for testing
+public actor MockXcodeClient: XcodeClientProtocol {
     public struct BuildCall: Sendable {
         public let scheme: String
         public let clean: Bool
@@ -52,7 +52,7 @@ public actor MockBuildService: BuildServiceProtocol {
 
         let shouldFail = shouldFailBuildForScheme[scheme] ?? false
         if shouldFail {
-            throw BuildError.configurationError("Mock build failure for \(scheme)")
+            throw XcodeClientError.configurationError("Mock build failure for \(scheme)")
         }
     }
 
@@ -61,7 +61,7 @@ public actor MockBuildService: BuildServiceProtocol {
 
         let shouldFail = shouldFailTestForDestination[destination] ?? false
         if shouldFail {
-            throw BuildError.configurationError("Mock test failure for \(destination)")
+            throw XcodeClientError.configurationError("Mock test failure for \(destination)")
         }
     }
 

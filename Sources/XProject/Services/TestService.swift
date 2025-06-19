@@ -20,14 +20,14 @@ public protocol TestServiceProtocol: Sendable {
 
 public final class TestService: TestServiceProtocol, Sendable {
     private let configurationProvider: any ConfigurationProviding
-    private let buildService: any BuildServiceProtocol
+    private let xcodeClient: any XcodeClientProtocol
 
     public init(
         configurationProvider: any ConfigurationProviding = ConfigurationService.shared,
-        buildService: (any BuildServiceProtocol)? = nil
+        xcodeClient: (any XcodeClientProtocol)? = nil
     ) {
         self.configurationProvider = configurationProvider
-        self.buildService = buildService ?? BuildService(
+        self.xcodeClient = xcodeClient ?? XcodeClient(
             configurationProvider: configurationProvider
         )
     }
@@ -110,7 +110,7 @@ public final class TestService: TestServiceProtocol, Sendable {
         // Build for testing (unless skipping)
         if !skipBuild {
             do {
-                try await buildService.buildForTesting(
+                try await xcodeClient.buildForTesting(
                     scheme: schemeConfig.scheme,
                     clean: clean,
                     buildDestination: schemeConfig.buildDestination
@@ -137,7 +137,7 @@ public final class TestService: TestServiceProtocol, Sendable {
         // Run tests on each destination
         for destination in destinations {
             do {
-                try await buildService.runTests(
+                try await xcodeClient.runTests(
                     scheme: schemeConfig.scheme,
                     destination: destination
                 )

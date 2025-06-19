@@ -12,7 +12,7 @@ struct TestServiceTests {
     @Test("TestService can be instantiated")
     func testServiceInstantiation() throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let mockConfigProvider = MockConfigurationProvider(
             config: createTestConfiguration()
         )
@@ -20,7 +20,7 @@ struct TestServiceTests {
         // When
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // Then
@@ -30,12 +30,12 @@ struct TestServiceTests {
     @Test("TestService runs all schemes when none specified")
     func testRunAllSchemes() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
@@ -43,19 +43,19 @@ struct TestServiceTests {
 
         // Then
         #expect(results.totalSchemes == 2)
-        #expect(await mockBuildService.buildForTestingCalls.count == 2)
-        #expect(await mockBuildService.runTestsCalls.count == 3) // 2 destinations for Nebula, 1 for NebulaTV
+        #expect(await mockXcodeClient.buildForTestingCalls.count == 2)
+        #expect(await mockXcodeClient.runTestsCalls.count == 3) // 2 destinations for Nebula, 1 for NebulaTV
     }
 
     @Test("TestService runs specific scheme when requested")
     func testRunSpecificScheme() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
@@ -63,21 +63,21 @@ struct TestServiceTests {
 
         // Then
         #expect(results.totalSchemes == 1)
-        let buildCalls = await mockBuildService.buildForTestingCalls
+        let buildCalls = await mockXcodeClient.buildForTestingCalls
         #expect(buildCalls.count == 1)
         #expect(buildCalls[0].scheme == "Nebula")
-        #expect(await mockBuildService.runTestsCalls.count == 2) // 2 destinations for Nebula
+        #expect(await mockXcodeClient.runTestsCalls.count == 2) // 2 destinations for Nebula
     }
 
     @Test("TestService throws error for unknown scheme")
     func testUnknownSchemeError() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When/Then
@@ -99,51 +99,51 @@ struct TestServiceTests {
     @Test("TestService skips build when requested")
     func testSkipBuild() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
         _ = try await testService.runTests(skipBuild: true)
 
         // Then
-        #expect(await mockBuildService.buildForTestingCalls.isEmpty)
-        let testCalls = await mockBuildService.runTestsCalls
+        #expect(await mockXcodeClient.buildForTestingCalls.isEmpty)
+        let testCalls = await mockXcodeClient.runTestsCalls
         #expect(!testCalls.isEmpty)
     }
 
     @Test("TestService uses clean build when requested")
     func testCleanBuild() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
         _ = try await testService.runTests(clean: true)
 
         // Then
-        let buildCalls = await mockBuildService.buildForTestingCalls
+        let buildCalls = await mockXcodeClient.buildForTestingCalls
         #expect(buildCalls.allSatisfy { $0.clean == true })
     }
 
     @Test("TestService uses destination override")
     func testDestinationOverride() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
         let overrideDestination = "platform=iOS Simulator,OS=17.0,name=iPhone 15"
 
@@ -151,20 +151,20 @@ struct TestServiceTests {
         _ = try await testService.runTests(destination: overrideDestination)
 
         // Then
-        let testCalls = await mockBuildService.runTestsCalls
+        let testCalls = await mockXcodeClient.runTestsCalls
         #expect(testCalls.allSatisfy { $0.destination == overrideDestination })
     }
 
     @Test("TestService aggregates build failures")
     func testBuildFailureAggregation() async throws {
         // Given
-        let mockBuildService = MockBuildService()
-        await mockBuildService.setShouldFailBuildForScheme("Nebula", shouldFail: true)
+        let mockXcodeClient = MockXcodeClient()
+        await mockXcodeClient.setShouldFailBuildForScheme("Nebula", shouldFail: true)
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
@@ -181,14 +181,14 @@ struct TestServiceTests {
     @Test("TestService aggregates test failures")
     func testTestFailureAggregation() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let failingDestination = "platform=iOS Simulator,OS=18.5,name=iPhone 16 Pro"
-        await mockBuildService.setShouldFailTestForDestination(failingDestination, shouldFail: true)
+        await mockXcodeClient.setShouldFailTestForDestination(failingDestination, shouldFail: true)
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When
@@ -205,7 +205,7 @@ struct TestServiceTests {
     @Test("TestService handles missing test configuration")
     func testMissingTestConfiguration() async throws {
         // Given
-        let mockBuildService = MockBuildService()
+        let mockXcodeClient = MockXcodeClient()
         let config = XProjectConfiguration(
             appName: "TestApp",
             workspacePath: nil,
@@ -223,7 +223,7 @@ struct TestServiceTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
             configurationProvider: mockConfigProvider,
-            buildService: mockBuildService
+            xcodeClient: mockXcodeClient
         )
 
         // When/Then
@@ -257,7 +257,7 @@ struct TestServiceTests {
         #expect(!results.hasFailures)
 
         // Given - with failures
-        results.recordBuildFailure(scheme: "Scheme3", error: BuildError.configurationError("Test error"))
+        results.recordBuildFailure(scheme: "Scheme3", error: XcodeClientError.configurationError("Test error"))
 
         // Then
         #expect(results.summary.contains("Tests failed"))

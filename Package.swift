@@ -5,6 +5,10 @@
 //
 import PackageDescription
 
+let settings: [SwiftSetting] = [
+    .enableUpcomingFeature("StrictConcurrency")
+]
+
 let package = Package(
     name: "XProject",
     platforms: [
@@ -25,15 +29,14 @@ let package = Package(
                 "XProject",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
-            ]
+            swiftSettings: settings
         ),
         .target(
             name: "XProject",
             dependencies: [
                 "Yams"
-            ]
+            ],
+            swiftSettings: settings
         ),
         .testTarget(
             name: "XProjectTests",
@@ -46,9 +49,7 @@ let package = Package(
             resources: [
                 .copy("Support")
             ],
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
-            ]
+            swiftSettings: settings
         )
     ]
 )

@@ -1,5 +1,5 @@
 //
-// BuildServiceTests.swift
+// XcodeClientTests.swift
 // XProject
 //
 
@@ -7,10 +7,10 @@ import Foundation
 import Testing
 @testable import XProject
 
-@Suite("BuildService Tests", .tags(.buildService))
-struct BuildServiceTests {
-    @Test("BuildService can be instantiated")
-    func testBuildServiceInstantiation() throws {
+@Suite("XcodeClient Tests", .tags(.xcodeClient))
+struct XcodeClientTests {
+    @Test("XcodeClient can be instantiated")
+    func testXcodeClientInstantiation() throws {
         // Given
         let mockExecutor = MockCommandExecutor()
         let mockConfigProvider = MockConfigurationProvider(
@@ -25,16 +25,16 @@ struct BuildServiceTests {
         )
 
         // When
-        let buildService = BuildService(
+        let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor
         )
 
         // Then - just verify it's created successfully
-        #expect(type(of: buildService) == BuildService.self)
+        #expect(type(of: xcodeClient) == XcodeClient.self)
     }
 
-    @Test("BuildService clean removes build artifacts")
+    @Test("XcodeClient clean removes build artifacts")
     func testClean() async throws {
         // Given
         let mockExecutor = MockCommandExecutor()
@@ -57,13 +57,13 @@ struct BuildServiceTests {
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
-        let buildService = BuildService(
+        let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor
         ) { mockFileManager }
 
         // When
-        try await buildService.clean()
+        try await xcodeClient.clean()
 
         // Then
         #expect(mockExecutor.executedCommands.count == 1)
@@ -88,16 +88,16 @@ struct BuildServiceTests {
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
-        let buildService = BuildService(
+        let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor
         )
 
         // When/Then
         do {
-            try await buildService.archive(environment: "test")
+            try await xcodeClient.archive(environment: "test")
             #expect(Bool(false), "Should have thrown an error")
-        } catch BuildError.environmentNotFound {
+        } catch XcodeClientError.environmentNotFound {
             // Expected error
         } catch {
             #expect(Bool(false), "Wrong error type: \(error)")
@@ -128,7 +128,7 @@ struct BuildServiceTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
 
-        let buildService = BuildService(
+        let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor
         ) { mockFileManager }
@@ -140,7 +140,7 @@ struct BuildServiceTests {
         // This should call createDirectoriesIfNeeded which uses our builder
         // It will fail on Xcode commands but that's ok for this test
         do {
-            try await buildService.buildForTesting(
+            try await xcodeClient.buildForTesting(
                 scheme: "TestScheme",
                 clean: false,
                 buildDestination: "generic/platform=iOS Simulator"

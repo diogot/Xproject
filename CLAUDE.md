@@ -183,7 +183,7 @@ rake swiftgen:strings       # Generate localized strings
 4. **Swift 6.1 compliance**: Project uses Swift 6.1 with strict concurrency checking
 
 ### Security Guidelines
-- Any use of @unchecked Sendable or nonisolated(unsafe) needs my approval
+- Any use of @unchecked Sendable or nonisolated(unsafe) needs user approval
 
 ### Code Quality Guidelines
 - Swift files should have less up to 300 lines

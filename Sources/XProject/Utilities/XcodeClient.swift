@@ -1,13 +1,13 @@
 //
-// BuildService.swift
+// XcodeClient.swift
 // XProject
 //
 
 import Foundation
 
-// MARK: - Build Service Protocol
+// MARK: - Xcode Client Protocol
 
-public protocol BuildServiceProtocol: Sendable {
+public protocol XcodeClientProtocol: Sendable {
     func buildForTesting(scheme: String, clean: Bool, buildDestination: String) async throws
     func runTests(scheme: String, destination: String) async throws
     func archive(environment: String) async throws
@@ -16,9 +16,9 @@ public protocol BuildServiceProtocol: Sendable {
     func clean() async throws
 }
 
-// MARK: - Build Service
+// MARK: - Xcode Client
 
-public final class BuildService: BuildServiceProtocol, Sendable {
+public final class XcodeClient: XcodeClientProtocol, Sendable {
     private let configurationProvider: any ConfigurationProviding
     private let commandExecutor: any CommandExecuting
     private let fileManagerBuilder: @Sendable () -> FileManager
@@ -82,7 +82,7 @@ public final class BuildService: BuildServiceProtocol, Sendable {
         let config = try configurationProvider.configuration
 
         guard let releaseConfig = config.xcode?.release?[environment] else {
-            throw BuildError.environmentNotFound(environment)
+            throw XcodeClientError.environmentNotFound(environment)
         }
 
         try createDirectoriesIfNeeded(config: config)
@@ -110,7 +110,7 @@ public final class BuildService: BuildServiceProtocol, Sendable {
         let config = try configurationProvider.configuration
 
         guard let releaseConfig = config.xcode?.release?[environment] else {
-            throw BuildError.environmentNotFound(environment)
+            throw XcodeClientError.environmentNotFound(environment)
         }
 
         let exportPath = exportPath(filename: releaseConfig.output, config: config)
@@ -134,7 +134,7 @@ public final class BuildService: BuildServiceProtocol, Sendable {
         let config = try configurationProvider.configuration
 
         guard let releaseConfig = config.xcode?.release?[environment] else {
-            throw BuildError.environmentNotFound(environment)
+            throw XcodeClientError.environmentNotFound(environment)
         }
 
         let ipaPath = "\(exportPath(filename: releaseConfig.output, config: config))/\(releaseConfig.scheme).ipa"
@@ -219,7 +219,7 @@ public final class BuildService: BuildServiceProtocol, Sendable {
         }
 
         guard let xcodeApp = matchingXcode else {
-            throw BuildError.xcodeVersionNotFound(targetVersion)
+            throw XcodeClientError.xcodeVersionNotFound(targetVersion)
         }
 
         return "DEVELOPER_DIR=\"\(xcodeApp)/Contents/Developer\""
@@ -335,9 +335,9 @@ public final class BuildService: BuildServiceProtocol, Sendable {
     }
 }
 
-// MARK: - Build Errors
+// MARK: - Xcode Client Errors
 
-public enum BuildError: Error, LocalizedError, Sendable {
+public enum XcodeClientError: Error, LocalizedError, Sendable {
     case environmentNotFound(String)
     case xcodeVersionNotFound(String)
     case configurationError(String)

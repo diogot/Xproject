@@ -38,8 +38,8 @@ extension Tag {
     /// Tests that may be flaky or have timing dependencies
     @Tag static var flaky: Self
 
-    /// Tests that verify build service functionality
-    @Tag static var buildService: Self
+    /// Tests that verify Xcode client functionality
+    @Tag static var xcodeClient: Self
 
     /// Tests that verify test service functionality
     @Tag static var testService: Self
