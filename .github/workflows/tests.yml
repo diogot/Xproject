@@ -23,14 +23,6 @@ jobs:
     - name: Set up Xcode 16.4
       run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
-    - name: Cache Swift Package Manager
-      uses: actions/cache@v4
-      with:
-        path: .build
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-        restore-keys: |
-          ${{ runner.os }}-spm-
-
     - name: Install SwiftLint
       run: |
         if ! command -v swiftlint &> /dev/null; then
