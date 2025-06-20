@@ -1,22 +1,22 @@
-# XProject
+# Xproject
 
 A modern Swift command line tool for Xcode project build automation.
 
 ## Installation & Usage
 
-**No external dependencies required!** XProject runs with just Xcode's built-in Swift tooling.
+**No external dependencies required!** Xproject runs with just Xcode's built-in Swift tooling.
 
 ### Quick Start
 
 1. **Clone or add as git submodule:**
    ```bash
    # Option 1: Clone directly
-   git clone https://github.com/diogot/XProject.git
-   cd XProject
+   git clone https://github.com/diogot/Xproject.git
+   cd Xproject
 
    # Option 2: Add as submodule to your project
-   git submodule add https://github.com/diogot/XProject.git Tools/XProject
-   cd Tools/XProject
+   git submodule add https://github.com/diogot/Xproject.git Tools/Xproject
+   cd Tools/Xproject
    ```
 
 2. **Run directly with Swift:**
@@ -57,7 +57,7 @@ A modern Swift command line tool for Xcode project build automation.
 ### Global Options
 
 All commands support the following global options:
-- `--config <path>` - Specify custom configuration file (default: auto-discover XProject.yml, rake-config.yml)
+- `--config <path>` - Specify custom configuration file (default: auto-discover Xproject.yml, rake-config.yml)
 - `--dry-run` - Show what would be done without executing (available on most commands)
 
 ### Command Examples
@@ -81,19 +81,19 @@ xp config show
 
 ### Integration with Existing Projects
 
-Add XProject as a git submodule and create a simple script:
+Add Xproject as a git submodule and create a simple script:
 
 **setup.sh:**
 ```bash
 #!/bin/bash
-cd Tools/XProject
+cd Tools/Xproject
 swift run xp setup
 ```
 
 **build.sh:**
 ```bash
 #!/bin/bash
-cd Tools/XProject
+cd Tools/Xproject
 swift run xp build --scheme "$1" --clean
 ```
 

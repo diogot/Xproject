@@ -1,0 +1,21 @@
+app_name: Xproject
+project_path:
+  cli: DummyProject.xcodeproj
+
+setup:
+  brew:
+    enabled: true
+    formulas:
+      - swiftgen
+      - swiftlint
+
+xcode:
+  version: "16.4"
+  build_path: "test-build"
+  reports_path: "test-reports"
+  tests:
+    schemes:
+      - scheme: TestScheme
+        build_destination: "generic/platform=iOS Simulator"
+        test_destinations:
+          - "platform=iOS Simulator,OS=18.5,name=iPhone 16 Pro"

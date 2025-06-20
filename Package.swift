@@ -1,7 +1,7 @@
 // swift-tools-version: 6.1
 //
 // Package.swift
-// XProject
+// Xproject
 //
 import PackageDescription
 
@@ -10,13 +10,13 @@ let settings: [SwiftSetting] = [
 ]
 
 let package = Package(
-    name: "XProject",
+    name: "Xproject",
     platforms: [
         .macOS(.v15)
     ],
     products: [
-        .executable(name: "xp", targets: ["XProjectCLI"]),
-        .library(name: "XProject", targets: ["XProject"])
+        .executable(name: "xp", targets: ["XprojectCLI"]),
+        .library(name: "Xproject", targets: ["Xproject"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
@@ -24,24 +24,24 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "XProjectCLI",
+            name: "XprojectCLI",
             dependencies: [
-                "XProject",
+                "Xproject",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
             swiftSettings: settings
         ),
         .target(
-            name: "XProject",
+            name: "Xproject",
             dependencies: [
                 "Yams"
             ],
             swiftSettings: settings
         ),
         .testTarget(
-            name: "XProjectTests",
+            name: "XprojectTests",
             dependencies: [
-                "XProject"
+                "Xproject"
             ],
             exclude: [
                 "TestHelperGuide.md"

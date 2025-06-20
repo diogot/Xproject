@@ -1,4 +1,4 @@
-# SwiftLint Configuration for XProject
+# SwiftLint Configuration for Xproject
 # Swift CLI tool with Swift Testing framework
 
 # Included and excluded paths
@@ -150,7 +150,7 @@ file_header:
   required_pattern: |
                     \/\/
                     \/\/ .*\.swift
-                    \/\/ XProject
+                    \/\/ Xproject
                     \/\/
   forbidden_pattern: |
                      \/\/

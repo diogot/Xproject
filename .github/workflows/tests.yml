@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Clear Swift Package Manager cache'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,12 +30,14 @@ jobs:
       run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
     - name: Cache Swift Package Manager
+      if: ${{ !inputs.clear_cache }}
       uses: actions/cache@v4
       with:
         path: .build
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+        key: spm-${{ runner.os }}-${{ hashFiles('Package.swift', 'Package.resolved') }}-v2
         restore-keys: |
-          ${{ runner.os }}-spm-
+          spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}-v2
+          spm-${{ runner.os }}-v2
 
     - name: Install SwiftLint
       run: |
