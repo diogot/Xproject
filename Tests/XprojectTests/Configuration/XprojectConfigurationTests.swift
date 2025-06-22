@@ -134,4 +134,237 @@ struct XprojectConfigurationTests {
             }
         }
     }
+
+    @Test("Configuration validation includes example suggestions", .tags(.configuration, .errorHandling, .unit))
+    func configurationValidationIncludesExampleSuggestions() throws {
+        // Test empty app name includes example
+        let invalidConfig1 = XprojectConfiguration(
+            appName: "",
+            workspacePath: nil,
+            projectPaths: ["ios": "TestApp.xcodeproj"],
+            setup: nil,
+            xcode: nil,
+            danger: nil
+        )
+
+        #expect {
+            try invalidConfig1.validate()
+        } throws: { error in
+            guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                Issue.record("Expected ValidationError, got \(error)")
+                return false
+            }
+            let message = validationError.message
+            return message.contains("✅ Example:") &&
+                   message.contains("app_name: MyApp")
+        }
+
+        // Test empty project paths includes example
+        let invalidConfig2 = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: [:],
+            setup: nil,
+            xcode: nil,
+            danger: nil
+        )
+
+        #expect {
+            try invalidConfig2.validate()
+        } throws: { error in
+            guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                Issue.record("Expected ValidationError, got \(error)")
+                return false
+            }
+            let message = validationError.message
+            return message.contains("✅ Example:") &&
+                   message.contains("project_path:") &&
+                   message.contains("ios: MyApp.xcodeproj")
+        }
+    }
+
+    @Test("Configuration validation includes suggestions for missing project paths", .tags(.configuration, .errorHandling, .fileSystem))
+    func configurationValidationIncludesProjectPathSuggestions() throws {
+        try TestFileHelper.withTemporaryDirectory { tempDir in
+            // Create some .xcodeproj files in the temp directory
+            _ = try TestFileHelper.createDummyProject(in: tempDir, name: "SuggestedApp")
+            _ = try TestFileHelper.createDummyProject(in: tempDir, name: "AnotherApp")
+
+            let invalidConfig = XprojectConfiguration(
+                appName: "TestApp",
+                workspacePath: nil,
+                projectPaths: ["ios": "NonExistentApp.xcodeproj"],
+                setup: nil,
+                xcode: nil,
+                danger: nil
+            )
+
+            #expect {
+                try invalidConfig.validate(baseDirectory: tempDir)
+            } throws: { error in
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                    Issue.record("Expected ValidationError, got \(error)")
+                    return false
+                }
+                let message = validationError.message
+                return message.contains("💡 Did you mean:") &&
+                       message.contains("SuggestedApp.xcodeproj") &&
+                       message.contains("📁 Searched in:")
+            }
+        }
+    }
+
+    @Test("Configuration validation includes suggestions for missing workspace paths", .tags(.configuration, .errorHandling, .fileSystem))
+    func configurationValidationIncludesWorkspaceSuggestions() throws {
+        try TestFileHelper.withTemporaryDirectory { tempDir in
+            // Create some .xcworkspace files in the temp directory
+            let workspaceURL1 = tempDir.appendingPathComponent("SuggestedWorkspace.xcworkspace")
+            let workspaceURL2 = tempDir.appendingPathComponent("AnotherWorkspace.xcworkspace")
+            try "dummy workspace".write(to: workspaceURL1, atomically: true, encoding: .utf8)
+            try "dummy workspace".write(to: workspaceURL2, atomically: true, encoding: .utf8)
+
+            // Also create a valid project for the configuration
+            _ = try TestFileHelper.createDummyProject(in: tempDir, name: "TestApp")
+
+            let invalidConfig = XprojectConfiguration(
+                appName: "TestApp",
+                workspacePath: "NonExistentWorkspace.xcworkspace",
+                projectPaths: ["ios": "TestApp.xcodeproj"],
+                setup: nil,
+                xcode: nil,
+                danger: nil
+            )
+
+            #expect {
+                try invalidConfig.validate(baseDirectory: tempDir)
+            } throws: { error in
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                    Issue.record("Expected ValidationError, got \(error)")
+                    return false
+                }
+                let message = validationError.message
+                return message.contains("💡 Did you mean:") &&
+                       message.contains("SuggestedWorkspace.xcworkspace") &&
+                       message.contains("📁 Searched in:")
+            }
+        }
+    }
+
+    @Test("Configuration validation includes examples for empty Xcode test schemes", .tags(.configuration, .errorHandling, .unit))
+    func configurationValidationIncludesEmptyXcodeTestSchemesExamples() throws {
+        try ConfigurationTestHelper.withValidationTestFiles { projectPath in
+            let xcodeConfig = XcodeConfiguration(
+                version: "16.4",
+                buildPath: nil,
+                reportsPath: nil,
+                tests: TestsConfiguration(schemes: []),
+                release: nil
+            )
+
+            let invalidConfig = XprojectConfiguration(
+                appName: "TestApp",
+                workspacePath: nil,
+                projectPaths: ["ios": projectPath],
+                setup: nil,
+                xcode: xcodeConfig,
+                danger: nil
+            )
+
+            #expect {
+                try invalidConfig.validate()
+            } throws: { error in
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                    Issue.record("Expected ValidationError, got \(error)")
+                    return false
+                }
+                let message = validationError.message
+                return message.contains("✅ Example:") &&
+                       message.contains("schemes:") &&
+                       message.contains("- scheme: MyApp") &&
+                       message.contains("test_destinations:")
+            }
+        }
+    }
+
+    @Test("Configuration validation includes examples for empty scheme names", .tags(.configuration, .errorHandling, .unit))
+    func configurationValidationIncludesEmptySchemeNameExamples() throws {
+        try ConfigurationTestHelper.withValidationTestFiles { projectPath in
+            let invalidScheme = TestSchemeConfiguration(
+                scheme: "",
+                buildDestination: "generic/platform=iOS Simulator",
+                testDestinations: ["platform=iOS Simulator,name=iPhone 16"]
+            )
+
+            let xcodeConfig = XcodeConfiguration(
+                version: "16.4",
+                buildPath: nil,
+                reportsPath: nil,
+                tests: TestsConfiguration(schemes: [invalidScheme]),
+                release: nil
+            )
+
+            let invalidConfig = XprojectConfiguration(
+                appName: "TestApp",
+                workspacePath: nil,
+                projectPaths: ["ios": projectPath],
+                setup: nil,
+                xcode: xcodeConfig,
+                danger: nil
+            )
+
+            #expect {
+                try invalidConfig.validate()
+            } throws: { error in
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                    Issue.record("Expected ValidationError, got \(error)")
+                    return false
+                }
+                let message = validationError.message
+                return message.contains("✅ Example:") &&
+                       message.contains("- scheme: MyApp")
+            }
+        }
+    }
+
+    @Test("Configuration validation includes examples for empty test destinations", .tags(.configuration, .errorHandling, .unit))
+    func configurationValidationIncludesEmptyTestDestinationsExamples() throws {
+        try ConfigurationTestHelper.withValidationTestFiles { projectPath in
+            let schemeWithoutDestinations = TestSchemeConfiguration(
+                scheme: "TestApp",
+                buildDestination: "generic/platform=iOS Simulator",
+                testDestinations: []
+            )
+
+            let xcodeConfig = XcodeConfiguration(
+                version: "16.4",
+                buildPath: nil,
+                reportsPath: nil,
+                tests: TestsConfiguration(schemes: [schemeWithoutDestinations]),
+                release: nil
+            )
+
+            let invalidConfig = XprojectConfiguration(
+                appName: "TestApp",
+                workspacePath: nil,
+                projectPaths: ["ios": projectPath],
+                setup: nil,
+                xcode: xcodeConfig,
+                danger: nil
+            )
+
+            #expect {
+                try invalidConfig.validate()
+            } throws: { error in
+                guard let validationError = error as? XprojectConfiguration.ValidationError else {
+                    Issue.record("Expected ValidationError, got \(error)")
+                    return false
+                }
+                let message = validationError.message
+                return message.contains("✅ Example:") &&
+                       message.contains("- scheme: TestApp") &&
+                       message.contains("test_destinations:") &&
+                       message.contains("platform=iOS Simulator,name=iPhone 16")
+            }
+        }
+    }
 }
