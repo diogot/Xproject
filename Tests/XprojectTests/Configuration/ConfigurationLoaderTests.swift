@@ -308,7 +308,6 @@ struct ConfigurationLoaderTests {
     func configurationLoaderFileReadError() throws {
         let loader = ConfigurationLoader()
         let nonExistentURL = URL(fileURLWithPath: "/nonexistent/path/config.yml")
-        
         #expect {
             try loader.loadConfiguration(from: nonExistentURL)
         } throws: { error in
@@ -324,7 +323,7 @@ struct ConfigurationLoaderTests {
     func configurationLoaderEmptyFileError() throws {
         let loader = ConfigurationLoader()
         let emptyContent = ""
-        
+
         _ = try TestFileHelper.withTemporaryFile(content: emptyContent, fileName: "empty-config") { tempURL in
             #expect {
                 try loader.loadConfiguration(from: tempURL)
@@ -347,7 +346,7 @@ struct ConfigurationLoaderTests {
         project_path:
           ios: Test.xcodeproj
         """
-        
+
         _ = try TestFileHelper.withTemporaryFile(content: invalidYamlSyntax, fileName: "invalid-yaml") { tempURL in
             #expect {
                 try loader.loadConfiguration(from: tempURL)
@@ -366,15 +365,15 @@ struct ConfigurationLoaderTests {
     @Test("Configuration loader handles invalid encoding error", .tags(.configuration, .errorHandling))
     func configurationLoaderInvalidEncodingError() throws {
         let loader = ConfigurationLoader()
-        
+
         // Create a temporary file with invalid UTF-8 encoding
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("invalid-encoding-\(UUID().uuidString).yml")
         defer { try? FileManager.default.removeItem(at: tempURL) }
-        
+
         // Write invalid UTF-8 bytes
         let invalidUTF8Data = Data([0xFF, 0xFE, 0x00, 0x00]) // Invalid UTF-8 sequence
         try invalidUTF8Data.write(to: tempURL)
-        
+
         #expect {
             try loader.loadConfiguration(from: tempURL)
         } throws: { error in

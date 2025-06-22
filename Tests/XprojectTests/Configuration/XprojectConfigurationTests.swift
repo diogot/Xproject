@@ -367,5 +367,4 @@ struct XprojectConfigurationTests {
             }
         }
     }
-
 }
