@@ -72,25 +72,16 @@ struct ConfigCommand: AsyncParsableCommand {
         do {
             let config = try service.configuration
             try config.validate()
+
+            // Show the configuration file being used
+            if let configPath = try? service.configurationFilePath {
+                print("📄 Configuration file: \(configPath)")
+            }
+
             print("✅ Configuration is valid!")
 
             // Additional checks
             var warnings: [String] = []
-
-            // Check if workspace/projects exist
-            if let workspacePath = config.workspacePath {
-                let url = service.resolvePath(workspacePath)
-                if !FileManager.default.fileExists(atPath: url.path) {
-                    warnings.append("Workspace file not found: \(workspacePath)")
-                }
-            }
-
-            for (target, path) in config.projectPaths {
-                let url = service.resolvePath(path)
-                if !FileManager.default.fileExists(atPath: url.path) {
-                    warnings.append("Project file not found for \(target): \(path)")
-                }
-            }
 
             // Check for missing optional configurations
             warnings.append(contentsOf: validateXcodeConfiguration(config: config))
@@ -101,11 +92,42 @@ struct ConfigCommand: AsyncParsableCommand {
                     print("   \(warning)")
                 }
             }
+        } catch let error as ConfigurationError {
+            print("❌ Configuration validation failed:")
+            print()
+            print(formatConfigurationError(error))
+            print()
+            throw ExitCode.failure
         } catch {
             print("❌ Configuration validation failed:")
             print("   \(error.localizedDescription)")
             throw ExitCode.failure
         }
+    }
+
+    /// Formats a configuration error for display in the CLI with proper indentation and visual formatting.
+    /// - Parameter error: The configuration error to format
+    /// - Returns: A formatted string suitable for CLI output
+    private func formatConfigurationError(_ error: ConfigurationError) -> String {
+        let errorMessage = error.localizedDescription
+
+        // Add some visual separation and formatting
+        let lines = errorMessage.components(separatedBy: .newlines)
+        var formattedLines: [String] = []
+
+        for line in lines {
+            if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                formattedLines.append("")
+            } else if line.hasPrefix("   ") {
+                // Already indented - keep it
+                formattedLines.append(line)
+            } else {
+                // Add indentation for main error content
+                formattedLines.append("   \(line)")
+            }
+        }
+
+        return formattedLines.joined(separator: "\n")
     }
 
     private func validateXcodeConfiguration(config: XprojectConfiguration) -> [String] {

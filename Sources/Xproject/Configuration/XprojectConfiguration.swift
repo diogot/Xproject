@@ -109,15 +109,39 @@ public extension XprojectConfiguration {
     }
 
     func validate(baseDirectory: URL) throws {
+        try validateBasicFields()
+        try validateProjectPaths(baseDirectory: baseDirectory)
+        try validateWorkspacePath(baseDirectory: baseDirectory)
+
+        // Validate Xcode configuration if present
+        if let xcode = xcode {
+            try validateXcodeConfiguration(xcode)
+        }
+    }
+
+    private func validateBasicFields() throws {
         if appName.isEmpty {
-            throw ValidationError(message: "app_name cannot be empty")
+            throw ValidationError(message: """
+                app_name cannot be empty.
+
+                ✅ Example:
+                app_name: MyApp
+                """)
         }
 
         if projectPaths.isEmpty {
-            throw ValidationError(message: "at least one project_path must be specified")
-        }
+            throw ValidationError(message: """
+                At least one project_path must be specified.
 
-        // Validate project paths exist
+                ✅ Example:
+                project_path:
+                  ios: MyApp.xcodeproj
+                  tvos: MyAppTV/MyAppTV.xcodeproj
+                """)
+        }
+    }
+
+    private func validateProjectPaths(baseDirectory: URL) throws {
         for (target, path) in projectPaths {
             let url: URL
             if path.hasPrefix("/") {
@@ -127,23 +151,124 @@ public extension XprojectConfiguration {
             }
 
             if !FileManager.default.fileExists(atPath: url.path) {
-                throw ValidationError(message: "project path for '\(target)' not found: \(path)")
+                // Check for common mistakes
+                let suggestions = generatePathSuggestions(for: path, in: baseDirectory, target: target)
+                let suggestionText = suggestions.isEmpty ? "" :
+                    "\n\n💡 Did you mean:\n" + suggestions.map { "   - \($0)" }.joined(separator: "\n")
+
+                throw ValidationError(message: """
+                    Project path for '\(target)' not found: \(path)
+
+                    📁 Searched in: \(url.path)
+
+                    ✅ Make sure the path is correct and the file exists.\(suggestionText)
+                    """)
             }
         }
+    }
 
-        // Validate workspace path if specified
-        if let workspacePath = workspacePath {
-            let url: URL
-            if workspacePath.hasPrefix("/") {
-                url = URL(fileURLWithPath: workspacePath)
-            } else {
-                url = baseDirectory.appendingPathComponent(workspacePath)
+    private func validateWorkspacePath(baseDirectory: URL) throws {
+        guard let workspacePath = workspacePath else {
+            return
+        }
+
+        let url: URL
+        if workspacePath.hasPrefix("/") {
+            url = URL(fileURLWithPath: workspacePath)
+        } else {
+            url = baseDirectory.appendingPathComponent(workspacePath)
+        }
+
+        if !FileManager.default.fileExists(atPath: url.path) {
+            // Check for common mistakes
+            let suggestions = generateWorkspaceSuggestions(for: workspacePath, in: baseDirectory)
+            let suggestionText = suggestions.isEmpty ? "" :
+                "\n\n💡 Did you mean:\n" + suggestions.map { "   - \($0)" }.joined(separator: "\n")
+
+            throw ValidationError(message: """
+                Workspace not found: \(workspacePath)
+
+                📁 Searched in: \(url.path)
+
+                ✅ Make sure the path is correct and the file exists.\(suggestionText)
+                """)
+        }
+    }
+
+    private func validateXcodeConfiguration(_ xcode: XcodeConfiguration) throws {
+        // Validate test configuration
+        if let tests = xcode.tests {
+            if tests.schemes.isEmpty {
+                throw ValidationError(message: """
+                    Test configuration must have at least one scheme.
+
+                    ✅ Example:
+                    xcode:
+                      tests:
+                        schemes:
+                          - scheme: MyApp
+                            test_destinations:
+                              - platform=iOS Simulator,name=iPhone 16
+                    """)
             }
 
-            if !FileManager.default.fileExists(atPath: url.path) {
-                throw ValidationError(message: "workspace not found: \(workspacePath)")
+            for scheme in tests.schemes {
+                if scheme.scheme.isEmpty {
+                    throw ValidationError(message: """
+                        Scheme name cannot be empty.
+
+                        ✅ Example:
+                        schemes:
+                          - scheme: MyApp
+                            test_destinations:
+                              - platform=iOS Simulator,name=iPhone 16
+                        """)
+                }
+
+                if scheme.testDestinations.isEmpty {
+                    throw ValidationError(message: """
+                        Test scheme '\(scheme.scheme)' must have at least one test destination.
+
+                        ✅ Example:
+                        - scheme: \(scheme.scheme)
+                          test_destinations:
+                            - platform=iOS Simulator,name=iPhone 16
+                            - platform=iOS Simulator,name=iPad Pro (13-inch) (M4)
+                        """)
+                }
             }
         }
+    }
+
+    private func generatePathSuggestions(for path: String, in baseDirectory: URL, target: String) -> [String] {
+        let extensions = ["xcodeproj"]
+        let suggestions = scanDirectory(for: extensions, in: baseDirectory)
+        return Array(suggestions.prefix(3)) // Limit to 3 suggestions
+    }
+
+    private func generateWorkspaceSuggestions(for path: String, in baseDirectory: URL) -> [String] {
+        let extensions = ["xcworkspace"]
+        let suggestions = scanDirectory(for: extensions, in: baseDirectory)
+        return Array(suggestions.prefix(3)) // Limit to 3 suggestions
+    }
+
+    private func scanDirectory(for extensions: [String], in baseDirectory: URL) -> [String] {
+        var results: [String] = []
+        let fileManager = FileManager.default
+
+        do {
+            let contents = try fileManager.contentsOfDirectory(at: baseDirectory, includingPropertiesForKeys: nil)
+            for ext in extensions {
+                let matchingFiles = contents.filter { $0.pathExtension == ext }
+                for file in matchingFiles {
+                    results.append(file.lastPathComponent)
+                }
+            }
+        } catch {
+            // Ignore errors when looking for suggestions
+        }
+
+        return results
     }
 }
 
