@@ -21,12 +21,40 @@ public struct YAMLConfigurationFormat: ConfigurationFormat {
     public init() {}
 
     public func load(from url: URL) throws -> XprojectConfiguration {
-        let data = try Data(contentsOf: url)
-        let yamlString = String(data: data, encoding: .utf8) ?? ""
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            throw ConfigurationError.fileReadError(
+                file: url.path,
+                underlyingError: error
+            )
+        }
+
+        guard let yamlString = String(data: data, encoding: .utf8) else {
+            throw ConfigurationError.invalidEncoding(
+                file: url.path,
+                encoding: "UTF-8"
+            )
+        }
+
+        if yamlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw ConfigurationError.emptyFile(file: url.path)
+        }
 
         do {
             let decoder = YAMLDecoder()
             return try decoder.decode(XprojectConfiguration.self, from: yamlString)
+        } catch let yamlError as YamlError {
+            throw ConfigurationError.yamlParsingError(
+                file: url.path,
+                yamlError: yamlError
+            )
+        } catch let decodingError as DecodingError {
+            throw ConfigurationError.structureError(
+                file: url.path,
+                decodingError: decodingError
+            )
         } catch {
             throw ConfigurationError.invalidFormat(
                 format: "YAML",
@@ -207,6 +235,11 @@ public final class ConfigurationLoader: Sendable {
 public enum ConfigurationError: Error, LocalizedError, Sendable {
     case noConfigurationFound(searchPaths: [String])
     case unsupportedFormat(extension: String, supportedExtensions: [String])
+    case fileReadError(file: String, underlyingError: Error)
+    case invalidEncoding(file: String, encoding: String)
+    case emptyFile(file: String)
+    case yamlParsingError(file: String, yamlError: YamlError)
+    case structureError(file: String, decodingError: DecodingError)
     case invalidFormat(format: String, file: String, underlyingError: Error)
     case validation(file: String, error: XprojectConfiguration.ValidationError)
 
@@ -216,10 +249,110 @@ public enum ConfigurationError: Error, LocalizedError, Sendable {
             return "No configuration file found. Searched paths: \(paths.joined(separator: ", "))"
         case let .unsupportedFormat(ext, supported):
             return "Unsupported configuration format '.\(ext)'. Supported formats: \(supported.joined(separator: ", "))"
+        case let .fileReadError(file, error):
+            return "Failed to read configuration file '\(file)': \(error.localizedDescription)"
+        case let .invalidEncoding(file, encoding):
+            return "Configuration file '\(file)' is not valid \(encoding). Please ensure the file is saved with \(encoding) encoding."
+        case let .emptyFile(file):
+            return "Configuration file '\(file)' is empty. Please add your configuration settings."
+        case let .yamlParsingError(file, yamlError):
+            return formatYamlError(file: file, yamlError: yamlError)
+        case let .structureError(file, decodingError):
+            return formatDecodingError(file: file, decodingError: decodingError)
         case let .invalidFormat(format, file, error):
             return "Invalid \(format) format in \(file): \(error.localizedDescription)"
         case let .validation(file, error):
             return "Configuration validation failed in \(file): \(error.localizedDescription)"
+        }
+    }
+
+    private func formatYamlError(file: String, yamlError: YamlError) -> String {
+        switch yamlError {
+        case let .scanner(_, problem, mark, _):
+            return "YAML syntax error in '\(file)' at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        case let .parser(_, problem, mark, _):
+            return "YAML parsing error in '\(file)' at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        case let .composer(_, problem, mark, _):
+            return "YAML composition error in '\(file)' at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        default:
+            return "YAML error in '\(file)': \(yamlError.localizedDescription)"
+        }
+    }
+
+    private func formatDecodingError(file: String, decodingError: DecodingError) -> String {
+        switch decodingError {
+        case let .typeMismatch(type, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return """
+                Type mismatch in '\(file)' at \(pathDescription): Expected \(type), but found different type. \
+                \(context.debugDescription)
+                """
+
+        case let .valueNotFound(type, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Missing required value in '\(file)' at \(pathDescription): Expected \(type). \(context.debugDescription)"
+
+        case let .keyNotFound(key, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return """
+                Missing required field in '\(file)' at \(pathDescription): '\(key.stringValue)' is required.
+
+                ✅ Add the missing field to your configuration:
+                \(generateFieldExample(for: key.stringValue, at: path))
+                """
+
+        case let .dataCorrupted(context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Invalid data in '\(file)' at \(pathDescription): \(context.debugDescription)"
+
+        @unknown default:
+            return "Configuration structure error in '\(file)': \(decodingError.localizedDescription)"
+        }
+    }
+
+    private func generateFieldExample(for fieldName: String, at path: String) -> String {
+        switch (path, fieldName) {
+        case ("xcode", "version"):
+            return """
+                xcode:
+                  version: "16.4"
+                  # ... rest of your xcode configuration
+                """
+        case ("", "app_name"):
+            return """
+                app_name: YourAppName
+                """
+        case ("", "project_path"):
+            return """
+                project_path:
+                  ios: YourProject.xcodeproj
+                """
+        case ("xcode.tests.schemes", "scheme"):
+            return """
+                schemes:
+                  - scheme: YourScheme
+                    build_destination: "generic/platform=iOS Simulator"
+                    test_destinations:
+                      - platform=iOS Simulator,name=iPhone 16
+                """
+        case (_, "build_destination"):
+            return """
+                build_destination: "generic/platform=iOS Simulator"
+                """
+        case (_, "test_destinations"):
+            return """
+                test_destinations:
+                  - platform=iOS Simulator,name=iPhone 16
+                  - platform=iOS Simulator,name=iPad Pro (13-inch) (M4)
+                """
+        default:
+            return """
+                \(fieldName): # Add appropriate value here
+                """
         }
     }
 }

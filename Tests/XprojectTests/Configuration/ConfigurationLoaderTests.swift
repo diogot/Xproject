@@ -102,8 +102,8 @@ struct ConfigurationLoaderTests {
             #expect {
                 try loader.loadConfiguration(from: tempURL)
             } throws: { error in
-                guard case ConfigurationError.invalidFormat = error else {
-                    Issue.record("Expected ConfigurationError.invalidFormat, got \(error)")
+                guard case ConfigurationError.structureError = error else {
+                    Issue.record("Expected ConfigurationError.structureError, got \(error)")
                     return false
                 }
                 return true

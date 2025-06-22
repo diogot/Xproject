@@ -55,7 +55,7 @@ struct XprojectConfigurationTests {
             #expect {
                 try invalidConfig2.validate()
             } throws: { error in
-                error.localizedDescription.contains("at least one project_path must be specified")
+                error.localizedDescription.contains("At least one project_path must be specified")
             }
         }
 
@@ -130,7 +130,7 @@ struct XprojectConfigurationTests {
                     Issue.record("Expected ValidationError, got \(error)")
                     return false
                 }
-                return validationError.message.contains("at least one project_path must be specified")
+                return validationError.message.contains("At least one project_path must be specified")
             }
         }
     }
