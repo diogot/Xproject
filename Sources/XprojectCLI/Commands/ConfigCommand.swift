@@ -105,6 +105,9 @@ struct ConfigCommand: AsyncParsableCommand {
         }
     }
 
+    /// Formats a configuration error for display in the CLI with proper indentation and visual formatting.
+    /// - Parameter error: The configuration error to format
+    /// - Returns: A formatted string suitable for CLI output
     private func formatConfigurationError(_ error: ConfigurationError) -> String {
         let errorMessage = error.localizedDescription
 

@@ -303,4 +303,86 @@ struct ConfigurationLoaderTests {
             }
         }
     }
+
+    @Test("Configuration loader handles file read errors", .tags(.configuration, .errorHandling))
+    func configurationLoaderFileReadError() throws {
+        let loader = ConfigurationLoader()
+        let nonExistentURL = URL(fileURLWithPath: "/nonexistent/path/config.yml")
+        
+        #expect {
+            try loader.loadConfiguration(from: nonExistentURL)
+        } throws: { error in
+            guard case ConfigurationError.fileReadError(let file, _) = error else {
+                Issue.record("Expected ConfigurationError.fileReadError, got \(error)")
+                return false
+            }
+            return file == nonExistentURL.path
+        }
+    }
+
+    @Test("Configuration loader handles empty file error", .tags(.configuration, .errorHandling))
+    func configurationLoaderEmptyFileError() throws {
+        let loader = ConfigurationLoader()
+        let emptyContent = ""
+        
+        _ = try TestFileHelper.withTemporaryFile(content: emptyContent, fileName: "empty-config") { tempURL in
+            #expect {
+                try loader.loadConfiguration(from: tempURL)
+            } throws: { error in
+                guard case ConfigurationError.emptyFile(let file) = error else {
+                    Issue.record("Expected ConfigurationError.emptyFile, got \(error)")
+                    return false
+                }
+                return file == tempURL.path
+            }
+        }
+    }
+
+    @Test("Configuration loader handles YAML parsing errors", .tags(.configuration, .errorHandling))
+    func configurationLoaderYamlParsingError() throws {
+        let loader = ConfigurationLoader()
+        let invalidYamlSyntax = """
+        app_name: TestApp
+        invalid_yaml: [unclosed bracket
+        project_path:
+          ios: Test.xcodeproj
+        """
+        
+        _ = try TestFileHelper.withTemporaryFile(content: invalidYamlSyntax, fileName: "invalid-yaml") { tempURL in
+            #expect {
+                try loader.loadConfiguration(from: tempURL)
+            } throws: { error in
+                // YAML syntax errors are caught as structureError with dataCorrupted
+                guard case ConfigurationError.structureError(let file, let decodingError) = error,
+                      case .dataCorrupted = decodingError else {
+                    Issue.record("Expected ConfigurationError.structureError with dataCorrupted, got \(error)")
+                    return false
+                }
+                return file == tempURL.path
+            }
+        }
+    }
+
+    @Test("Configuration loader handles invalid encoding error", .tags(.configuration, .errorHandling))
+    func configurationLoaderInvalidEncodingError() throws {
+        let loader = ConfigurationLoader()
+        
+        // Create a temporary file with invalid UTF-8 encoding
+        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("invalid-encoding-\(UUID().uuidString).yml")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+        
+        // Write invalid UTF-8 bytes
+        let invalidUTF8Data = Data([0xFF, 0xFE, 0x00, 0x00]) // Invalid UTF-8 sequence
+        try invalidUTF8Data.write(to: tempURL)
+        
+        #expect {
+            try loader.loadConfiguration(from: tempURL)
+        } throws: { error in
+            guard case ConfigurationError.invalidEncoding(let file, let encoding) = error else {
+                Issue.record("Expected ConfigurationError.invalidEncoding, got \(error)")
+                return false
+            }
+            return file == tempURL.path && encoding == "UTF-8"
+        }
+    }
 }

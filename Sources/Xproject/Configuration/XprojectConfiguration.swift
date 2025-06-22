@@ -241,48 +241,34 @@ public extension XprojectConfiguration {
     }
 
     private func generatePathSuggestions(for path: String, in baseDirectory: URL, target: String) -> [String] {
-        var suggestions: [String] = []
-        let fileManager = FileManager.default
-
-        // Look for .xcodeproj files in the base directory
-        do {
-            let contents = try fileManager.contentsOfDirectory(at: baseDirectory, includingPropertiesForKeys: nil)
-            let xcodeprojs = contents.filter { $0.pathExtension == "xcodeproj" }
-
-            for project in xcodeprojs {
-                let relativePath = project.lastPathComponent
-                suggestions.append(relativePath)
-            }
-            // Look for .xcworkspace files too
-            let workspaces = contents.filter { $0.pathExtension == "xcworkspace" }
-            for workspace in workspaces {
-                let relativePath = workspace.lastPathComponent
-                suggestions.append(relativePath)
-            }
-        } catch {
-            // Ignore errors when looking for suggestions
-        }
-
+        let extensions = ["xcodeproj"]
+        let suggestions = scanDirectory(for: extensions, in: baseDirectory)
         return Array(suggestions.prefix(3)) // Limit to 3 suggestions
     }
 
     private func generateWorkspaceSuggestions(for path: String, in baseDirectory: URL) -> [String] {
-        var suggestions: [String] = []
+        let extensions = ["xcworkspace"]
+        let suggestions = scanDirectory(for: extensions, in: baseDirectory)
+        return Array(suggestions.prefix(3)) // Limit to 3 suggestions
+    }
+
+    private func scanDirectory(for extensions: [String], in baseDirectory: URL) -> [String] {
+        var results: [String] = []
         let fileManager = FileManager.default
 
         do {
             let contents = try fileManager.contentsOfDirectory(at: baseDirectory, includingPropertiesForKeys: nil)
-            let workspaces = contents.filter { $0.pathExtension == "xcworkspace" }
-
-            for workspace in workspaces {
-                let relativePath = workspace.lastPathComponent
-                suggestions.append(relativePath)
+            for ext in extensions {
+                let matchingFiles = contents.filter { $0.pathExtension == ext }
+                for file in matchingFiles {
+                    results.append(file.lastPathComponent)
+                }
             }
         } catch {
             // Ignore errors when looking for suggestions
         }
 
-        return Array(suggestions.prefix(3)) // Limit to 3 suggestions
+        return results
     }
 }
 

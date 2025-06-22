@@ -324,17 +324,17 @@ public enum ConfigurationError: Error, LocalizedError, Sendable {
                 """
         case ("", "app_name"):
             return """
-                app_name: YourAppName
+                app_name: MyApp
                 """
         case ("", "project_path"):
             return """
                 project_path:
-                  ios: YourProject.xcodeproj
+                  ios: MyApp.xcodeproj
                 """
         case ("xcode.tests.schemes", "scheme"):
             return """
                 schemes:
-                  - scheme: YourScheme
+                  - scheme: MyApp
                     build_destination: "generic/platform=iOS Simulator"
                     test_destinations:
                       - platform=iOS Simulator,name=iPhone 16
