@@ -25,9 +25,10 @@ public final class SetupService: Sendable {
     public func runSetup() throws {
         let config = try configService.configuration
 
-        // Only run brew setup since other dependency managers are deprecated
         if let setup = config.setup, let brew = setup.brew, brew.enabled {
             try setupBrew(brew)
+        } else {
+            print("ℹ️  No setup steps required")
         }
     }
 
