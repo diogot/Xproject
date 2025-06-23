@@ -141,6 +141,65 @@ struct SetupServiceTests {
         // In dry run mode, no actual commands should be executed
         // (This test verifies the dry run integration works end-to-end)
     }
+
+    @Test("Setup service runs by default when enabled is not specified", .tags(.integration, .commandExecution))
+    func setupServiceRunsByDefaultWhenEnabledNotSpecified() throws {
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+
+        // Create temporary config with brew setup but no enabled field specified
+        try ConfigurationTestHelper.withTemporaryConfig(
+            appName: "TestApp",
+            projectName: "TestProject",
+            additionalYaml: """
+            setup:
+              brew:
+                formulas:
+                  - test-formula
+            """
+        ) { _, configService in
+            let service = SetupService(configService: configService, executor: mockExecutor)
+
+            // Run setup - should succeed and run brew commands
+            #expect(throws: Never.self) {
+                try service.runSetup()
+            }
+
+            // Verify brew commands were executed
+            #expect(mockExecutor.wasCommandExecuted("which brew"))
+            #expect(mockExecutor.wasCommandExecuted("brew update"))
+            #expect(mockExecutor.executedCommands.contains { $0.command.contains("test-formula") })
+        }
+    }
+
+    @Test("Setup service skips when explicitly disabled", .tags(.integration, .commandExecution))
+    func setupServiceSkipsWhenExplicitlyDisabled() throws {
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+
+        // Create temporary config with brew setup explicitly disabled
+        try ConfigurationTestHelper.withTemporaryConfig(
+            appName: "TestApp",
+            projectName: "TestProject",
+            additionalYaml: """
+            setup:
+              brew:
+                enabled: false
+                formulas:
+                  - test-formula
+            """
+        ) { _, configService in
+            let service = SetupService(configService: configService, executor: mockExecutor)
+
+            // Run setup - should complete but skip brew commands
+            #expect(throws: Never.self) {
+                try service.runSetup()
+            }
+
+            // Verify no brew commands were executed
+            #expect(!mockExecutor.wasCommandExecuted("which brew"))
+            #expect(!mockExecutor.wasCommandExecuted("brew update"))
+            #expect(!mockExecutor.executedCommands.contains { $0.command.contains("test-formula") })
+        }
+    }
 }
 
 // Helper error for testing

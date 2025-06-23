@@ -42,7 +42,7 @@ public class XprojectConfigurationBuilder {
         return self
     }
 
-    public func withBrewSetup(enabled: Bool = true, formulas: [String] = []) -> XprojectConfigurationBuilder {
+    public func withBrewSetup(enabled: Bool? = nil, formulas: [String] = []) -> XprojectConfigurationBuilder {
         self.setup = SetupConfiguration(brew: BrewConfiguration(enabled: enabled, formulas: formulas))
         return self
     }

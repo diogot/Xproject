@@ -58,8 +58,9 @@ struct ConfigCommand: AsyncParsableCommand {
         if let setup = config.setup {
             print("⚙️ Setup:")
             if let brew = setup.brew {
-                print("   Brew: \(brew.enabled ? "✅" : "❌")")
-                if brew.enabled, let formulas = brew.formulas {
+                let isEnabled = brew.enabled ?? true
+                print("   Brew: \(isEnabled ? "✅" : "❌")")
+                if isEnabled, let formulas = brew.formulas {
                     print("     Formulas: \(formulas.joined(separator: ", "))")
                 }
             }

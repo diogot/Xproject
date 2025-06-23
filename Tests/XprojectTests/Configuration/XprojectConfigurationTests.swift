@@ -87,6 +87,54 @@ struct XprojectConfigurationTests {
         #expect(config.projectPath(for: "tvos") == nil)
     }
 
+    @Test("Configuration setup.brew enabled defaults to true when not specified", .tags(.configuration, .unit))
+    func configurationBrewEnabledDefaultsToTrue() throws {
+        // Test with no enabled field specified (should default to true)
+        let configWithDefaultEnabled = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["ios": "TestApp.xcodeproj"],
+            setup: SetupConfiguration(
+                brew: BrewConfiguration(formulas: ["swiftgen"])
+            ),
+            xcode: nil,
+            danger: nil
+        )
+
+        // Should be enabled by default
+        #expect(configWithDefaultEnabled.isEnabled("setup.brew"))
+
+        // Test with explicitly disabled
+        let configWithDisabled = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["ios": "TestApp.xcodeproj"],
+            setup: SetupConfiguration(
+                brew: BrewConfiguration(enabled: false, formulas: ["swiftgen"])
+            ),
+            xcode: nil,
+            danger: nil
+        )
+
+        // Should be disabled when explicitly set to false
+        #expect(!configWithDisabled.isEnabled("setup.brew"))
+
+        // Test with explicitly enabled
+        let configWithEnabled = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["ios": "TestApp.xcodeproj"],
+            setup: SetupConfiguration(
+                brew: BrewConfiguration(enabled: true, formulas: ["swiftgen"])
+            ),
+            xcode: nil,
+            danger: nil
+        )
+
+        // Should be enabled when explicitly set to true
+        #expect(configWithEnabled.isEnabled("setup.brew"))
+    }
+
     @Test("Configuration validation errors are properly reported", .tags(.configuration, .errorHandling, .unit))
     func configurationValidationErrors() throws {
         try ConfigurationTestHelper.withValidationTestFiles(
