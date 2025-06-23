@@ -40,12 +40,15 @@ public final class SetupService: Sendable {
         }
 
         // Update brew (retry once if it fails)
+        print("🔄 Updating Homebrew package list...")
         do {
             _ = try executor.executeOrThrow("brew update")
+            print("✅ Homebrew package list updated")
         } catch {
             do {
                 print("⚠️  brew update failed, retrying...")
                 _ = try executor.executeOrThrow("brew update")
+                print("✅ Homebrew package list updated (after retry)")
             } catch {
                 print("⚠️  brew update failed twice, continuing with potentially outdated package list: \(error.localizedDescription)")
             }
@@ -53,16 +56,21 @@ public final class SetupService: Sendable {
 
         // Install formulas if specified
         if let formulas = brewConfig.formulas, !formulas.isEmpty {
-            for formula in formulas {
+            print("📦 Processing \(formulas.count) formula\(formulas.count == 1 ? "" : "s")...")
+
+            for (index, formula) in formulas.enumerated() {
+                print("🔄 Processing \(formula) (\(index + 1) of \(formulas.count))...")
                 do {
                     let command = "( brew list \(formula) ) && " +
                                   "( brew outdated \(formula) || brew upgrade \(formula) ) || " +
                                   "( brew install \(formula) )"
                     _ = try executor.executeOrThrow(command)
+                    print("✅ \(formula) is ready")
                 } catch {
                     throw SetupError.brewFormulaFailed(formula: formula, error: error)
                 }
             }
+            print("✅ All formulas processed successfully")
         }
     }
 }
