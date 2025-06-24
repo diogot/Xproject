@@ -11,6 +11,7 @@ public protocol CommandExecuting: Sendable {
     func execute(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
     func executeOrThrow(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
     func executeReadOnly(_ command: String, workingDirectory: URL?, environment: [String: String]?) throws -> CommandResult
+    func executeWithStreamingOutput(_ command: String, workingDirectory: URL?, environment: [String: String]?) async throws -> CommandResult
     func commandExists(_ command: String) -> Bool
 }
 
@@ -31,6 +32,14 @@ public extension CommandExecuting {
 
     func executeReadOnly(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
         return try execute(command, workingDirectory: workingDirectory, environment: environment)
+    }
+
+    func executeWithStreamingOutput(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) async throws -> CommandResult {
+        return try await executeWithStreamingOutput(command, workingDirectory: workingDirectory, environment: environment)
     }
 }
 
@@ -179,6 +188,203 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             error: error.trimmingCharacters(in: .whitespacesAndNewlines),
             command: command
         )
+    }
+
+
+    /// Create and configure a Process for command execution
+    private func createProcess(
+        command: String,
+        workingDirectory: URL?,
+        environment: [String: String]?
+    ) -> Process {
+        let process = Process()
+
+        // Set command
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", command]
+
+        // Set working directory
+        if let workingDirectory = workingDirectory {
+            process.currentDirectoryURL = workingDirectory
+        }
+
+        // Set environment
+        if let environment = environment {
+            var processEnvironment = ProcessInfo.processInfo.environment
+            for (key, value) in environment {
+                processEnvironment[key] = value
+            }
+            process.environment = processEnvironment
+        }
+
+        return process
+    }
+
+    /// Handle dry run mode for streaming output
+    private func handleDryRunStreamingOutput(
+        command: String,
+        workingDirectory: URL?,
+        environment: [String: String]?
+    ) -> CommandResult {
+        var context = ""
+        if let workingDirectory = workingDirectory {
+            context += " (in \(workingDirectory.path))"
+        }
+        if let environment = environment, !environment.isEmpty {
+            let envVars = environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+            context += " (env: \(envVars))"
+        }
+
+        print("[DRY RUN] Would run with streaming output: \(command)\(context)")
+
+        return CommandResult(
+            exitCode: 0,
+            output: "",
+            error: "",
+            command: command
+        )
+    }
+
+
+    /// Create CommandResult from process and data
+    private func createCommandResult(
+        from process: Process,
+        outputData: Data,
+        errorData: Data,
+        command: String
+    ) -> CommandResult {
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let error = String(data: errorData, encoding: .utf8) ?? ""
+
+        return CommandResult(
+            exitCode: process.terminationStatus,
+            output: output.trimmingCharacters(in: .whitespacesAndNewlines),
+            error: error.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: command
+        )
+    }
+
+    /// Execute a command with streaming output (async version using AsyncStream)
+    @discardableResult
+    public func executeWithStreamingOutput(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) async throws -> CommandResult {
+        if dryRun {
+            return handleDryRunStreamingOutput(command: command, workingDirectory: workingDirectory, environment: environment)
+        }
+
+        let process = createProcess(command: command, workingDirectory: workingDirectory, environment: environment)
+        let (outputData, errorData) = await executeProcessWithStreamingAsync(process)
+
+        return createCommandResult(
+            from: process,
+            outputData: outputData,
+            errorData: errorData,
+            command: command
+        )
+    }
+    
+    /// Execute process with streaming output using AsyncStream
+    private func executeProcessWithStreamingAsync(_ process: Process) async -> (Data, Data) {
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+        
+        // Use actor for thread-safe data collection
+        actor DataCollector {
+            var outputData = Data()
+            var errorData = Data()
+            
+            func appendOutput(_ data: Data) {
+                outputData.append(data)
+            }
+            
+            func appendError(_ data: Data) {
+                errorData.append(data)
+            }
+            
+            func getData() -> (Data, Data) {
+                (outputData, errorData)
+            }
+        }
+        
+        let collector = DataCollector()
+        
+        // Create async streams for output and error
+        let outputStream = AsyncStream<Data> { continuation in
+            outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.isEmpty {
+                    continuation.finish()
+                } else {
+                    continuation.yield(data)
+                }
+            }
+            
+            continuation.onTermination = { _ in
+                outputPipe.fileHandleForReading.readabilityHandler = nil
+            }
+        }
+        
+        let errorStream = AsyncStream<Data> { continuation in
+            errorPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.isEmpty {
+                    continuation.finish()
+                } else {
+                    continuation.yield(data)
+                }
+            }
+            
+            continuation.onTermination = { _ in
+                errorPipe.fileHandleForReading.readabilityHandler = nil
+            }
+        }
+        
+        // Start the process
+        try? process.run()
+        
+        // Process streams concurrently
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await data in outputStream {
+                    if let string = String(data: data, encoding: .utf8) {
+                        print(string, terminator: "")
+                        fflush(stdout)
+                    }
+                    await collector.appendOutput(data)
+                }
+            }
+            
+            group.addTask {
+                for await data in errorStream {
+                    if let string = String(data: data, encoding: .utf8) {
+                        fputs(string, stderr)
+                        fflush(stderr)
+                    }
+                    await collector.appendError(data)
+                }
+            }
+            
+            group.addTask {
+                process.waitUntilExit()
+                // Ensure streams are closed when process exits
+                outputPipe.fileHandleForReading.readabilityHandler = nil
+                errorPipe.fileHandleForReading.readabilityHandler = nil
+            }
+        }
+        
+        // Collect any remaining data
+        let remainingOutputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let remainingErrorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        
+        await collector.appendOutput(remainingOutputData)
+        await collector.appendError(remainingErrorData)
+        
+        return await collector.getData()
     }
 
     /// Check if a command exists in PATH

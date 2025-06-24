@@ -18,15 +18,18 @@ struct SetupCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
+    @Flag(name: [.short, .long], help: "Show detailed output from underlying commands")
+    var verbose = false
+
     func run() async throws {
         let modeDescription = dryRun ? " (dry run)" : ""
         print("🔧 Setting up project\(modeDescription)...")
 
         let configService = ConfigurationService(customConfigPath: globalOptions.config)
-        let setupService = SetupService(configService: configService, dryRun: dryRun)
+        let setupService = SetupService(configService: configService, dryRun: dryRun, verbose: verbose)
 
         do {
-            try setupService.runSetup()
+            try await setupService.runSetup()
             print("✅ Setup completed successfully\(modeDescription)!")
         } catch let error as SetupError {
             switch error {
