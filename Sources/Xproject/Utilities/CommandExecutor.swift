@@ -275,6 +275,14 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             return handleDryRunStreamingOutput(command: command, workingDirectory: workingDirectory, environment: environment)
         }
 
+        // Print the command being executed
+        var context = ""
+        if let workingDirectory = workingDirectory {
+            context += " (in \(workingDirectory.path))"
+        }
+        
+        print("$ \(command)\(context)")
+
         let process = createProcess(command: command, workingDirectory: workingDirectory, environment: environment)
         let (outputData, errorData) = await executeProcessWithStreamingAsync(process)
 
