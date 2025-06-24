@@ -45,15 +45,13 @@ struct SetupServiceTests {
     // MARK: - Integration Tests with MockCommandExecutor
 
     @Test("Setup service complete workflow with mocked commands", .tags(.integration, .commandExecution))
-    func setupServiceCompleteWorkflow() throws {
+    func setupServiceCompleteWorkflow() async throws {
         let mockExecutor = MockCommandExecutor.withBrewSetup()
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Run setup
-        #expect(throws: Never.self) {
-            try service.runSetup()
-        }
+        try await service.runSetup()
 
         // Verify expected commands were executed
         let executedCommands = mockExecutor.executedCommands
@@ -70,7 +68,7 @@ struct SetupServiceTests {
     }
 
     @Test("Setup service handles missing brew correctly", .tags(.integration, .errorHandling))
-    func setupServiceWithMissingBrew() throws {
+    func setupServiceWithMissingBrew() async throws {
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: false)
 
@@ -78,8 +76,8 @@ struct SetupServiceTests {
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should throw SetupError.brewNotInstalled
-        #expect(throws: SetupError.self) {
-            try service.runSetup()
+        await #expect(throws: SetupError.brewNotInstalled) {
+            try await service.runSetup()
         }
 
         // Should not attempt to run brew commands
@@ -87,7 +85,7 @@ struct SetupServiceTests {
     }
 
     @Test("Setup service brew update retry logic works", .tags(.integration, .errorHandling))
-    func setupServiceBrewUpdateRetryLogic() throws {
+    func setupServiceBrewUpdateRetryLogic() async throws {
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: true)
 
@@ -98,16 +96,14 @@ struct SetupServiceTests {
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should complete setup despite initial brew update failure
-        #expect(throws: Never.self) {
-            try service.runSetup()
-        }
+        try await service.runSetup()
 
         // Should have attempted brew update (retry logic in the service handles this)
         #expect(mockExecutor.wasCommandExecuted("brew update"))
     }
 
     @Test("Setup service handles failed formula installation", .tags(.integration, .errorHandling))
-    func setupServiceWithFailedFormula() throws {
+    func setupServiceWithFailedFormula() async throws {
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: true)
         mockExecutor.setResponse(for: "brew update", response: MockCommandExecutor.MockResponse.success)
@@ -123,23 +119,127 @@ struct SetupServiceTests {
         let service = SetupService(configService: configService, executor: mockExecutor)
 
         // Should throw SetupError.brewFormulaFailed
-        #expect(throws: SetupError.self) {
-            try service.runSetup()
+        await #expect {
+            try await service.runSetup()
+        } throws: { error in
+            guard case SetupError.brewFormulaFailed = error else {
+                return false
+            }
+            return true
         }
     }
 
     @Test("Setup service works in dry run mode", .tags(.integration, .dryRun))
-    func setupServiceWithDryRun() throws {
+    func setupServiceWithDryRun() async throws {
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let service = SetupService(configService: configService, dryRun: true)
 
         // Should complete without error in dry run mode
-        #expect(throws: Never.self) {
-            try service.runSetup()
-        }
+        try await service.runSetup()
 
         // In dry run mode, no actual commands should be executed
         // (This test verifies the dry run integration works end-to-end)
+    }
+
+    @Test("Setup service works in verbose mode", .tags(.integration, .verbose))
+    func setupServiceWithVerbose() async throws {
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
+        let service = SetupService(configService: configService, executor: mockExecutor, verbose: true)
+
+        // Should complete without error in verbose mode
+        try await service.runSetup()
+
+        // Verify expected commands were executed
+        #expect(mockExecutor.wasCommandExecuted("which brew"))
+        #expect(mockExecutor.wasCommandExecuted("brew update"))
+        #expect(mockExecutor.executedCommands.contains { $0.command.contains("swiftgen") })
+        #expect(mockExecutor.executedCommands.contains { $0.command.contains("swiftlint") })
+    }
+
+    @Test("Setup service works in verbose and dry run mode", .tags(.integration, .verbose, .dryRun))
+    func setupServiceWithVerboseAndDryRun() async throws {
+        let configService = ConfigurationTestHelper.createTestConfigurationService()
+        let service = SetupService(configService: configService, dryRun: true, verbose: true)
+
+        // Should complete without error in verbose dry run mode
+        try await service.runSetup()
+
+        // In dry run mode, no actual commands should be executed
+        // (This test verifies the verbose + dry run integration works end-to-end)
+    }
+
+    @Test("Setup service runs by default when enabled is not specified", .tags(.integration, .commandExecution))
+    func setupServiceRunsByDefaultWhenEnabledNotSpecified() async throws {
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+
+        // Create temporary directory
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        try TestFileHelper.createDummyProject(in: tempDir, name: "TestProject")
+
+        let yamlContent = """
+        app_name: TestApp
+        project_path:
+          cli: TestProject.xcodeproj
+        setup:
+          brew:
+            formulas:
+              - test-formula
+        """
+        let configURL = tempDir.appendingPathComponent("Xproject.yml")
+        try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
+
+        let configService = ConfigurationService(customConfigPath: configURL.path)
+        let service = SetupService(configService: configService, executor: mockExecutor)
+
+        // Run setup - should succeed and run brew commands
+        try await service.runSetup()
+
+        // Verify brew commands were executed
+        #expect(mockExecutor.wasCommandExecuted("which brew"))
+        #expect(mockExecutor.wasCommandExecuted("brew update"))
+        #expect(mockExecutor.executedCommands.contains { $0.command.contains("test-formula") })
+    }
+
+    @Test("Setup service skips when explicitly disabled", .tags(.integration, .commandExecution))
+    func setupServiceSkipsWhenExplicitlyDisabled() async throws {
+        let mockExecutor = MockCommandExecutor.withBrewSetup()
+
+        // Create temporary directory
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        try TestFileHelper.createDummyProject(in: tempDir, name: "TestProject")
+
+        let yamlContent = """
+        app_name: TestApp
+        project_path:
+          cli: TestProject.xcodeproj
+        setup:
+          brew:
+            enabled: false
+            formulas:
+              - test-formula
+        """
+        let configURL = tempDir.appendingPathComponent("Xproject.yml")
+        try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
+
+        let configService = ConfigurationService(customConfigPath: configURL.path)
+        let service = SetupService(configService: configService, executor: mockExecutor)
+
+        // Run setup - should complete but skip brew commands
+        try await service.runSetup()
+
+        // Verify no brew commands were executed
+        #expect(!mockExecutor.wasCommandExecuted("which brew"))
+        #expect(!mockExecutor.wasCommandExecuted("brew update"))
+        #expect(!mockExecutor.executedCommands.contains { $0.command.contains("test-formula") })
     }
 }
 

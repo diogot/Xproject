@@ -18,29 +18,25 @@ struct SetupCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
+    @Flag(name: [.short, .long], help: "Show detailed output from underlying commands")
+    var verbose = false
+
     func run() async throws {
-        if dryRun {
-            print("🔧 Setting up project... (dry run)")
-        } else {
-            print("🔧 Setting up project...")
-        }
+        let modeDescription = dryRun ? " (dry run)" : ""
+        print("🔧 Setting up project\(modeDescription)...")
 
         let configService = ConfigurationService(customConfigPath: globalOptions.config)
-        let setupService = SetupService(configService: configService, dryRun: dryRun)
+        let setupService = SetupService(configService: configService, dryRun: dryRun, verbose: verbose)
 
         do {
-            try setupService.runSetup()
-            if dryRun {
-                print("✅ Setup completed! (dry run)")
-            } else {
-                print("✅ Setup completed!")
-            }
+            try await setupService.runSetup()
+            print("✅ Setup completed successfully\(modeDescription)!")
         } catch let error as SetupError {
             switch error {
             case .brewNotInstalled:
-                print("❌ \(error.localizedDescription)")
+                print("❌ Setup failed: \(error.localizedDescription)")
             case .brewFormulaFailed(let formula, _):
-                print("❌ Failed to install \(formula): \(error.localizedDescription)")
+                print("❌ Setup failed while processing \(formula): \(error.localizedDescription)")
             }
             throw ExitCode.failure
         }

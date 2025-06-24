@@ -276,4 +276,58 @@ struct CommandExecutorTests {
         #expect(result.exitCode == 0)
         #expect(result.output.contains("world"))
     }
+
+    // MARK: - Streaming Output Tests
+
+    @Test("Streaming output execution succeeds", .tags(.unit, .commandExecution, .streaming, .fast))
+    func streamingOutputExecution() async throws {
+        let executor = CommandExecutor()
+        let result = try await executor.executeWithStreamingOutput("echo 'test'")
+
+        #expect(result.exitCode == 0)
+        #expect(result.output == "test")
+        #expect(result.command == "echo 'test'")
+        #expect(result.isSuccess)
+    }
+
+    @Test("Streaming output with dry run mode", .tags(.unit, .dryRun, .streaming, .fast))
+    func streamingOutputDryRun() async throws {
+        let executor = CommandExecutor(dryRun: true)
+        let result = try await executor.executeWithStreamingOutput("echo 'test'")
+
+        #expect(result.exitCode == 0)
+        #expect(result.isSuccess)
+        #expect(result.output.isEmpty) // Dry run returns empty output
+    }
+
+    @Test("Streaming output handles command failure", .tags(.unit, .commandExecution, .streaming, .errorHandling, .fast))
+    func streamingOutputFailure() async throws {
+        let executor = CommandExecutor()
+        let result = try await executor.executeWithStreamingOutput("false")
+
+        #expect(result.exitCode == 1)
+        #expect(!result.isSuccess)
+        #expect(result.command == "false")
+    }
+
+    @Test("Streaming output works with working directory", .tags(.unit, .commandExecution, .streaming, .fast))
+    func streamingOutputWithWorkingDirectory() async throws {
+        let executor = CommandExecutor()
+        let tempDir = FileManager.default.temporaryDirectory
+        let result = try await executor.executeWithStreamingOutput("pwd", workingDirectory: tempDir)
+
+        #expect(result.exitCode == 0)
+        #expect(result.isSuccess)
+        #expect(result.output.contains(tempDir.path))
+    }
+
+    @Test("Streaming output works with environment variables", .tags(.unit, .commandExecution, .streaming, .fast))
+    func streamingOutputWithEnvironment() async throws {
+        let executor = CommandExecutor()
+        let env = ["TEST_VAR": "test_value"]
+        let result = try await executor.executeWithStreamingOutput("echo $TEST_VAR", environment: env)
+
+        #expect(result.exitCode == 0)
+        #expect(result.output == "test_value")
+    }
 }

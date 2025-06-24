@@ -147,6 +147,15 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         return try execute(command, workingDirectory: workingDirectory, environment: environment)
     }
 
+    public func executeWithStreamingOutput(
+        _ command: String,
+        workingDirectory: URL? = nil,
+        environment: [String: String]? = nil
+    ) async throws -> CommandResult {
+        // For testing, async streaming execution behaves the same as regular execute
+        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+    }
+
     public func commandExists(_ command: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }

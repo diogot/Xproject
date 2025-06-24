@@ -32,10 +32,10 @@ public struct SetupConfiguration: Codable, Sendable {
 }
 
 public struct BrewConfiguration: Codable, Sendable {
-    public let enabled: Bool
+    public let enabled: Bool?
     public let formulas: [String]?
 
-    public init(enabled: Bool, formulas: [String]? = nil) {
+    public init(enabled: Bool? = nil, formulas: [String]? = nil) {
         self.enabled = enabled
         self.formulas = formulas
     }
@@ -59,7 +59,7 @@ public extension XprojectConfiguration {
 
         switch (components[0], components[1]) {
         case ("setup", "brew"):
-            return setup?.brew?.enabled ?? false
+            return setup?.brew?.enabled ?? true
         default:
             return false
         }

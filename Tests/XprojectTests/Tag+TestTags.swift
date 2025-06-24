@@ -43,4 +43,10 @@ extension Tag {
 
     /// Tests that verify test service functionality
     @Tag static var testService: Self
+
+    /// Tests that verify verbose output functionality
+    @Tag static var verbose: Self
+
+    /// Tests that verify streaming output functionality
+    @Tag static var streaming: Self
 }
