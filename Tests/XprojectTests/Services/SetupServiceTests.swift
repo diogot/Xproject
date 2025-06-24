@@ -178,9 +178,9 @@ struct SetupServiceTests {
             .appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
-        
+
         try TestFileHelper.createDummyProject(in: tempDir, name: "TestProject")
-        
+
         let yamlContent = """
         app_name: TestApp
         project_path:
@@ -192,7 +192,7 @@ struct SetupServiceTests {
         """
         let configURL = tempDir.appendingPathComponent("Xproject.yml")
         try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
-        
+
         let configService = ConfigurationService(customConfigPath: configURL.path)
         let service = SetupService(configService: configService, executor: mockExecutor)
 
@@ -214,9 +214,9 @@ struct SetupServiceTests {
             .appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
-        
+
         try TestFileHelper.createDummyProject(in: tempDir, name: "TestProject")
-        
+
         let yamlContent = """
         app_name: TestApp
         project_path:
@@ -229,7 +229,7 @@ struct SetupServiceTests {
         """
         let configURL = tempDir.appendingPathComponent("Xproject.yml")
         try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
-        
+
         let configService = ConfigurationService(customConfigPath: configURL.path)
         let service = SetupService(configService: configService, executor: mockExecutor)
 

@@ -128,7 +128,7 @@ public enum SetupError: Error, LocalizedError, Sendable, Equatable {
             return "Failed to install \(formula): \(error.localizedDescription)"
         }
     }
-    
+
     public static func == (lhs: SetupError, rhs: SetupError) -> Bool {
         switch (lhs, rhs) {
         case (.brewNotInstalled, .brewNotInstalled):
