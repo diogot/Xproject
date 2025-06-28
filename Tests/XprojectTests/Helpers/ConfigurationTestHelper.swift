@@ -15,7 +15,7 @@ public struct ConfigurationTestHelper {
         let configDir = configURL.deletingLastPathComponent()
 
         // Ensure DummyProject.xcodeproj exists in the same directory as the config
-        TestFileHelper.ensureDummyProject(at: configDir)
+        try! TestFileHelper.ensureDummyProject(at: configDir)
         return ConfigurationService(customConfigPath: configPath)
     }
 

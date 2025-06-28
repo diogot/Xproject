@@ -242,7 +242,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         print("$ \(command)\(context)")
 
         let process = createProcess(command: command, workingDirectory: workingDirectory, environment: environment)
-        let (outputData, errorData) = await executeProcessWithStreamingAsync(process)
+        let (outputData, errorData) = try await executeProcessWithStreamingAsync(process)
 
         return createCommandResult(
             from: process,
@@ -253,12 +253,13 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     }
 
     /// Execute process with streaming output using AsyncStream
-    private func executeProcessWithStreamingAsync(_ process: Process) async -> (Data, Data) {
+    /// - Throws: An error if the process fails to launch
+    private func executeProcessWithStreamingAsync(_ process: Process) async throws -> (Data, Data) {
         let (outputPipe, errorPipe) = setupProcessPipes(process)
         let collector = DataCollector()
         let (outputStream, errorStream) = createAsyncStreams(outputPipe: outputPipe, errorPipe: errorPipe)
 
-        try? process.run()
+        try process.run()
 
         // Process streams concurrently
         await withTaskGroup(of: Void.self) { group in

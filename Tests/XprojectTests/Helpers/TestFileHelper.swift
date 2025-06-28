@@ -42,7 +42,7 @@ public struct TestFileHelper {
     }
 
     @discardableResult
-    public static func ensureDummyProject(at path: URL, name: String = "DummyProject") -> URL {
+    public static func ensureDummyProject(at path: URL, name: String = "DummyProject") throws -> URL {
         let projectURL = path.appendingPathComponent("\(name).xcodeproj")
         if !FileManager.default.fileExists(atPath: projectURL.path) {
             let dummyContent = """
@@ -50,7 +50,7 @@ public struct TestFileHelper {
                 // This file exists solely to provide a valid project path for tests
                 // that need to reference an existing file during test execution
                 """
-            try? dummyContent.write(to: projectURL, atomically: true, encoding: .utf8)
+            try dummyContent.write(to: projectURL, atomically: true, encoding: .utf8)
         }
         return projectURL
     }
