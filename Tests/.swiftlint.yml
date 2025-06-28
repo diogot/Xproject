@@ -3,5 +3,6 @@
 
 disabled_rules:
   - force_unwrapping  # Allow force unwrapping in tests for convenience
+  - force_try         # Allow force try in tests for test setup
   - type_body_length  # Allow longer test classes
   - file_length       # Allow longer test files
