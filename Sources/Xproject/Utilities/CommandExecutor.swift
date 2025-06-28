@@ -253,6 +253,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     }
 
     /// Execute process with streaming output using AsyncStream
+    /// - Throws: An error if the process fails to launch
     private func executeProcessWithStreamingAsync(_ process: Process) async throws -> (Data, Data) {
         let (outputPipe, errorPipe) = setupProcessPipes(process)
         let collector = DataCollector()
