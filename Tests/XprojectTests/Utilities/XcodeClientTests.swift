@@ -228,11 +228,11 @@ struct XcodeClientTests {
                 clean: false,
                 buildDestination: "generic/platform=iOS Simulator"
             )
-            #expect(Bool(false), "Should have thrown an error")
+            Issue.record("Should have thrown an error")
         } catch XcodeClientError.xcodeVersionNotFound {
             // Expected error when no Xcode installation is found
         } catch {
-            #expect(Bool(false), "Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -281,11 +281,11 @@ struct XcodeClientTests {
                 clean: false,
                 buildDestination: "generic/platform=iOS Simulator"
             )
-            #expect(Bool(false), "Should have thrown an error")
+            Issue.record("Should have thrown an error")
         } catch XcodeClientError.xcodeVersionNotFound {
             // Expected error when PlistBuddy fails - no version can be read so no matching Xcode found
         } catch {
-            #expect(Bool(false), "Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -335,11 +335,11 @@ struct XcodeClientTests {
                 clean: false,
                 buildDestination: "generic/platform=iOS Simulator"
             )
-            #expect(Bool(false), "Should have thrown an error")
+            Issue.record("Should have thrown an error")
         } catch XcodeClientError.xcodeVersionNotFound {
             // Expected error when PlistBuddy returns empty output - no version can be read so no matching Xcode found
         } catch {
-            #expect(Bool(false), "Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 
@@ -394,11 +394,11 @@ struct XcodeClientTests {
         // Since fetchXcodeVersion fails and is caught by try?, no matching Xcode will be found
         do {
             try await xcodeClient.upload(environment: "production")
-            #expect(Bool(false), "Should have thrown an error")
+            Issue.record("Should have thrown an error")
         } catch XcodeClientError.xcodeVersionNotFound {
             // Expected error when version fetch fails - results in no matching Xcode being found
         } catch {
-            #expect(Bool(false), "Unexpected error type: \(error)")
+            Issue.record("Unexpected error type: \(error)")
         }
     }
 }
