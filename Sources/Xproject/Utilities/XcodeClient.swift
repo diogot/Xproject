@@ -252,10 +252,14 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let result = try commandExecutor.executeReadOnly(command)
 
         guard result.isSuccess, !result.output.isEmpty else {
-            return "0.0"
+            throw XcodeClientError.xcodeVersionFetchFailed(path)
         }
 
-        return result.output.split(separator: "\n").first.map(String.init) ?? "0.0"
+        guard let version = result.output.split(separator: "\n").first.map(String.init) else {
+            throw XcodeClientError.xcodeVersionFetchFailed(path)
+        }
+
+        return version
     }
 
     private func createDirectoriesIfNeeded(config: XprojectConfiguration) throws {
@@ -340,6 +344,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 public enum XcodeClientError: Error, LocalizedError, Sendable {
     case environmentNotFound(String)
     case xcodeVersionNotFound(String)
+    case xcodeVersionFetchFailed(String)
     case configurationError(String)
 
     public var errorDescription: String? {
@@ -348,6 +353,8 @@ public enum XcodeClientError: Error, LocalizedError, Sendable {
             return "Environment '\(environment)' not found in xcode.release configuration"
         case .xcodeVersionNotFound(let version):
             return "Xcode version \(version) not found"
+        case .xcodeVersionFetchFailed(let path):
+            return "Failed to fetch Xcode version from '\(path)'"
         case .configurationError(let message):
             return "Configuration error: \(message)"
         }
