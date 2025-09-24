@@ -12,13 +12,7 @@ public final class SetupService: Sendable {
     private let executor: any CommandExecuting
     private let verbose: Bool
 
-    public init(configService: ConfigurationService = .shared, dryRun: Bool = false, verbose: Bool = false) {
-        self.configService = configService
-        self.executor = CommandExecutor(dryRun: dryRun)
-        self.verbose = verbose
-    }
-
-    public init(configService: ConfigurationService = .shared, executor: any CommandExecuting, verbose: Bool = false) {
+    public init(configService: ConfigurationService = .shared, executor: any CommandExecuting, verbose: Bool) {
         self.configService = configService
         self.executor = executor
         self.verbose = verbose
@@ -49,11 +43,7 @@ public final class SetupService: Sendable {
     private func updateHomebrew() async throws {
         let command = "brew update"
 
-        if verbose {
-            print("🔄 Running: \(command)")
-        } else {
-            print("🔄 Updating Homebrew package list...")
-        }
+        print("🔄 Updating Homebrew package list...")
 
         do {
             _ = try await executeBrewCommand(command)
@@ -90,11 +80,7 @@ public final class SetupService: Sendable {
                       "( brew outdated \(formula) || brew upgrade \(formula) ) || " +
                       "( brew install \(formula) )"
 
-        if verbose {
-            print("🔄 Running formula commands for \(formula) (\(index + 1) of \(total))...")
-        } else {
-            print("🔄 Processing \(formula) (\(index + 1) of \(total))...")
-        }
+        print("🔄 Processing \(formula) (\(index + 1) of \(total))...")
 
         do {
             _ = try await executeBrewCommand(command)

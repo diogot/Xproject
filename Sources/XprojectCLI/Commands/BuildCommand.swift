@@ -34,7 +34,8 @@ struct BuildCommand: AsyncParsableCommand {
         let configService = ConfigurationService(customConfigPath: globalOptions.config)
         let xcodeClient = XcodeClient(
             configurationProvider: configService,
-            commandExecutor: CommandExecutor(dryRun: dryRun)
+            commandExecutor: CommandExecutor(dryRun: dryRun, verbose: globalOptions.verbose),
+            verbose: globalOptions.verbose
         )
 
         do {

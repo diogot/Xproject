@@ -24,12 +24,10 @@ public final class TestService: TestServiceProtocol, Sendable {
 
     public init(
         configurationProvider: any ConfigurationProviding = ConfigurationService.shared,
-        xcodeClient: (any XcodeClientProtocol)? = nil
+        xcodeClient: any XcodeClientProtocol
     ) {
         self.configurationProvider = configurationProvider
-        self.xcodeClient = xcodeClient ?? XcodeClient(
-            configurationProvider: configurationProvider
-        )
+        self.xcodeClient = xcodeClient
     }
 
     // MARK: - Public Methods

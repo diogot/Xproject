@@ -22,15 +22,18 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
     private let configurationProvider: any ConfigurationProviding
     private let commandExecutor: any CommandExecuting
     private let fileManagerBuilder: @Sendable () -> FileManager
+    private let verbose: Bool
 
     public init(
         configurationProvider: any ConfigurationProviding = ConfigurationService.shared,
-        commandExecutor: any CommandExecuting = CommandExecutor(),
+        commandExecutor: any CommandExecuting,
+        verbose: Bool,
         fileManagerBuilder: @Sendable @escaping () -> FileManager = { .default }
     ) {
         self.configurationProvider = configurationProvider
         self.commandExecutor = commandExecutor
         self.fileManagerBuilder = fileManagerBuilder
+        self.verbose = verbose
     }
 
     // MARK: - Public Methods
@@ -124,7 +127,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         ]
 
         // Clean export directory
-        _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
+        if verbose {
+            _ = try await commandExecutor.executeWithStreamingOutput("rm -rf '\(exportPath)'")
+        } else {
+            _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
+        }
 
         let reportName = "export-\(environment)"
         try await executeXcodeBuild(args: xcodeArgs, reportName: reportName, config: config)
@@ -150,7 +157,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
             uploadCommand += " -p @env:APP_STORE_PASS"
         }
 
-        _ = try commandExecutor.executeOrThrow(uploadCommand)
+        if verbose {
+            _ = try await commandExecutor.executeWithStreamingOutput(uploadCommand)
+        } else {
+            _ = try commandExecutor.executeOrThrow(uploadCommand)
+        }
     }
 
     public func clean() async throws {
@@ -158,7 +169,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
 
-        _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
+        if verbose {
+            _ = try await commandExecutor.executeWithStreamingOutput("rm -rf '\(buildPath)' '\(reportsPath)'")
+        } else {
+            _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
+        }
     }
 
     // MARK: - Private Methods
@@ -194,13 +209,21 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let argsString = allArgs.joined(separator: " ")
 
         // Clean previous outputs
-        _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
+        if verbose {
+            _ = try await commandExecutor.executeWithStreamingOutput("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
+        } else {
+            _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
+        }
 
         // Execute xcodebuild with xcpretty
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
                            "tee '\(xcodeLogFile)' | xcpretty --color --no-utf -r junit -o '\(reportFile)'"
 
-        _ = try commandExecutor.executeOrThrow(buildCommand)
+        if verbose {
+            _ = try await commandExecutor.executeWithStreamingOutput(buildCommand)
+        } else {
+            _ = try commandExecutor.executeOrThrow(buildCommand)
+        }
     }
 
     private func getXcodeVersion(config: XprojectConfiguration) async throws -> String {
