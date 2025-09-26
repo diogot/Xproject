@@ -167,13 +167,13 @@ struct CommandExecutorTests {
         #expect(result.isSuccess)
     }
 
-    @Test("Dry run assumes all commands exist", .tags(.unit, .dryRun, .fast))
+    @Test("Dry run still performs actual command existence checks", .tags(.unit, .dryRun, .fast))
     func dryRunCommandExists() {
         let executor = CommandExecutor(dryRun: true)
 
-        // In dry run, should assume commands exist
+        // In dry run, still performs actual existence checks using executeReadOnly
         #expect(executor.commandExists("echo"))
-        #expect(executor.commandExists("definitely_not_a_real_command"))
+        #expect(!executor.commandExists("definitely_not_a_real_command"))
     }
 
     @Test("Dry run executeOrThrow never throws", .tags(.unit, .dryRun, .fast))

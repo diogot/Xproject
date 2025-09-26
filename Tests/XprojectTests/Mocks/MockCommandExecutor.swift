@@ -13,11 +13,13 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         public let command: String
         public let workingDirectory: URL?
         public let environment: [String: String]?
+        public let verbose: Bool
 
-        public init(command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) {
+        public init(command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil, verbose: Bool = false) {
             self.command = command
             self.workingDirectory = workingDirectory
             self.environment = environment
+            self.verbose = verbose
         }
     }
 
@@ -41,8 +43,11 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
     private var _responses: [String: MockResponse] = [:]
     private var _defaultResponse: MockResponse = .success
     private var _commandExists: [String: Bool] = [:]
+    private let verbose: Bool
 
-    public init() {}
+    public init(verbose: Bool = false) {
+        self.verbose = verbose
+    }
 
     // MARK: - Configuration Methods
 
@@ -109,7 +114,8 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         let executedCommand = ExecutedCommand(
             command: command,
             workingDirectory: workingDirectory,
-            environment: environment
+            environment: environment,
+            verbose: verbose
         )
         _executedCommands.append(executedCommand)
 
@@ -161,7 +167,7 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         defer { lock.unlock() }
 
         // Record this as an executed command for verification
-        let executedCommand = ExecutedCommand(command: "which \(command)")
+        let executedCommand = ExecutedCommand(command: "which \(command)", verbose: verbose)
         _executedCommands.append(executedCommand)
 
         return _commandExists[command] ?? true // Default to exists
@@ -172,15 +178,15 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
 public extension MockCommandExecutor {
     /// Creates a MockCommandExecutor with common brew setup for successful operations
-    static func withBrewSetup() -> MockCommandExecutor {
-        let executor = MockCommandExecutor()
+    static func withBrewSetup(verbose: Bool = false) -> MockCommandExecutor {
+        let executor = MockCommandExecutor(verbose: verbose)
         executor.setupBrewMocks()
         return executor
     }
 
     /// Creates a MockCommandExecutor with brew failure scenarios
-    static func withBrewFailure() -> MockCommandExecutor {
-        let executor = MockCommandExecutor()
+    static func withBrewFailure(verbose: Bool = false) -> MockCommandExecutor {
+        let executor = MockCommandExecutor(verbose: verbose)
         executor.setupBrewFailureMocks()
         return executor
     }
