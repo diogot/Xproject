@@ -7,9 +7,18 @@ import Foundation
 
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let dryRun: Bool
+    private let verbose: Bool
 
-    public init(dryRun: Bool = false) {
+    // Patterns for sensitive environment variables that should be masked in output
+    private static let sensitiveEnvPatterns = [
+        "PASSWORD", "PASS", "SECRET", "TOKEN", "KEY", "API",
+        "PRIVATE", "AUTH", "CREDENTIAL", "SIGNING", "CERT", "CERTIFICATE",
+        "JWT", "OAUTH", "BEARER", "ACCESS"
+    ]
+
+    public init(dryRun: Bool = false, verbose: Bool = false) {
         self.dryRun = dryRun
+        self.verbose = verbose
     }
 
     /// Execute a shell command and return the result
@@ -21,8 +30,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
                 context += " (in \(workingDirectory.path))"
             }
             if let environment = environment, !environment.isEmpty {
-                let envVars = environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-                context += " (env: \(envVars))"
+                context += " (env: \(sanitizeEnvironment(environment))"
             }
 
             print("[DRY RUN] Would run: \(command)\(context)")
@@ -34,6 +42,10 @@ public struct CommandExecutor: CommandExecuting, Sendable {
                 error: "",
                 command: command
             )
+        }
+
+        if verbose {
+            printVerboseCommandInfo(command: command, workingDirectory: workingDirectory, environment: environment)
         }
 
         let process = Process()
@@ -190,8 +202,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             context += " (in \(workingDirectory.path))"
         }
         if let environment = environment, !environment.isEmpty {
-            let envVars = environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-            context += " (env: \(envVars))"
+            context += " (env: \(sanitizeEnvironment(environment)))"
         }
 
         print("[DRY RUN] Would run with streaming output: \(command)\(context)")
@@ -222,6 +233,28 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         )
     }
 
+    /// Sanitize environment variables for safe display (always masks sensitive values)
+    private func sanitizeEnvironment(_ environment: [String: String]) -> String {
+        return environment.map { key, value in
+            let isSensitive = Self.sensitiveEnvPatterns.contains {
+                key.uppercased().contains($0)
+            }
+            return isSensitive ? "\(key)=***" : "\(key)=\(value)"
+        }.joined(separator: " ")
+    }
+
+    /// Print verbose command information
+    private func printVerboseCommandInfo(command: String, workingDirectory: URL?, environment: [String: String]?) {
+        var context = ""
+        if let workingDirectory = workingDirectory {
+            context += " (in \(workingDirectory.path))"
+        }
+        if let environment = environment, !environment.isEmpty {
+            context += " (env: \(sanitizeEnvironment(environment)))"
+        }
+        print("$ \(command)\(context)")
+    }
+
     /// Execute a command with streaming output (async version using AsyncStream)
     @discardableResult
     public func executeWithStreamingOutput(
@@ -233,13 +266,8 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             return handleDryRunStreamingOutput(command: command, workingDirectory: workingDirectory, environment: environment)
         }
 
-        // Print the command being executed
-        var context = ""
-        if let workingDirectory = workingDirectory {
-            context += " (in \(workingDirectory.path))"
-        }
-
-        print("$ \(command)\(context)")
+        // Always print command info for streaming output (verbose-like behavior)
+        printVerboseCommandInfo(command: command, workingDirectory: workingDirectory, environment: environment)
 
         let process = createProcess(command: command, workingDirectory: workingDirectory, environment: environment)
         let (outputData, errorData) = try await executeProcessWithStreamingAsync(process)
@@ -257,7 +285,10 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     private func executeProcessWithStreamingAsync(_ process: Process) async throws -> (Data, Data) {
         let (outputPipe, errorPipe) = setupProcessPipes(process)
         let collector = DataCollector()
-        let (outputStream, errorStream) = createAsyncStreams(outputPipe: outputPipe, errorPipe: errorPipe)
+
+        // Create streams that will be manually finished
+        let (outputStream, outputContinuation) = createManagedAsyncStream(for: outputPipe)
+        let (errorStream, errorContinuation) = createManagedAsyncStream(for: errorPipe)
 
         try process.run()
 
@@ -284,10 +315,10 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             }
 
             group.addTask {
+                // Wait for process to complete, then finish streams
                 process.waitUntilExit()
-                // Ensure streams are closed when process exits
-                outputPipe.fileHandleForReading.readabilityHandler = nil
-                errorPipe.fileHandleForReading.readabilityHandler = nil
+                outputContinuation.finish()
+                errorContinuation.finish()
             }
         }
 
@@ -305,39 +336,27 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         return (outputPipe, errorPipe)
     }
 
-    /// Create async streams for output and error data
-    private func createAsyncStreams(outputPipe: Pipe, errorPipe: Pipe) -> (AsyncStream<Data>, AsyncStream<Data>) {
-        let outputStream = AsyncStream<Data> { continuation in
-            outputPipe.fileHandleForReading.readabilityHandler = { handle in
+    /// Create a managed async stream with external control over termination
+    private func createManagedAsyncStream(for pipe: Pipe) -> (AsyncStream<Data>, AsyncStream<Data>.Continuation) {
+        var storedContinuation: AsyncStream<Data>.Continuation?
+
+        let stream = AsyncStream<Data> { continuation in
+            storedContinuation = continuation
+
+            pipe.fileHandleForReading.readabilityHandler = { handle in
                 let data = handle.availableData
-                if data.isEmpty {
-                    continuation.finish()
-                } else {
+                if !data.isEmpty {
                     continuation.yield(data)
                 }
+                // Don't finish on empty data - will be finished externally
             }
 
             continuation.onTermination = { _ in
-                outputPipe.fileHandleForReading.readabilityHandler = nil
+                pipe.fileHandleForReading.readabilityHandler = nil
             }
         }
 
-        let errorStream = AsyncStream<Data> { continuation in
-            errorPipe.fileHandleForReading.readabilityHandler = { handle in
-                let data = handle.availableData
-                if data.isEmpty {
-                    continuation.finish()
-                } else {
-                    continuation.yield(data)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                errorPipe.fileHandleForReading.readabilityHandler = nil
-            }
-        }
-
-        return (outputStream, errorStream)
+        return (stream, storedContinuation!)
     }
 
     /// Collect any remaining data from pipes after process completion
@@ -351,13 +370,8 @@ public struct CommandExecutor: CommandExecuting, Sendable {
 
     /// Check if a command exists in PATH
     public func commandExists(_ command: String) -> Bool {
-        if dryRun {
-            print("[DRY RUN] Would check if '\(command)' command exists")
-            return true // Assume command exists in dry run mode
-        }
-
         do {
-            let result = try execute("which \(command)")
+            let result = try executeReadOnly("which \(command)")
             return result.exitCode == 0
         } catch {
             return false

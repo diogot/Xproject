@@ -27,7 +27,8 @@ struct XcodeClientTests {
         // When
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         )
 
         // Then - just verify it's created successfully
@@ -59,7 +60,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When
@@ -90,7 +92,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         )
 
         // When/Then
@@ -130,7 +133,8 @@ struct XcodeClientTests {
 
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When - Test the builder pattern by accessing createDirectoriesIfNeeded indirectly
@@ -218,7 +222,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When/Then - Try to build which will trigger Xcode version discovery
@@ -270,7 +275,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When/Then - Try to build which will trigger Xcode version fetch
@@ -324,7 +330,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When/Then - Try to build which will trigger Xcode version fetch
@@ -387,7 +394,8 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
             configurationProvider: mockConfigProvider,
-            commandExecutor: mockExecutor
+            commandExecutor: mockExecutor,
+            verbose: false
         ) { mockFileManager }
 
         // When/Then - Try upload which calls getXcodeVersion

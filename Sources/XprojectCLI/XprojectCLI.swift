@@ -11,6 +11,9 @@ struct GlobalOptions: ParsableArguments {
         help: "Path to configuration file (default: auto-discover Xproject.yml, rake-config.yml)"
     )
     var config: String?
+
+    @Flag(name: [.short, .long], help: "Show detailed output and commands being executed")
+    var verbose = false
 }
 
 @main
