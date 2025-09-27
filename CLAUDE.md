@@ -41,6 +41,19 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
 - `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
 
+### Development Commands
+```bash
+# Build and test the Xproject Swift package itself
+swift build            # Build the project
+swift build -c release # Build for release
+swift test             # Run all tests
+swift run xp           # Run the CLI tool directly
+
+# Install for development
+swift build -c release
+cp .build/release/xp /usr/local/bin/  # Optional: install to PATH
+```
+
 ### Available Commands
 ```bash
 # Global options available on all commands
