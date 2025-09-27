@@ -6,6 +6,10 @@ A modern Swift command line tool for Xcode project build automation.
 
 **No external dependencies required!** Xproject runs with just Xcode's built-in Swift tooling.
 
+### Requirements
+- **Swift 6.2+** (included with Xcode 16.4+)
+- **macOS 15+** (specified in Package.swift platforms)
+
 ### Quick Start
 
 1. **Clone or add as git submodule:**
