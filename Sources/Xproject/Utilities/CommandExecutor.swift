@@ -9,10 +9,11 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     private let dryRun: Bool
     private let verbose: Bool
 
-    // Patterns for sensitive environment variables that should be masked in verbose output
+    // Patterns for sensitive environment variables that should be masked in output
     private static let sensitiveEnvPatterns = [
         "PASSWORD", "PASS", "SECRET", "TOKEN", "KEY", "API",
-        "PRIVATE", "AUTH", "CREDENTIAL", "SIGNING"
+        "PRIVATE", "AUTH", "CREDENTIAL", "SIGNING", "CERT", "CERTIFICATE",
+        "JWT", "OAUTH", "BEARER", "ACCESS"
     ]
 
     public init(dryRun: Bool = false, verbose: Bool = false) {
@@ -232,18 +233,14 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         )
     }
 
-    /// Sanitize environment variables for safe display in verbose mode
+    /// Sanitize environment variables for safe display (always masks sensitive values)
     private func sanitizeEnvironment(_ environment: [String: String]) -> String {
-        if verbose {
-            return environment.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-        } else {
-            return environment.map { key, value in
-                let isSensitive = Self.sensitiveEnvPatterns.contains {
-                    key.uppercased().contains($0)
-                }
-                return isSensitive ? "\(key)=***" : "\(key)=\(value)"
-            }.joined(separator: " ")
-        }
+        return environment.map { key, value in
+            let isSensitive = Self.sensitiveEnvPatterns.contains {
+                key.uppercased().contains($0)
+            }
+            return isSensitive ? "\(key)=***" : "\(key)=\(value)"
+        }.joined(separator: " ")
     }
 
     /// Print verbose command information
