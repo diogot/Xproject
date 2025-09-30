@@ -51,7 +51,7 @@ public struct TestAssertions {
         _ executor: MockCommandExecutor,
         command: String,
         containing substring: String? = nil,
-        workingDirectory: URL? = nil,
+        workingDirectory: String? = nil,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
