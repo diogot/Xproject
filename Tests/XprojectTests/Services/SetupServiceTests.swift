@@ -12,7 +12,14 @@ struct SetupServiceTests {
     @Test("Setup service can be created", .tags(.unit, .fast))
     func setupServiceCreation() throws {
         let mockExecutor = MockCommandExecutor()
-        let service = SetupService(workingDirectory: FileManager.default.temporaryDirectory.path, configService: ConfigurationService(workingDirectory: FileManager.default.temporaryDirectory.path), executor: mockExecutor, verbose: false)
+        let tempDir = FileManager.default.temporaryDirectory.path
+        let configService = ConfigurationService(workingDirectory: tempDir)
+        let service = SetupService(
+            workingDirectory: tempDir,
+            configService: configService,
+            executor: mockExecutor,
+            verbose: false
+        )
         // Simply verify instantiation succeeded (no assertion needed for non-optional)
         _ = service
     }

@@ -348,7 +348,10 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             }
         }
 
-        return (stream, storedContinuation!)
+        guard let continuation = storedContinuation else {
+            fatalError("Continuation should be set immediately in AsyncStream initialization")
+        }
+        return (stream, continuation)
     }
 
     /// Collect any remaining data from pipes after process completion
