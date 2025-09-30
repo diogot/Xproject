@@ -73,8 +73,12 @@ struct ConfigCommand: AsyncParsableCommand {
 
         do {
             let config = try service.configuration
-            // Validation is already done by ConfigurationLoader, but we can call it again for completeness
-            // The loader validates with the proper baseDirectory already
+
+            // Explicitly validate configuration
+            // Note: ConfigurationLoader already validates on load, but we call it here
+            // to provide a clear validation point in the validate command
+            let baseDirectory = URL(fileURLWithPath: globalOptions.resolvedWorkingDirectory)
+            try config.validate(baseDirectory: baseDirectory)
 
             // Show the configuration file being used
             if let configPath = try? service.configurationFilePath {
