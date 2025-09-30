@@ -22,11 +22,16 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Setup command**: Homebrew formula installation (deprecated bundler/cocoapods/submodules removed)
 - ✅ **Build command**: Complete implementation for building Xcode projects for testing
 - ✅ **Test command**: Full test orchestration with multi-scheme and multi-destination support
-- ✅ **Global --config option**: Custom configuration file support across all commands
-- ✅ **Enhanced error handling**: Informative error messages with config file context
-- ✅ **Dry-run functionality**: Safe preview mode for all commands with executeReadOnly for discovery operations
-- ✅ **Command execution utilities**: Safe shell command execution with proper error handling
-- ✅ **Clean architecture**: Separated CLI concerns from business logic
+- ✅ **Working directory support**: Run commands from any directory with `-C/--working-directory`
+- ✅ **Multi-scheme and multi-destination testing**: Run tests across multiple iOS simulators
+- ✅ **Custom configuration files**: Use `--config` option to specify project-specific configs
+- ✅ **Dry-run mode**: Preview operations without executing them (`--dry-run`)
+- ✅ **Verbose mode**: Show detailed command output with `--verbose`
+- ✅ **Enhanced error handling**: Clear error messages with config file context
+- ✅ **Legacy compatibility**: Works with existing rake-config.yml files
+- ✅ **Type-safe configuration**: Swift Codable structs with validation
+- ✅ **Homebrew integration**: Automated tool installation and updates
+- ✅ **Clean architecture**: Separated CLI and business logic with explicit working directory handling
 
 ### Architecture Overview
 **Targets:**
@@ -57,8 +62,10 @@ cp .build/release/xp /usr/local/bin/  # Optional: install to PATH
 ### Available Commands
 ```bash
 # Global options available on all commands
---config <path>    # Specify custom configuration file (auto-discovers Xproject.yml, rake-config.yml by default)
---dry-run          # Show what would be done without executing (available on most commands)
+-C, --working-directory <path>  # Working directory for the command (default: current directory)
+-c, --config <path>             # Specify custom configuration file (auto-discovers Xproject.yml, rake-config.yml by default)
+-v, --verbose                   # Show detailed output and commands being executed
+--dry-run                       # Show what would be done without executing (available on most commands)
 
 # Core commands
 xp setup           # Install/update Homebrew formulas from config
@@ -69,6 +76,8 @@ xp test            # Run tests (supports --scheme, --clean, --skip-build, --dest
 xp release         # TODO: Implement release functionality
 
 # Examples
+xp -C /path/to/project config show
+xp --working-directory MyProject build --scheme MyApp --clean
 xp test --config my-config.yml --scheme MyApp --clean --dry-run
 xp setup --dry-run
 xp config --config custom.yml validate
@@ -193,7 +202,9 @@ rake swiftgen:strings       # Generate localized strings
 1. **No CLI dependencies in core library**: Xproject library must remain free of ArgumentParser or other CLI frameworks
 2. **Deprecated dependency managers**: Do not implement bundler, cocoapods, submodules, or carthage - these are deprecated
 3. **Service-based architecture**: Business logic should be in services that CLI commands call into
-4. **Swift 6.1 compliance**: Project uses Swift 6.1 with strict concurrency checking
+4. **Swift 6.2 compliance**: Project uses Swift 6.2 with strict concurrency checking
+5. **Explicit working directory**: All services and classes require explicit `workingDirectory` parameter with NO default values. Only GlobalOptions provides the default via computed property `resolvedWorkingDirectory`. This eliminates implicit `FileManager.default.currentDirectoryPath` usage throughout the codebase.
+6. **Single source of truth for working directory**: CommandExecutor uses only its instance property for working directory, not method parameters. If different directory needed, create new executor instance.
 
 ### Security Guidelines
 - Any use of @unchecked Sendable or nonisolated(unsafe) needs user approval

@@ -61,12 +61,18 @@ A modern Swift command line tool for Xcode project build automation.
 ### Global Options
 
 All commands support the following global options:
-- `--config <path>` - Specify custom configuration file (default: auto-discover Xproject.yml, rake-config.yml)
+- `-C, --working-directory <path>` - Working directory for the command (default: current directory)
+- `-c, --config <path>` - Specify custom configuration file (default: auto-discover Xproject.yml, rake-config.yml)
+- `-v, --verbose` - Show detailed output and commands being executed
 - `--dry-run` - Show what would be done without executing (available on most commands)
 
 ### Command Examples
 
 ```bash
+# Run from any directory with -C flag
+xp -C /path/to/project config show
+xp --working-directory MyProject build
+
 # Use custom configuration file
 xp test --config my-project.yml --dry-run
 
@@ -79,8 +85,8 @@ xp setup --dry-run
 # Validate configuration
 xp config validate
 
-# Show current configuration
-xp config show
+# Show current configuration with verbose output
+xp config show --verbose
 ```
 
 ### Integration with Existing Projects
@@ -90,15 +96,15 @@ Add Xproject as a git submodule and create a simple script:
 **setup.sh:**
 ```bash
 #!/bin/bash
-cd Tools/Xproject
-swift run xp setup
+# Run from project root
+Tools/Xproject/.build/release/xp -C . setup
 ```
 
 **build.sh:**
 ```bash
 #!/bin/bash
-cd Tools/Xproject
-swift run xp build --scheme "$1" --clean
+# Run from project root
+Tools/Xproject/.build/release/xp -C . build --scheme "$1" --clean
 ```
 
 This approach ensures:
@@ -124,14 +130,16 @@ swift run xp --help
 ## Features
 
 ### ✅ Completed
+- **Working directory support** - Run commands from any directory with `-C/--working-directory`
 - **Multi-scheme and multi-destination testing** - Run tests across multiple iOS simulators
 - **Custom configuration files** - Use `--config` option to specify project-specific configs
 - **Dry-run mode** - Preview operations without executing them (`--dry-run`)
+- **Verbose mode** - Show detailed command output with `--verbose`
 - **Enhanced error handling** - Clear error messages with config file context
 - **Legacy compatibility** - Works with existing rake-config.yml files
 - **Type-safe configuration** - Swift Codable structs with validation
 - **Homebrew integration** - Automated tool installation and updates
-- **Clean architecture** - Separated CLI and business logic
+- **Clean architecture** - Separated CLI and business logic with explicit working directory handling
 
 ### 🚧 In Development
 - **Release command** - Archive creation, IPA generation, App Store upload
