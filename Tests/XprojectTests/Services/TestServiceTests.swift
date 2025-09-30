@@ -19,6 +19,7 @@ struct TestServiceTests {
 
         // When
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -34,6 +35,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -54,6 +56,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -76,6 +79,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -103,6 +107,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -123,6 +128,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -142,6 +148,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -163,6 +170,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -187,6 +195,7 @@ struct TestServiceTests {
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )
@@ -222,6 +231,7 @@ struct TestServiceTests {
         )
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             xcodeClient: mockXcodeClient
         )

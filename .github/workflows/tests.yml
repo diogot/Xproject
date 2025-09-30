@@ -20,14 +20,14 @@ concurrency:
 jobs:
   lint-and-test:
     name: SwiftLint + Tests
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Xcode 16.4
-      run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+    - name: Set up Xcode 26
+      run: sudo xcode-select -s /Applications/Xcode.app
 
     - name: Cache Swift Package Manager
       if: ${{ !inputs.clear_cache }}

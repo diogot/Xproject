@@ -4,6 +4,7 @@
 //
 
 import ArgumentParser
+import Foundation
 
 struct GlobalOptions: ParsableArguments {
     @Option(
@@ -12,8 +13,19 @@ struct GlobalOptions: ParsableArguments {
     )
     var config: String?
 
+    @Option(
+        name: [.customShort("C"), .long],
+        help: "Working directory for the command (default: current directory)"
+    )
+    private var workingDirectory: String?
+
     @Flag(name: [.short, .long], help: "Show detailed output and commands being executed")
     var verbose = false
+
+    /// Resolved working directory - uses provided value or current directory
+    var resolvedWorkingDirectory: String {
+        workingDirectory ?? FileManager.default.currentDirectoryPath
+    }
 }
 
 @main

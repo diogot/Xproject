@@ -22,7 +22,8 @@ struct ConfigCommand: AsyncParsableCommand {
     var environment: String?
 
     func run() async throws {
-        let configService = ConfigurationService(customConfigPath: globalOptions.config)
+        let workingDirectory = globalOptions.resolvedWorkingDirectory
+        let configService = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
 
         switch action {
         case "show":
@@ -72,7 +73,12 @@ struct ConfigCommand: AsyncParsableCommand {
 
         do {
             let config = try service.configuration
-            try config.validate()
+
+            // Explicitly validate configuration
+            // Note: ConfigurationLoader already validates on load, but we call it here
+            // to provide a clear validation point in the validate command
+            let baseDirectory = URL(fileURLWithPath: globalOptions.resolvedWorkingDirectory)
+            try config.validate(baseDirectory: baseDirectory)
 
             // Show the configuration file being used
             if let configPath = try? service.configurationFilePath {

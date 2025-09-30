@@ -8,11 +8,13 @@ import Foundation
 // MARK: - Setup Service
 
 public final class SetupService: Sendable {
+    private let workingDirectory: String
     private let configService: ConfigurationService
     private let executor: any CommandExecuting
     private let verbose: Bool
 
-    public init(configService: ConfigurationService = .shared, executor: any CommandExecuting, verbose: Bool) {
+    public init(workingDirectory: String, configService: ConfigurationService, executor: any CommandExecuting, verbose: Bool) {
+        self.workingDirectory = workingDirectory
         self.configService = configService
         self.executor = executor
         self.verbose = verbose

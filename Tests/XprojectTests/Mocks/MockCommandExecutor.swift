@@ -11,11 +11,11 @@ import Foundation
 public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
     public struct ExecutedCommand: Sendable {
         public let command: String
-        public let workingDirectory: URL?
+        public let workingDirectory: String
         public let environment: [String: String]?
         public let verbose: Bool
 
-        public init(command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil, verbose: Bool = false) {
+        public init(command: String, workingDirectory: String, environment: [String: String]? = nil, verbose: Bool = false) {
             self.command = command
             self.workingDirectory = workingDirectory
             self.environment = environment
@@ -43,9 +43,11 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
     private var _responses: [String: MockResponse] = [:]
     private var _defaultResponse: MockResponse = .success
     private var _commandExists: [String: Bool] = [:]
+    private let workingDirectory: String
     private let verbose: Bool
 
-    public init(verbose: Bool = false) {
+    public init(workingDirectory: String = FileManager.default.temporaryDirectory.path, verbose: Bool = false) {
+        self.workingDirectory = workingDirectory
         self.verbose = verbose
     }
 
@@ -106,11 +108,11 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     // MARK: - Mock Implementation
 
-    public func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+    public func execute(_ command: String, environment: [String: String]? = nil) throws -> CommandResult {
         lock.lock()
         defer { lock.unlock() }
 
-        // Record the executed command
+        // Record the executed command with the mock's working directory
         let executedCommand = ExecutedCommand(
             command: command,
             workingDirectory: workingDirectory,
@@ -132,10 +134,9 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     public func executeOrThrow(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
-        let result = try execute(command, workingDirectory: workingDirectory, environment: environment)
+        let result = try execute(command, environment: environment)
 
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)
@@ -146,20 +147,18 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     public func executeReadOnly(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
         // For testing, executeReadOnly behaves the same as execute
-        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+        return try execute(command, environment: environment)
     }
 
     public func executeWithStreamingOutput(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) async throws -> CommandResult {
         // For testing, async streaming execution behaves the same as regular execute
-        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+        return try execute(command, environment: environment)
     }
 
     public func commandExists(_ command: String) -> Bool {
@@ -167,7 +166,11 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         defer { lock.unlock() }
 
         // Record this as an executed command for verification
-        let executedCommand = ExecutedCommand(command: "which \(command)", verbose: verbose)
+        let executedCommand = ExecutedCommand(
+            command: "which \(command)",
+            workingDirectory: workingDirectory,
+            verbose: verbose
+        )
         _executedCommands.append(executedCommand)
 
         return _commandExists[command] ?? true // Default to exists
@@ -178,15 +181,21 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
 public extension MockCommandExecutor {
     /// Creates a MockCommandExecutor with common brew setup for successful operations
-    static func withBrewSetup(verbose: Bool = false) -> MockCommandExecutor {
-        let executor = MockCommandExecutor(verbose: verbose)
+    static func withBrewSetup(
+        workingDirectory: String = FileManager.default.temporaryDirectory.path,
+        verbose: Bool = false
+    ) -> MockCommandExecutor {
+        let executor = MockCommandExecutor(workingDirectory: workingDirectory, verbose: verbose)
         executor.setupBrewMocks()
         return executor
     }
 
     /// Creates a MockCommandExecutor with brew failure scenarios
-    static func withBrewFailure(verbose: Bool = false) -> MockCommandExecutor {
-        let executor = MockCommandExecutor(verbose: verbose)
+    static func withBrewFailure(
+        workingDirectory: String = FileManager.default.temporaryDirectory.path,
+        verbose: Bool = false
+    ) -> MockCommandExecutor {
+        let executor = MockCommandExecutor(workingDirectory: workingDirectory, verbose: verbose)
         executor.setupBrewFailureMocks()
         return executor
     }

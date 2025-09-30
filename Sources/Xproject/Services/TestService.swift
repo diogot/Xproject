@@ -19,13 +19,16 @@ public protocol TestServiceProtocol: Sendable {
 // MARK: - Test Service
 
 public final class TestService: TestServiceProtocol, Sendable {
+    private let workingDirectory: String
     private let configurationProvider: any ConfigurationProviding
     private let xcodeClient: any XcodeClientProtocol
 
     public init(
-        configurationProvider: any ConfigurationProviding = ConfigurationService.shared,
+        workingDirectory: String,
+        configurationProvider: any ConfigurationProviding,
         xcodeClient: any XcodeClientProtocol
     ) {
+        self.workingDirectory = workingDirectory
         self.configurationProvider = configurationProvider
         self.xcodeClient = xcodeClient
     }

@@ -12,13 +12,22 @@ struct SetupServiceTests {
     @Test("Setup service can be created", .tags(.unit, .fast))
     func setupServiceCreation() throws {
         let mockExecutor = MockCommandExecutor()
-        let service = SetupService(executor: mockExecutor, verbose: false)
+        let tempDir = FileManager.default.temporaryDirectory.path
+        let configService = ConfigurationService(workingDirectory: tempDir)
+        let service = SetupService(
+            workingDirectory: tempDir,
+            configService: configService,
+            executor: mockExecutor,
+            verbose: false
+        )
         // Simply verify instantiation succeeded (no assertion needed for non-optional)
         _ = service
     }
 
     @Test("Setup service works with configuration", .tags(.unit, .integration, .fast))
     func setupServiceWithConfiguration() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+
         // Create a test configuration
         let brewConfig = BrewConfiguration(enabled: true, formulas: ["test-formula"])
         _ = SetupConfiguration(brew: brewConfig)
@@ -27,7 +36,7 @@ struct SetupServiceTests {
         // Create a mock config service
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let mockExecutor = MockCommandExecutor()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // We can't easily test the full setup without brew being installed,
         // but we can verify the service is properly configured
@@ -48,9 +57,10 @@ struct SetupServiceTests {
 
     @Test("Setup service complete workflow with mocked commands", .tags(.integration, .commandExecution))
     func setupServiceCompleteWorkflow() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let mockExecutor = MockCommandExecutor.withBrewSetup()
         let configService = ConfigurationTestHelper.createTestConfigurationService()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Run setup
         try await service.runSetup()
@@ -71,11 +81,12 @@ struct SetupServiceTests {
 
     @Test("Setup service handles missing brew correctly", .tags(.integration, .errorHandling))
     func setupServiceWithMissingBrew() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: false)
 
         let configService = ConfigurationTestHelper.createTestConfigurationService()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Should throw SetupError.brewNotInstalled
         await #expect(throws: SetupError.brewNotInstalled) {
@@ -88,6 +99,7 @@ struct SetupServiceTests {
 
     @Test("Setup service brew update retry logic works", .tags(.integration, .errorHandling))
     func setupServiceBrewUpdateRetryLogic() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: true)
 
@@ -95,7 +107,7 @@ struct SetupServiceTests {
         mockExecutor.setResponse(for: "brew update", response: MockCommandExecutor.MockResponse(exitCode: 1, error: "Network error"))
 
         let configService = ConfigurationTestHelper.createTestConfigurationService()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Should complete setup despite initial brew update failure
         try await service.runSetup()
@@ -106,6 +118,7 @@ struct SetupServiceTests {
 
     @Test("Setup service handles failed formula installation", .tags(.integration, .errorHandling))
     func setupServiceWithFailedFormula() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: true)
         mockExecutor.setResponse(for: "brew update", response: MockCommandExecutor.MockResponse.success)
@@ -118,7 +131,7 @@ struct SetupServiceTests {
                                  response: MockCommandExecutor.MockResponse(exitCode: 1, error: "Formula not found"))
 
         let configService = ConfigurationTestHelper.createTestConfigurationService()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Should throw SetupError.brewFormulaFailed
         await #expect {
@@ -133,10 +146,11 @@ struct SetupServiceTests {
 
     @Test("Setup service works in dry run mode", .tags(.integration, .dryRun))
     func setupServiceWithDryRun() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let mockExecutor = MockCommandExecutor()
         mockExecutor.setCommandExists("brew", exists: true)
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Should complete without error in dry run mode
         try await service.runSetup()
@@ -147,9 +161,10 @@ struct SetupServiceTests {
 
     @Test("Setup service works in verbose mode", .tags(.integration, .verbose))
     func setupServiceWithVerbose() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let mockExecutor = MockCommandExecutor.withBrewSetup(verbose: true)
         let configService = ConfigurationTestHelper.createTestConfigurationService()
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: true)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: true)
 
         // Should complete without error in verbose mode
         try await service.runSetup()
@@ -163,10 +178,11 @@ struct SetupServiceTests {
 
     @Test("Setup service works in verbose and dry run mode", .tags(.integration, .verbose, .dryRun))
     func setupServiceWithVerboseAndDryRun() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
         let configService = ConfigurationTestHelper.createTestConfigurationService()
         let mockExecutor = MockCommandExecutor(verbose: true)
         mockExecutor.setCommandExists("brew", exists: true)
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: true)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: true)
 
         // Should complete without error in verbose dry run mode
         try await service.runSetup()
@@ -199,8 +215,8 @@ struct SetupServiceTests {
         let configURL = tempDir.appendingPathComponent("Xproject.yml")
         try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
 
-        let configService = ConfigurationService(customConfigPath: configURL.path)
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let configService = ConfigurationService(workingDirectory: tempDir.path, customConfigPath: configURL.path)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Run setup - should succeed and run brew commands
         try await service.runSetup()
@@ -236,8 +252,8 @@ struct SetupServiceTests {
         let configURL = tempDir.appendingPathComponent("Xproject.yml")
         try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
 
-        let configService = ConfigurationService(customConfigPath: configURL.path)
-        let service = SetupService(configService: configService, executor: mockExecutor, verbose: false)
+        let configService = ConfigurationService(workingDirectory: tempDir.path, customConfigPath: configURL.path)
+        let service = SetupService(workingDirectory: tempDir.path, configService: configService, executor: mockExecutor, verbose: false)
 
         // Run setup - should complete but skip brew commands
         try await service.runSetup()

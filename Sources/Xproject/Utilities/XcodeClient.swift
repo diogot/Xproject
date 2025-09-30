@@ -19,17 +19,20 @@ public protocol XcodeClientProtocol: Sendable {
 // MARK: - Xcode Client
 
 public final class XcodeClient: XcodeClientProtocol, Sendable {
+    private let workingDirectory: String
     private let configurationProvider: any ConfigurationProviding
     private let commandExecutor: any CommandExecuting
     private let fileManagerBuilder: @Sendable () -> FileManager
     private let verbose: Bool
 
     public init(
-        configurationProvider: any ConfigurationProviding = ConfigurationService.shared,
+        workingDirectory: String,
+        configurationProvider: any ConfigurationProviding,
         commandExecutor: any CommandExecuting,
         verbose: Bool,
         fileManagerBuilder: @Sendable @escaping () -> FileManager = { .default }
     ) {
+        self.workingDirectory = workingDirectory
         self.configurationProvider = configurationProvider
         self.commandExecutor = commandExecutor
         self.fileManagerBuilder = fileManagerBuilder

@@ -22,10 +22,12 @@ struct SetupCommand: AsyncParsableCommand {
         let modeDescription = dryRun ? " (dry run)" : ""
         print("🔧 Setting up project\(modeDescription)...")
 
-        let configService = ConfigurationService(customConfigPath: globalOptions.config)
+        let workingDirectory = globalOptions.resolvedWorkingDirectory
+        let configService = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
         let setupService = SetupService(
+            workingDirectory: workingDirectory,
             configService: configService,
-            executor: CommandExecutor(dryRun: dryRun, verbose: globalOptions.verbose),
+            executor: CommandExecutor(workingDirectory: workingDirectory, dryRun: dryRun, verbose: globalOptions.verbose),
             verbose: globalOptions.verbose
         )
 

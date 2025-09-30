@@ -13,7 +13,7 @@ struct CommandExecutorTests {
 
     @Test("Basic command execution succeeds", .tags(.unit, .commandExecution, .fast))
     func basicCommandExecution() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("echo 'test'")
 
         #expect(result.exitCode == 0)
@@ -24,7 +24,7 @@ struct CommandExecutorTests {
 
     @Test("Failed command execution is handled correctly", .tags(.unit, .commandExecution, .errorHandling, .fast))
     func failedCommandExecution() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("false") // Command that always fails
 
         #expect(result.exitCode == 1)
@@ -34,7 +34,7 @@ struct CommandExecutorTests {
 
     @Test("Command with output is captured correctly", .tags(.unit, .commandExecution, .fast))
     func commandWithOutput() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("echo 'hello world'")
 
         #expect(result.exitCode == 0)
@@ -44,7 +44,7 @@ struct CommandExecutorTests {
 
     @Test("Command with error is captured correctly", .tags(.unit, .commandExecution, .fast))
     func commandWithError() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("cat /nonexistent/file")
 
         #expect(result.exitCode == 1)
@@ -54,7 +54,7 @@ struct CommandExecutorTests {
 
     @Test("Combined output from stdout and stderr", .tags(.unit, .commandExecution, .fast))
     func combinedOutput() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("printf 'stdout\n'; cat /nonexistent/file")
 
         #expect(result.exitCode == 1)
@@ -70,9 +70,9 @@ struct CommandExecutorTests {
 
     @Test("Command executes in specified working directory", .tags(.unit, .commandExecution, .fast))
     func commandWithWorkingDirectory() throws {
-        let executor = CommandExecutor()
         let tempDir = FileManager.default.temporaryDirectory
-        let result = try executor.execute("pwd", workingDirectory: tempDir)
+        let executor = CommandExecutor(workingDirectory: tempDir.path)
+        let result = try executor.execute("pwd")
 
         #expect(result.exitCode == 0)
         #expect(result.output.contains(tempDir.path))
@@ -82,7 +82,7 @@ struct CommandExecutorTests {
 
     @Test("Command uses provided environment variables", .tags(.unit, .commandExecution, .fast))
     func commandWithEnvironmentVariables() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let env = ["TEST_VAR": "test_value"]
         let result = try executor.execute("echo $TEST_VAR", environment: env)
 
@@ -92,7 +92,7 @@ struct CommandExecutorTests {
 
     @Test("Environment variables can override system defaults", .tags(.unit, .commandExecution, .fast))
     func environmentVariableOverride() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let env = ["PATH": "/custom/path"]
         let result = try executor.execute("echo $PATH", environment: env)
 
@@ -104,7 +104,7 @@ struct CommandExecutorTests {
 
     @Test("ExecuteOrThrow succeeds for successful commands", .tags(.unit, .commandExecution, .fast))
     func executeOrThrowSuccess() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.executeOrThrow("echo 'success'")
 
         #expect(result.exitCode == 0)
@@ -113,7 +113,7 @@ struct CommandExecutorTests {
 
     @Test("ExecuteOrThrow throws for failed commands", .tags(.unit, .commandExecution, .errorHandling, .fast))
     func executeOrThrowFailure() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
 
         #expect(throws: CommandError.self) {
             try executor.executeOrThrow("false")
@@ -124,7 +124,7 @@ struct CommandExecutorTests {
 
     @Test("Command existence detection works correctly", .tags(.unit, .commandExecution, .fast))
     func commandExists() {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
 
         // Test with a command that should exist
         #expect(executor.commandExists("echo"))
@@ -137,7 +137,7 @@ struct CommandExecutorTests {
 
     @Test("Dry run mode mocks command execution", .tags(.unit, .dryRun, .fast))
     func dryRunMode() throws {
-        let executor = CommandExecutor(dryRun: true)
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path, dryRun: true)
         let result = try executor.execute("false") // Would normally fail
 
         #expect(result.exitCode == 0) // Should be mocked success
@@ -149,9 +149,9 @@ struct CommandExecutorTests {
 
     @Test("Dry run works with working directory", .tags(.unit, .dryRun, .fast))
     func dryRunWithWorkingDirectory() throws {
-        let executor = CommandExecutor(dryRun: true)
         let tempDir = FileManager.default.temporaryDirectory
-        let result = try executor.execute("pwd", workingDirectory: tempDir)
+        let executor = CommandExecutor(workingDirectory: tempDir.path, dryRun: true)
+        let result = try executor.execute("pwd")
 
         #expect(result.exitCode == 0)
         #expect(result.isSuccess)
@@ -159,7 +159,7 @@ struct CommandExecutorTests {
 
     @Test("Dry run works with environment variables", .tags(.unit, .dryRun, .fast))
     func dryRunWithEnvironment() throws {
-        let executor = CommandExecutor(dryRun: true)
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path, dryRun: true)
         let env = ["TEST": "value"]
         let result = try executor.execute("echo $TEST", environment: env)
 
@@ -169,7 +169,7 @@ struct CommandExecutorTests {
 
     @Test("Dry run still performs actual command existence checks", .tags(.unit, .dryRun, .fast))
     func dryRunCommandExists() {
-        let executor = CommandExecutor(dryRun: true)
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path, dryRun: true)
 
         // In dry run, still performs actual existence checks using executeReadOnly
         #expect(executor.commandExists("echo"))
@@ -178,7 +178,7 @@ struct CommandExecutorTests {
 
     @Test("Dry run executeOrThrow never throws", .tags(.unit, .dryRun, .fast))
     func dryRunExecuteOrThrow() throws {
-        let executor = CommandExecutor(dryRun: true)
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path, dryRun: true)
 
         // Should not throw even for commands that would normally fail
         #expect(throws: Never.self) {
@@ -246,7 +246,7 @@ struct CommandExecutorTests {
 
     @Test("Output is properly trimmed of whitespace and newlines", .tags(.unit, .commandExecution, .fast))
     func outputTrimming() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("echo '  trimmed  '")
 
         #expect(result.output == "trimmed") // CommandExecutor trims whitespace and newlines
@@ -260,7 +260,7 @@ struct CommandExecutorTests {
 
     @Test("Complex commands with multiple operations work correctly", .tags(.unit, .commandExecution, .fast))
     func complexCommand() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("echo 'hello' && echo 'world'")
 
         #expect(result.exitCode == 0)
@@ -270,7 +270,7 @@ struct CommandExecutorTests {
 
     @Test("Pipe commands work correctly", .tags(.unit, .commandExecution, .fast))
     func pipeCommand() throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try executor.execute("echo 'hello world' | grep 'world'")
 
         #expect(result.exitCode == 0)
@@ -281,7 +281,7 @@ struct CommandExecutorTests {
 
     @Test("Streaming output execution succeeds", .tags(.unit, .commandExecution, .streaming, .fast))
     func streamingOutputExecution() async throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try await executor.executeWithStreamingOutput("echo 'test'")
 
         #expect(result.exitCode == 0)
@@ -292,7 +292,7 @@ struct CommandExecutorTests {
 
     @Test("Streaming output with dry run mode", .tags(.unit, .dryRun, .streaming, .fast))
     func streamingOutputDryRun() async throws {
-        let executor = CommandExecutor(dryRun: true)
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path, dryRun: true)
         let result = try await executor.executeWithStreamingOutput("echo 'test'")
 
         #expect(result.exitCode == 0)
@@ -302,7 +302,7 @@ struct CommandExecutorTests {
 
     @Test("Streaming output handles command failure", .tags(.unit, .commandExecution, .streaming, .errorHandling, .fast))
     func streamingOutputFailure() async throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let result = try await executor.executeWithStreamingOutput("false")
 
         #expect(result.exitCode == 1)
@@ -312,9 +312,9 @@ struct CommandExecutorTests {
 
     @Test("Streaming output works with working directory", .tags(.unit, .commandExecution, .streaming, .fast))
     func streamingOutputWithWorkingDirectory() async throws {
-        let executor = CommandExecutor()
         let tempDir = FileManager.default.temporaryDirectory
-        let result = try await executor.executeWithStreamingOutput("pwd", workingDirectory: tempDir)
+        let executor = CommandExecutor(workingDirectory: tempDir.path)
+        let result = try await executor.executeWithStreamingOutput("pwd")
 
         #expect(result.exitCode == 0)
         #expect(result.isSuccess)
@@ -323,7 +323,7 @@ struct CommandExecutorTests {
 
     @Test("Streaming output works with environment variables", .tags(.unit, .commandExecution, .streaming, .fast))
     func streamingOutputWithEnvironment() async throws {
-        let executor = CommandExecutor()
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
         let env = ["TEST_VAR": "test_value"]
         let result = try await executor.executeWithStreamingOutput("echo $TEST_VAR", environment: env)
 
