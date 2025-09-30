@@ -3,6 +3,7 @@
 // Xproject
 //
 
+import Foundation
 import Testing
 @testable import Xproject
 
@@ -23,7 +24,8 @@ struct XprojectTests {
     @Test("Configuration service is available", .tags(.unit, .fast))
     func configurationServiceAvailability() throws {
         // Test that we can access the configuration service
-        let service = ConfigurationService.shared
+        let tempDir = FileManager.default.temporaryDirectory
+        let service = ConfigurationService(workingDirectory: tempDir.path)
         // Simply verify access succeeded (no assertion needed for non-optional)
         _ = service
     }

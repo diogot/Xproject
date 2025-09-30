@@ -16,7 +16,7 @@ public struct ConfigurationTestHelper {
 
         // Ensure DummyProject.xcodeproj exists in the same directory as the config
         try! TestFileHelper.ensureDummyProject(at: configDir)
-        return ConfigurationService(customConfigPath: configPath)
+        return ConfigurationService(workingDirectory: configDir.path, customConfigPath: configPath)
     }
 
     /// Creates a valid test configuration with the specified project path
@@ -51,7 +51,7 @@ public struct ConfigurationTestHelper {
             let configURL = tempDir.appendingPathComponent("config.yml")
             try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
 
-            let configService = ConfigurationService(customConfigPath: configURL.path)
+            let configService = ConfigurationService(workingDirectory: tempDir.path, customConfigPath: configURL.path)
 
             return try perform(configURL, configService)
         }

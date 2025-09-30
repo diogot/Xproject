@@ -26,6 +26,7 @@ struct XcodeClientTests {
 
         // When
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -59,6 +60,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -91,6 +93,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -132,6 +135,7 @@ struct XcodeClientTests {
         let mockConfigProvider = MockConfigurationProvider(config: config)
 
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -221,6 +225,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -274,6 +279,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -329,6 +335,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false
@@ -393,6 +400,7 @@ struct XcodeClientTests {
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let xcodeClient = XcodeClient(
+            workingDirectory: FileManager.default.temporaryDirectory.path,
             configurationProvider: mockConfigProvider,
             commandExecutor: mockExecutor,
             verbose: false

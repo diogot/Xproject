@@ -23,7 +23,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect(throws: Never.self) {
-                try validConfig.validate()
+                try validConfig.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             }
 
             // Invalid configuration - empty app name
@@ -37,7 +37,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig1.validate()
+                try invalidConfig1.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 error.localizedDescription.contains("app_name cannot be empty")
             }
@@ -53,7 +53,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig2.validate()
+                try invalidConfig2.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 error.localizedDescription.contains("At least one project_path must be specified")
             }
@@ -152,7 +152,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig1.validate()
+                try invalidConfig1.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
@@ -172,7 +172,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig2.validate()
+                try invalidConfig2.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
@@ -196,7 +196,7 @@ struct XprojectConfigurationTests {
         )
 
         #expect {
-            try invalidConfig1.validate()
+            try invalidConfig1.validate(baseDirectory: FileManager.default.temporaryDirectory)
         } throws: { error in
             guard let validationError = error as? XprojectConfiguration.ValidationError else {
                 Issue.record("Expected ValidationError, got \(error)")
@@ -218,7 +218,7 @@ struct XprojectConfigurationTests {
         )
 
         #expect {
-            try invalidConfig2.validate()
+            try invalidConfig2.validate(baseDirectory: FileManager.default.temporaryDirectory)
         } throws: { error in
             guard let validationError = error as? XprojectConfiguration.ValidationError else {
                 Issue.record("Expected ValidationError, got \(error)")
@@ -319,7 +319,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig.validate()
+                try invalidConfig.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
@@ -361,7 +361,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig.validate()
+                try invalidConfig.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")
@@ -401,7 +401,7 @@ struct XprojectConfigurationTests {
             )
 
             #expect {
-                try invalidConfig.validate()
+                try invalidConfig.validate(baseDirectory: URL(fileURLWithPath: projectPath).deletingLastPathComponent())
             } throws: { error in
                 guard let validationError = error as? XprojectConfiguration.ValidationError else {
                     Issue.record("Expected ValidationError, got \(error)")

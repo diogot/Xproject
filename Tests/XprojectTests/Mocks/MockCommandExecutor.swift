@@ -106,14 +106,14 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     // MARK: - Mock Implementation
 
-    public func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+    public func execute(_ command: String, environment: [String: String]? = nil) throws -> CommandResult {
         lock.lock()
         defer { lock.unlock() }
 
         // Record the executed command
         let executedCommand = ExecutedCommand(
             command: command,
-            workingDirectory: workingDirectory,
+            workingDirectory: nil,
             environment: environment,
             verbose: verbose
         )
@@ -132,10 +132,9 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     public func executeOrThrow(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
-        let result = try execute(command, workingDirectory: workingDirectory, environment: environment)
+        let result = try execute(command, environment: environment)
 
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)
@@ -146,20 +145,18 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
 
     public func executeReadOnly(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
         // For testing, executeReadOnly behaves the same as execute
-        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+        return try execute(command, environment: environment)
     }
 
     public func executeWithStreamingOutput(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) async throws -> CommandResult {
         // For testing, async streaming execution behaves the same as regular execute
-        return try execute(command, workingDirectory: workingDirectory, environment: environment)
+        return try execute(command, environment: environment)
     }
 
     public func commandExists(_ command: String) -> Bool {

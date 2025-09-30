@@ -70,7 +70,7 @@ struct ConfigurationLoaderTests {
             projectName: "LoaderTestDummyProject",
             additionalYaml: additionalYaml
         ) { configURL, _ in
-            let loader = ConfigurationLoader()
+            let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
             let config = try loader.loadConfiguration(from: configURL)
 
             #expect(config.appName == "LoaderTest")
@@ -81,7 +81,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles missing files correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithMissingFile() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let nonExistentURL = URL(fileURLWithPath: "/path/that/does/not/exist.yml")
 
         #expect(throws: (any Error).self) {
@@ -91,7 +91,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles invalid YAML correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithInvalidYAML() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let invalidYAML = """
         app_name: TestApp
         invalid_yaml: [
@@ -113,7 +113,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles unsupported formats correctly", .tags(.configuration, .errorHandling))
     func configurationLoaderWithUnsupportedFormat() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let unsupportedURL = URL(fileURLWithPath: "/path/to/config.json")
 
         #expect {
@@ -133,7 +133,7 @@ struct ConfigurationLoaderTests {
             appName: "BaseApp",
             projectName: "BaseAppDummyProject"
         ) { configURL, _ in
-            let loader = ConfigurationLoader()
+            let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
             let config = try loader.loadConfiguration(from: configURL)
 
             // Verify base configuration is loaded correctly
@@ -149,7 +149,7 @@ struct ConfigurationLoaderTests {
             appName: "Xproject",
             projectName: "TestDiscoveryProject"
         ) {
-            let loader = ConfigurationLoader()
+            let loader = ConfigurationLoader(workingDirectory: FileManager.default.currentDirectoryPath)
 
             // Should find Xproject.yml in current directory
             #expect(throws: Never.self) {
@@ -177,7 +177,7 @@ struct ConfigurationLoaderTests {
             // Remove the directory to simulate file access error
             try FileManager.default.removeItem(at: tempDir)
 
-            let loader = ConfigurationLoader()
+            let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
 
             #expect {
                 try loader.loadConfiguration(from: configURL)
@@ -201,7 +201,7 @@ struct ConfigurationLoaderTests {
             let invalidBytes = Data([0xFF, 0xFE, 0xFD])
             try invalidBytes.write(to: configURL)
 
-            let loader = ConfigurationLoader()
+            let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
 
             #expect {
                 try loader.loadConfiguration(from: configURL)
@@ -217,7 +217,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles empty files correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithEmptyFile() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let emptyContent = ""
 
         _ = try TestFileHelper.withTemporaryFile(content: emptyContent) { tempURL in
@@ -235,7 +235,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles whitespace-only files correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithWhitespaceOnlyFile() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let whitespaceContent = "   \n\t  \n   "
 
         _ = try TestFileHelper.withTemporaryFile(content: whitespaceContent) { tempURL in
@@ -253,7 +253,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles YAML parsing errors correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithYAMLParsingError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         // Most YAML parsing errors end up wrapped as DecodingError.dataCorrupted
         // Test that we can handle YAML-related errors regardless of specific wrapping
         let invalidYAMLSyntax = """
@@ -284,7 +284,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles YAML structure errors correctly", .tags(.configuration, .errorHandling, .fileSystem))
     func configurationLoaderWithYAMLStructureError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         // Valid YAML syntax but invalid structure for XprojectConfiguration
         let invalidStructureYAML = """
         app_name: 123  # Should be string
@@ -306,7 +306,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles file read errors", .tags(.configuration, .errorHandling))
     func configurationLoaderFileReadError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let nonExistentURL = URL(fileURLWithPath: "/nonexistent/path/config.yml")
         #expect {
             try loader.loadConfiguration(from: nonExistentURL)
@@ -321,7 +321,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles empty file error", .tags(.configuration, .errorHandling))
     func configurationLoaderEmptyFileError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let emptyContent = ""
 
         _ = try TestFileHelper.withTemporaryFile(content: emptyContent, fileName: "empty-config") { tempURL in
@@ -339,7 +339,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles YAML parsing errors", .tags(.configuration, .errorHandling))
     func configurationLoaderYamlParsingError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
         let invalidYamlSyntax = """
         app_name: TestApp
         invalid_yaml: [unclosed bracket
@@ -364,7 +364,7 @@ struct ConfigurationLoaderTests {
 
     @Test("Configuration loader handles invalid encoding error", .tags(.configuration, .errorHandling))
     func configurationLoaderInvalidEncodingError() throws {
-        let loader = ConfigurationLoader()
+        let loader = ConfigurationLoader(workingDirectory: FileManager.default.temporaryDirectory.path)
 
         // Create a temporary file with invalid UTF-8 encoding
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("invalid-encoding-\(UUID().uuidString).yml")
