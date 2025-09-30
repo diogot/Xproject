@@ -18,8 +18,9 @@ struct ReleaseCommand: AsyncParsableCommand {
     var dryRun = false
 
     func run() async throws {
-        _ = ConfigurationService(customConfigPath: globalOptions.config)
-        _ = CommandExecutor(dryRun: dryRun, verbose: globalOptions.verbose)
+        let workingDirectory = globalOptions.resolvedWorkingDirectory
+        _ = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
+        _ = CommandExecutor(workingDirectory: workingDirectory, dryRun: dryRun, verbose: globalOptions.verbose)
 
         if dryRun {
             print("🚀 Creating release... (dry run)")

@@ -104,10 +104,6 @@ public extension XprojectConfiguration {
         }
     }
 
-    func validate() throws {
-        try validate(baseDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
-    }
-
     func validate(baseDirectory: URL) throws {
         try validateBasicFields()
         try validateProjectPaths(baseDirectory: baseDirectory)

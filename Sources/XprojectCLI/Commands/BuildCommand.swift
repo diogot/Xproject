@@ -31,10 +31,12 @@ struct BuildCommand: AsyncParsableCommand {
     var destination: String?
 
     func run() async throws {
-        let configService = ConfigurationService(customConfigPath: globalOptions.config)
+        let workingDirectory = globalOptions.resolvedWorkingDirectory
+        let configService = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
         let xcodeClient = XcodeClient(
+            workingDirectory: workingDirectory,
             configurationProvider: configService,
-            commandExecutor: CommandExecutor(dryRun: dryRun, verbose: globalOptions.verbose),
+            commandExecutor: CommandExecutor(workingDirectory: workingDirectory, dryRun: dryRun, verbose: globalOptions.verbose),
             verbose: globalOptions.verbose
         )
 

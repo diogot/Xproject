@@ -15,16 +15,16 @@ public protocol ConfigurationProviding: Sendable {
 // MARK: - Configuration Service
 
 public final class ConfigurationService: ConfigurationProviding, @unchecked Sendable {
-    public static let shared = ConfigurationService()
-
     private let lock = NSLock()
     private var _configuration: XprojectConfiguration?
     private var _configurationFilePath: String?
     private let loader: ConfigurationLoader
     private let customConfigPath: String?
+    private let workingDirectory: String
 
-    public init(loader: ConfigurationLoader = ConfigurationLoader(), customConfigPath: String? = nil) {
-        self.loader = loader
+    public init(workingDirectory: String, customConfigPath: String? = nil) {
+        self.workingDirectory = workingDirectory
+        self.loader = ConfigurationLoader(workingDirectory: workingDirectory)
         self.customConfigPath = customConfigPath
     }
 
@@ -150,7 +150,7 @@ public extension ConfigurationService {
         if path.hasPrefix("/") {
             return URL(fileURLWithPath: path)
         } else {
-            return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            return URL(fileURLWithPath: workingDirectory)
                 .appendingPathComponent(path)
         }
     }

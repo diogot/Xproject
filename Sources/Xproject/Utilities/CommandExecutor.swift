@@ -6,6 +6,7 @@
 import Foundation
 
 public struct CommandExecutor: CommandExecuting, Sendable {
+    private let workingDirectory: String
     private let dryRun: Bool
     private let verbose: Bool
 
@@ -16,21 +17,21 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         "JWT", "OAUTH", "BEARER", "ACCESS"
     ]
 
-    public init(dryRun: Bool = false, verbose: Bool = false) {
+    public init(workingDirectory: String, dryRun: Bool = false, verbose: Bool = false) {
+        self.workingDirectory = workingDirectory
         self.dryRun = dryRun
         self.verbose = verbose
     }
 
     /// Execute a shell command and return the result
     @discardableResult
-    public func execute(_ command: String, workingDirectory: URL? = nil, environment: [String: String]? = nil) throws -> CommandResult {
+    public func execute(_ command: String, environment: [String: String]? = nil) throws -> CommandResult {
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
         if dryRun {
-            var context = ""
-            if let workingDirectory = workingDirectory {
-                context += " (in \(workingDirectory.path))"
-            }
+            var context = " (in \(workingDirectoryURL.path))"
             if let environment = environment, !environment.isEmpty {
-                context += " (env: \(sanitizeEnvironment(environment))"
+                context += " (env: \(sanitizeEnvironment(environment)))"
             }
 
             print("[DRY RUN] Would run: \(command)\(context)")
@@ -45,7 +46,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         }
 
         if verbose {
-            printVerboseCommandInfo(command: command, workingDirectory: workingDirectory, environment: environment)
+            printVerboseCommandInfo(command: command, workingDirectory: workingDirectoryURL, environment: environment)
         }
 
         let process = Process()
@@ -55,9 +56,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         process.arguments = ["-c", command]
 
         // Set working directory
-        if let workingDirectory = workingDirectory {
-            process.currentDirectoryURL = workingDirectory
-        }
+        process.currentDirectoryURL = workingDirectoryURL
 
         // Set environment
         if let environment = environment {
@@ -97,10 +96,9 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     @discardableResult
     public func executeOrThrow(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
-        let result = try execute(command, workingDirectory: workingDirectory, environment: environment)
+        let result = try execute(command, environment: environment)
 
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)
@@ -113,10 +111,11 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     @discardableResult
     public func executeReadOnly(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) throws -> CommandResult {
         // Read-only commands always execute, even in dry-run mode
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
         let process = Process()
 
         // Set command
@@ -124,9 +123,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         process.arguments = ["-c", command]
 
         // Set working directory
-        if let workingDirectory = workingDirectory {
-            process.currentDirectoryURL = workingDirectory
-        }
+        process.currentDirectoryURL = workingDirectoryURL
 
         // Set environment
         if let environment = environment {
@@ -165,9 +162,10 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     /// Create and configure a Process for command execution
     private func createProcess(
         command: String,
-        workingDirectory: URL?,
         environment: [String: String]?
     ) -> Process {
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
         let process = Process()
 
         // Set command
@@ -175,9 +173,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         process.arguments = ["-c", command]
 
         // Set working directory
-        if let workingDirectory = workingDirectory {
-            process.currentDirectoryURL = workingDirectory
-        }
+        process.currentDirectoryURL = workingDirectoryURL
 
         // Set environment
         if let environment = environment {
@@ -194,13 +190,11 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     /// Handle dry run mode for streaming output
     private func handleDryRunStreamingOutput(
         command: String,
-        workingDirectory: URL?,
         environment: [String: String]?
     ) -> CommandResult {
-        var context = ""
-        if let workingDirectory = workingDirectory {
-            context += " (in \(workingDirectory.path))"
-        }
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
+        var context = " (in \(workingDirectoryURL.path))"
         if let environment = environment, !environment.isEmpty {
             context += " (env: \(sanitizeEnvironment(environment)))"
         }
@@ -244,11 +238,8 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     }
 
     /// Print verbose command information
-    private func printVerboseCommandInfo(command: String, workingDirectory: URL?, environment: [String: String]?) {
-        var context = ""
-        if let workingDirectory = workingDirectory {
-            context += " (in \(workingDirectory.path))"
-        }
+    private func printVerboseCommandInfo(command: String, workingDirectory: URL, environment: [String: String]?) {
+        var context = " (in \(workingDirectory.path))"
         if let environment = environment, !environment.isEmpty {
             context += " (env: \(sanitizeEnvironment(environment)))"
         }
@@ -259,17 +250,18 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     @discardableResult
     public func executeWithStreamingOutput(
         _ command: String,
-        workingDirectory: URL? = nil,
         environment: [String: String]? = nil
     ) async throws -> CommandResult {
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
         if dryRun {
-            return handleDryRunStreamingOutput(command: command, workingDirectory: workingDirectory, environment: environment)
+            return handleDryRunStreamingOutput(command: command, environment: environment)
         }
 
         // Always print command info for streaming output (verbose-like behavior)
-        printVerboseCommandInfo(command: command, workingDirectory: workingDirectory, environment: environment)
+        printVerboseCommandInfo(command: command, workingDirectory: workingDirectoryURL, environment: environment)
 
-        let process = createProcess(command: command, workingDirectory: workingDirectory, environment: environment)
+        let process = createProcess(command: command, environment: environment)
         let (outputData, errorData) = try await executeProcessWithStreamingAsync(process)
 
         return createCommandResult(

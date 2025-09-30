@@ -69,8 +69,10 @@ public struct YAMLConfigurationFormat: ConfigurationFormat {
 
 public final class ConfigurationLoader: Sendable {
     private let formats: [ConfigurationFormat]
+    private let workingDirectory: String
 
-    public init(formats: [ConfigurationFormat] = [YAMLConfigurationFormat()]) {
+    public init(workingDirectory: String, formats: [ConfigurationFormat] = [YAMLConfigurationFormat()]) {
+        self.workingDirectory = workingDirectory
         self.formats = formats
     }
 
@@ -90,7 +92,7 @@ public final class ConfigurationLoader: Sendable {
         ]
 
         for path in possiblePaths {
-            let url = URL(fileURLWithPath: path)
+            let url = URL(fileURLWithPath: workingDirectory).appendingPathComponent(path)
             if FileManager.default.fileExists(atPath: url.path) {
                 let config = try loadConfiguration(from: url)
                 return (config, path)
@@ -140,7 +142,7 @@ public final class ConfigurationLoader: Sendable {
         ]
 
         for path in localPaths {
-            let url = URL(fileURLWithPath: path)
+            let url = URL(fileURLWithPath: workingDirectory).appendingPathComponent(path)
             if FileManager.default.fileExists(atPath: url.path) {
                 let localConfig = try loadConfiguration(from: url)
                 configuration = try merge(base: configuration, override: localConfig)
@@ -152,15 +154,21 @@ public final class ConfigurationLoader: Sendable {
         configuration = applyEnvironmentOverrides(to: configuration)
 
         // Final validation
-        let configURL = URL(fileURLWithPath: configPath)
-        try configuration.validate(baseDirectory: configURL.deletingLastPathComponent())
+        let baseDirectory = URL(fileURLWithPath: workingDirectory)
+        try configuration.validate(baseDirectory: baseDirectory)
 
         return (configuration, configPath)
     }
 
     /// Load configuration from specific file with layered overrides
     public func loadConfigurationWithOverrides(from configPath: String) throws -> (XprojectConfiguration, String) {
-        let url = URL(fileURLWithPath: configPath)
+        // Resolve config path relative to working directory if it's not absolute
+        let url: URL
+        if configPath.hasPrefix("/") {
+            url = URL(fileURLWithPath: configPath)
+        } else {
+            url = URL(fileURLWithPath: workingDirectory).appendingPathComponent(configPath)
+        }
 
         // Check if file exists first
         guard FileManager.default.fileExists(atPath: url.path) else {
