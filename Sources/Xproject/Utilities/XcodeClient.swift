@@ -131,7 +131,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         // Clean export directory
         if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutput("rm -rf '\(exportPath)'")
+            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(exportPath)'")
         } else {
             _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
         }
@@ -161,7 +161,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         }
 
         if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutput(uploadCommand)
+            _ = try await commandExecutor.executeWithStreamingOutputOrThrow(uploadCommand)
         } else {
             _ = try commandExecutor.executeOrThrow(uploadCommand)
         }
@@ -173,7 +173,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let reportsPath = config.reportsPath()
 
         if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutput("rm -rf '\(buildPath)' '\(reportsPath)'")
+            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
         } else {
             _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
         }
@@ -213,7 +213,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         // Clean previous outputs
         if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutput("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
+            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
         } else {
             _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
         }
@@ -223,7 +223,7 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
                            "tee '\(xcodeLogFile)' | xcpretty --color --no-utf -r junit -o '\(reportFile)'"
 
         if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutput(buildCommand)
+            _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
         } else {
             _ = try commandExecutor.executeOrThrow(buildCommand)
         }
