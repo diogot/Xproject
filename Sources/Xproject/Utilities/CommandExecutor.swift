@@ -29,12 +29,8 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
 
         if dryRun {
-            var context = " (in \(workingDirectoryURL.path))"
-            if let environment = environment, !environment.isEmpty {
-                context += " (env: \(sanitizeEnvironment(environment)))"
-            }
-
-            print("[DRY RUN] Would run: \(command)\(context)")
+            printEnvironmentBlock(environment)
+            print("[DRY RUN] Would run: \(command)")
 
             // Return mock successful result for dry run
             return CommandResult(
@@ -192,14 +188,8 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         command: String,
         environment: [String: String]?
     ) -> CommandResult {
-        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
-
-        var context = " (in \(workingDirectoryURL.path))"
-        if let environment = environment, !environment.isEmpty {
-            context += " (env: \(sanitizeEnvironment(environment)))"
-        }
-
-        print("[DRY RUN] Would run with streaming output: \(command)\(context)")
+        printEnvironmentBlock(environment)
+        print("[DRY RUN] Would run with streaming output: \(command)")
 
         return CommandResult(
             exitCode: 0,
@@ -227,23 +217,26 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         )
     }
 
-    /// Sanitize environment variables for safe display (always masks sensitive values)
-    private func sanitizeEnvironment(_ environment: [String: String]) -> String {
-        return environment.map { key, value in
+    /// Print environment variables in block format with sensitive values masked
+    private func printEnvironmentBlock(_ environment: [String: String]?) {
+        guard let environment = environment, !environment.isEmpty else {
+            return
+        }
+
+        print("Environment:")
+        for (key, value) in environment.sorted(by: { $0.key < $1.key }) {
             let isSensitive = Self.sensitiveEnvPatterns.contains {
                 key.uppercased().contains($0)
             }
-            return isSensitive ? "\(key)=***" : "\(key)=\(value)"
-        }.joined(separator: " ")
+            let displayValue = isSensitive ? "***" : value
+            print("  \(key)=\(displayValue)")
+        }
     }
 
     /// Print verbose command information
     private func printVerboseCommandInfo(command: String, workingDirectory: URL, environment: [String: String]?) {
-        var context = " (in \(workingDirectory.path))"
-        if let environment = environment, !environment.isEmpty {
-            context += " (env: \(sanitizeEnvironment(environment)))"
-        }
-        print("$ \(command)\(context)")
+        printEnvironmentBlock(environment)
+        print("$ \(command)")
     }
 
     /// Execute a command with streaming output (async version using AsyncStream)
