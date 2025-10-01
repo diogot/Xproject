@@ -32,6 +32,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Type-safe configuration**: Swift Codable structs with validation
 - ✅ **Homebrew integration**: Automated tool installation and updates
 - ✅ **Clean architecture**: Separated CLI and business logic with explicit working directory handling
+- ✅ **Improved CLI output formatting**: Clear info blocks showing working directory and configuration at command start, with environment variables displayed in structured format
 
 ### Architecture Overview
 **Targets:**
@@ -44,6 +45,9 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `SetupService`: Handles project setup (currently Homebrew only)
 - `BuildService`: Handles building for tests, archiving, IPA generation, and uploads with Xcode discovery
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
+
+**Key Utilities:**
+- `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
 - `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
 
 ### Development Commands

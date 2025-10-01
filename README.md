@@ -140,6 +140,7 @@ swift run xp --help
 - **Type-safe configuration** - Swift Codable structs with validation
 - **Homebrew integration** - Automated tool installation and updates
 - **Clean architecture** - Separated CLI and business logic with explicit working directory handling
+- **Improved CLI output** - Clear info blocks with working directory and configuration display, structured environment variable formatting
 
 ### 🚧 In Development
 - **Release command** - Archive creation, IPA generation, App Store upload
