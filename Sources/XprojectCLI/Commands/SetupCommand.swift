@@ -19,10 +19,17 @@ struct SetupCommand: AsyncParsableCommand {
     var dryRun = false
 
     func run() async throws {
+        let workingDirectory = globalOptions.resolvedWorkingDirectory
+
+        // Print info block at start
+        OutputFormatter.printInfoBlock(
+            workingDirectory: workingDirectory,
+            configFile: globalOptions.config,
+            verbose: globalOptions.verbose
+        )
+
         let modeDescription = dryRun ? " (dry run)" : ""
         print("🔧 Setting up project\(modeDescription)...")
-
-        let workingDirectory = globalOptions.resolvedWorkingDirectory
         let configService = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
         let setupService = SetupService(
             workingDirectory: workingDirectory,

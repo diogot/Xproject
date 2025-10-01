@@ -44,6 +44,14 @@ struct TestCommand: AsyncParsableCommand {
 
     func run() async throws {
         let workingDirectory = globalOptions.resolvedWorkingDirectory
+
+        // Print info block at start
+        OutputFormatter.printInfoBlock(
+            workingDirectory: workingDirectory,
+            configFile: globalOptions.config,
+            verbose: globalOptions.verbose
+        )
+
         let configService = ConfigurationService(workingDirectory: workingDirectory, customConfigPath: globalOptions.config)
         let testService = TestService(
             workingDirectory: workingDirectory,
