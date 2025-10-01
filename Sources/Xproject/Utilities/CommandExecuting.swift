@@ -20,8 +20,8 @@ public extension CommandExecuting {
         return try execute(command, environment: nil)
     }
 
-    func executeOrThrow(_ command: String) throws -> CommandResult {
-        let result = try execute(command, environment: nil)
+    func executeOrThrow(_ command: String, environment: [String: String]? = nil) throws -> CommandResult {
+        let result = try execute(command, environment: environment)
 
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)
@@ -36,5 +36,18 @@ public extension CommandExecuting {
 
     func executeWithStreamingOutput(_ command: String) async throws -> CommandResult {
         return try await executeWithStreamingOutput(command, environment: nil)
+    }
+
+    func executeWithStreamingOutputOrThrow(
+        _ command: String,
+        environment: [String: String]? = nil
+    ) async throws -> CommandResult {
+        let result = try await executeWithStreamingOutput(command, environment: environment)
+
+        if result.exitCode != 0 {
+            throw CommandError.executionFailed(result: result)
+        }
+
+        return result
     }
 }

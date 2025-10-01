@@ -95,7 +95,7 @@ public final class SetupService: Sendable {
     /// Execute a brew command using the appropriate execution method based on verbose mode
     private func executeBrewCommand(_ command: String) async throws -> CommandResult {
         if verbose {
-            return try await executor.executeWithStreamingOutput(command)
+            return try await executor.executeWithStreamingOutputOrThrow(command)
         } else {
             return try executor.executeOrThrow(command)
         }
