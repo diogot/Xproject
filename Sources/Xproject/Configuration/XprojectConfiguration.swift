@@ -234,6 +234,119 @@ public extension XprojectConfiguration {
                 }
             }
         }
+
+        // Validate release configuration
+        if let release = xcode.release {
+            for (envName, releaseConfig) in release {
+                try validateReleaseConfiguration(envName: envName, config: releaseConfig)
+            }
+        }
+    }
+
+    private func validateReleaseConfiguration(envName: String, config: ReleaseConfiguration) throws {
+        if config.scheme.isEmpty {
+            throw ValidationError(message: """
+                Release environment '\(envName)': scheme cannot be empty.
+
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      scheme: MyApp
+                      output: MyApp
+                      destination: iOS
+                      type: ios
+                """)
+        }
+
+        if config.output.isEmpty {
+            throw ValidationError(message: """
+                Release environment '\(envName)': output cannot be empty.
+
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      scheme: \(config.scheme)
+                      output: MyApp
+                      destination: iOS
+                      type: ios
+                """)
+        }
+
+        if config.destination.isEmpty {
+            throw ValidationError(message: """
+                Release environment '\(envName)': destination cannot be empty.
+
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      scheme: \(config.scheme)
+                      output: \(config.output)
+                      destination: iOS
+                      type: ios
+
+                Common destinations: iOS, tvOS
+                """)
+        }
+
+        if config.type.isEmpty {
+            throw ValidationError(message: """
+                Release environment '\(envName)': type cannot be empty.
+
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      scheme: \(config.scheme)
+                      output: \(config.output)
+                      destination: \(config.destination)
+                      type: ios
+
+                Common types: ios, appletvos
+                """)
+        }
+
+        // Validate signing configuration for manual signing
+        if let signing = config.signing {
+            if signing.signingStyle == "manual" {
+                if signing.signingCertificate == nil || signing.signingCertificate?.isEmpty == true {
+                    throw ValidationError(message: """
+                        Release environment '\(envName)': signingCertificate is required for manual signing.
+
+                        ✅ Example:
+                        xcode:
+                          release:
+                            \(envName):
+                              sign:
+                                signingStyle: manual
+                                signingCertificate: 'iPhone Distribution'
+                                teamID: 'YOUR_TEAM_ID'
+                                provisioningProfiles:
+                                  com.example.app: 'Distribution Profile'
+                        """)
+                }
+
+                if signing.provisioningProfiles == nil || signing.provisioningProfiles?.isEmpty == true {
+                    throw ValidationError(message: """
+                        Release environment '\(envName)': provisioningProfiles is required for manual signing.
+
+                        ✅ Example:
+                        xcode:
+                          release:
+                            \(envName):
+                              sign:
+                                signingStyle: manual
+                                signingCertificate: 'iPhone Distribution'
+                                teamID: 'YOUR_TEAM_ID'
+                                provisioningProfiles:
+                                  com.example.app: 'Distribution Profile'
+                                  com.example.app.extension: 'Extension Profile'
+                        """)
+                }
+            }
+        }
     }
 
     private func generatePathSuggestions(for path: String, in baseDirectory: URL, target: String) -> [String] {

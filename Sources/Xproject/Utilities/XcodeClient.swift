@@ -122,19 +122,21 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let exportPath = exportPath(filename: releaseConfig.output, config: config)
         let exportPlistPath = try createExportPlist(signingConfiguration: releaseConfig.signing, config: config)
 
-        let xcodeArgs = [
+        var xcodeArgs = [
             "-exportArchive",
             "-archivePath '\(archivePath(filename: releaseConfig.output, config: config))'",
             "-exportPath '\(exportPath)'",
             "-exportOptionsPlist '\(exportPlistPath)'"
         ]
 
-        // Clean export directory
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(exportPath)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
+        // Add -allowProvisioningUpdates only for automatic signing
+        if releaseConfig.signing?.signingStyle == "automatic" {
+            xcodeArgs.append("-allowProvisioningUpdates")
         }
+
+        // Clean export directory
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
 
         let reportName = "export-\(environment)"
         try await executeXcodeBuild(args: xcodeArgs, reportName: reportName, config: config)
@@ -172,11 +174,8 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
 
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
-        }
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
     }
 
     // MARK: - Private Methods
@@ -212,11 +211,8 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let argsString = allArgs.joined(separator: " ")
 
         // Clean previous outputs
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
-        }
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
 
         // Execute xcodebuild with xcpretty
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
@@ -288,10 +284,19 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         return version
     }
 
+    private func absolutePath(from path: String) -> String {
+        if path.hasPrefix("/") {
+            return path  // Already absolute
+        }
+        return URL(fileURLWithPath: workingDirectory)
+            .appendingPathComponent(path)
+            .path
+    }
+
     private func createDirectoriesIfNeeded(config: XprojectConfiguration) throws {
         let fileManager = fileManagerBuilder()
-        let buildPath = config.buildPath()
-        let reportsPath = config.reportsPath()
+        let buildPath = absolutePath(from: config.buildPath())
+        let reportsPath = absolutePath(from: config.reportsPath())
 
         try fileManager.createDirectory(atPath: buildPath, withIntermediateDirectories: true)
         try fileManager.createDirectory(atPath: reportsPath, withIntermediateDirectories: true)
@@ -356,12 +361,13 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
             }
         }
 
-        let plistPath = "\(config.buildPath())/export.plist"
+        let relativePlistPath = "\(config.buildPath())/export.plist"
+        let absolutePlistPath = absolutePath(from: relativePlistPath)
         let plistData = try PropertyListSerialization.data(fromPropertyList: plistDict, format: .xml, options: 0)
 
-        try plistData.write(to: URL(fileURLWithPath: plistPath))
+        try plistData.write(to: URL(fileURLWithPath: absolutePlistPath))
 
-        return plistPath
+        return relativePlistPath  // Return relative path for xcodebuild command
     }
 }
 
