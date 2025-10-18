@@ -120,6 +120,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         }
 
         let exportPath = exportPath(filename: releaseConfig.output, config: config)
+
+        // Validate export path is safe to delete BEFORE doing any other operations
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        try validateSafeToDelete(exportPath)
+
         let exportPlistPath = try createExportPlist(signingConfiguration: releaseConfig.signing, config: config)
 
         var xcodeArgs = [
@@ -135,7 +140,6 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         }
 
         // Clean export directory
-        // Note: Use non-streaming execute for rm commands since they produce no output
         _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
 
         let reportName = "export-\(environment)"
@@ -369,6 +373,50 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         return relativePlistPath  // Return relative path for xcodebuild command
     }
+
+    /// Validates that a path is safe to delete with rm -rf
+    /// - Parameter path: The path to validate
+    /// - Throws: XcodeClientError.unsafePathDeletion if the path is potentially dangerous
+    private func validateSafeToDelete(_ path: String) throws {
+        // Reject empty paths
+        guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw XcodeClientError.unsafePathDeletion(path)
+        }
+
+        let normalizedPath = path.trimmingCharacters(in: .whitespaces)
+
+        // Reject root and critical system directories
+        let dangerousPaths = [
+            "/",
+            "/System",
+            "/Library",
+            "/Users",
+            "/Applications",
+            "/bin",
+            "/sbin",
+            "/usr",
+            "/var",
+            "/etc",
+            "/tmp",
+            "/private"
+        ]
+
+        for dangerousPath in dangerousPaths {
+            if normalizedPath == dangerousPath || normalizedPath.hasPrefix(dangerousPath + "/") {
+                throw XcodeClientError.unsafePathDeletion(path)
+            }
+        }
+
+        // Must contain "build", "reports", or common artifact indicators
+        let safeIndicators = ["build", "reports", ".xcarchive", "-ipa", ".ipa", ".log", ".xml", ".xcresult"]
+        let containsSafeIndicator = safeIndicators.contains { indicator in
+            normalizedPath.lowercased().contains(indicator.lowercased())
+        }
+
+        guard containsSafeIndicator else {
+            throw XcodeClientError.unsafePathDeletion(path)
+        }
+    }
 }
 
 // MARK: - Xcode Client Errors
@@ -378,6 +426,7 @@ public enum XcodeClientError: Error, LocalizedError, Sendable {
     case xcodeVersionNotFound(String)
     case xcodeVersionFetchFailed(String)
     case configurationError(String)
+    case unsafePathDeletion(String)
 
     public var errorDescription: String? {
         switch self {
@@ -389,6 +438,8 @@ public enum XcodeClientError: Error, LocalizedError, Sendable {
             return "Failed to fetch Xcode version from '\(path)'"
         case .configurationError(let message):
             return "Configuration error: \(message)"
+        case .unsafePathDeletion(let path):
+            return "Refusing to delete potentially unsafe path: '\(path)'. Path must be non-empty and within the build directory."
         }
     }
 }

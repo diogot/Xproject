@@ -1338,4 +1338,150 @@ struct XcodeClientTests {
 
         #expect(uploadCommand?.command.contains("DEVELOPER_DIR=\"/Applications/Xcode.app/Contents/Developer\"") == true)
     }
+
+    // MARK: - Safety Validation Tests
+
+    @Test("generateIPA rejects dangerous paths for deletion")
+    func testGenerateIPARejectsDangerousPaths() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("Users")  // Dangerous path component
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "/Users",  // Dangerous path - should fail validation
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When/Then - Should throw unsafePathDeletion error
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+            Issue.record("Should have thrown unsafePathDeletion error")
+        } catch XcodeClientError.unsafePathDeletion {
+            // Expected - dangerous path was rejected
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("generateIPA allows safe build paths for deletion")
+    func testGenerateIPAAllowsSafePaths() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",  // Safe path - contains "build"
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+        } catch XcodeClientError.unsafePathDeletion {
+            Issue.record("Should NOT have thrown unsafePathDeletion error for safe path")
+        } catch {
+            // Expected to fail on xcodebuild execution, but NOT on path validation
+        }
+
+        // Then - Verify rm command was attempted (path validation passed)
+        let commands = mockExecutor.executedCommands
+        let cleanCommand = commands.first { $0.command.contains("rm -rf") && $0.command.contains("build/MyApp-ipa") }
+        #expect(cleanCommand != nil)
+    }
 }
