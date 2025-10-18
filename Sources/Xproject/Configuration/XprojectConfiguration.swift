@@ -248,6 +248,7 @@ public extension XprojectConfiguration {
         try validateReleaseSigningConfiguration(envName: envName, config: config)
     }
 
+    // swiftlint:disable:next function_body_length
     private func validateReleaseRequiredFields(envName: String, config: ReleaseConfiguration) throws {
         if config.scheme.isEmpty {
             throw ValidationError(message: """
