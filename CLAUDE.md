@@ -213,6 +213,7 @@ rake swiftgen:strings       # Generate localized strings
 4. **Swift 6.2 compliance**: Project uses Swift 6.2 with strict concurrency checking
 5. **Explicit working directory**: All services and classes require explicit `workingDirectory` parameter with NO default values. Only GlobalOptions provides the default via computed property `resolvedWorkingDirectory`. This eliminates implicit `FileManager.default.currentDirectoryPath` usage throughout the codebase.
 6. **Single source of truth for working directory**: CommandExecutor uses only its instance property for working directory, not method parameters. If different directory needed, create new executor instance.
+7. **Temporary files directory**: All temporary files and directories MUST be created in the project's `tmp/` directory, NEVER in the system `/tmp`. The `tmp/` directory is in .gitignore and its contents can be deleted at any time, so no important files should be stored there.
 
 ### Security Guidelines
 - Any use of @unchecked Sendable or nonisolated(unsafe) needs user approval
