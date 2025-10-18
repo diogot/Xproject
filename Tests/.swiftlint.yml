@@ -2,7 +2,8 @@
 # Allows force unwrapping in test files and relaxed file length limits
 
 disabled_rules:
-  - force_unwrapping  # Allow force unwrapping in tests for convenience
-  - force_try         # Allow force try in tests for test setup
-  - type_body_length  # Allow longer test classes
-  - file_length       # Allow longer test files
+  - force_unwrapping    # Allow force unwrapping in tests for convenience
+  - force_try           # Allow force try in tests for test setup
+  - type_body_length    # Allow longer test classes
+  - file_length         # Allow longer test files
+  - function_body_length # Allow longer test functions
