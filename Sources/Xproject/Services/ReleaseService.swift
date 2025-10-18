@@ -202,6 +202,7 @@ public enum ReleaseError: Error, LocalizedError, Sendable {
         switch self {
         case let .noReleaseConfiguration(configFile):
             let fileInfo = configFile.map { " (loaded from \($0))" } ?? ""
+            // swiftlint:disable:next line_length
             return "No release configuration found in xcode.release\(fileInfo). Add a 'release' section under 'xcode' in your configuration file."
         case let .noXcodeConfiguration(configFile):
             let fileInfo = configFile.map { " (loaded from \($0))" } ?? ""

@@ -166,6 +166,7 @@ struct ConfigCommand: AsyncParsableCommand {
                 } else if let signing = releaseConfig.signing {
                     let hasBasicSigning = signing.teamID != nil || signing.provisioningProfiles != nil
                     if !hasBasicSigning {
+                        // swiftlint:disable:next line_length
                         warnings.append("Release environment '\(envName)' signing configuration may be incomplete (missing teamID or provisioningProfiles)")
                     }
                 }
