@@ -200,22 +200,22 @@ public enum ReleaseError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .noReleaseConfiguration(let configFile):
+        case let .noReleaseConfiguration(configFile):
             let fileInfo = configFile.map { " (loaded from \($0))" } ?? ""
             return "No release configuration found in xcode.release\(fileInfo). Add a 'release' section under 'xcode' in your configuration file."
-        case .noXcodeConfiguration(let configFile):
+        case let .noXcodeConfiguration(configFile):
             let fileInfo = configFile.map { " (loaded from \($0))" } ?? ""
             return "No xcode configuration found\(fileInfo). Add an 'xcode' section to your configuration file."
-        case .environmentNotFound(let environment, let available):
+        case let .environmentNotFound(environment, available):
             let availableList = available.isEmpty
                 ? "No release environments configured."
                 : "Available environments: \(available.joined(separator: ", "))"
             return "Release environment '\(environment)' not found in configuration. \(availableList)"
-        case .archiveFailed(let environment, let error):
+        case let .archiveFailed(environment, error):
             return "Archive failed for environment '\(environment)': \(error.localizedDescription)"
-        case .ipaGenerationFailed(let environment, let error):
+        case let .ipaGenerationFailed(environment, error):
             return "IPA generation failed for environment '\(environment)': \(error.localizedDescription)"
-        case .uploadFailed(let environment, let error):
+        case let .uploadFailed(environment, error):
             return "Upload failed for environment '\(environment)': \(error.localizedDescription)"
         }
     }
