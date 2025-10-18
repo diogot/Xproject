@@ -145,8 +145,8 @@ struct ReleaseServiceTests {
         let uploadCalls = await mockXcodeClient.uploadCalls
 
         #expect(archiveCalls.count == 1)
-        #expect(ipaCalls.count == 0)
-        #expect(uploadCalls.count == 0)
+        #expect(ipaCalls.isEmpty)
+        #expect(uploadCalls.isEmpty)
     }
 
     // MARK: - Skip Upload Tests
@@ -182,7 +182,7 @@ struct ReleaseServiceTests {
 
         #expect(archiveCalls.count == 1)
         #expect(ipaCalls.count == 1)
-        #expect(uploadCalls.count == 0)
+        #expect(uploadCalls.isEmpty)
     }
 
     // MARK: - Upload Only Tests
@@ -216,8 +216,8 @@ struct ReleaseServiceTests {
         let ipaCalls = await mockXcodeClient.generateIPACalls
         let uploadCalls = await mockXcodeClient.uploadCalls
 
-        #expect(archiveCalls.count == 0)
-        #expect(ipaCalls.count == 0)
+        #expect(archiveCalls.isEmpty)
+        #expect(ipaCalls.isEmpty)
         #expect(uploadCalls.count == 1)
     }
 
@@ -250,8 +250,8 @@ struct ReleaseServiceTests {
         // Should not proceed to IPA/upload after archive failure
         let ipaCalls = await mockXcodeClient.generateIPACalls
         let uploadCalls = await mockXcodeClient.uploadCalls
-        #expect(ipaCalls.count == 0)
-        #expect(uploadCalls.count == 0)
+        #expect(ipaCalls.isEmpty)
+        #expect(uploadCalls.isEmpty)
     }
 
     @Test("ReleaseService handles IPA generation failure")
@@ -280,7 +280,7 @@ struct ReleaseServiceTests {
 
         // Should not proceed to upload after IPA failure
         let uploadCalls = await mockXcodeClient.uploadCalls
-        #expect(uploadCalls.count == 0)
+        #expect(uploadCalls.isEmpty)
     }
 
     @Test("ReleaseService handles upload failure")
@@ -326,7 +326,7 @@ struct ReleaseServiceTests {
             #expect(Bool(false), "Should have thrown an error")
         } catch let error as ReleaseError {
             switch error {
-            case .environmentNotFound(let environment, let available):
+            case let .environmentNotFound(environment, available):
                 #expect(environment == "unknown-env")
                 #expect(available.contains("production-ios"))
                 #expect(available.contains("dev-ios"))

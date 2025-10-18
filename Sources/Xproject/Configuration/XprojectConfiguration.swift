@@ -244,6 +244,11 @@ public extension XprojectConfiguration {
     }
 
     private func validateReleaseConfiguration(envName: String, config: ReleaseConfiguration) throws {
+        try validateReleaseRequiredFields(envName: envName, config: config)
+        try validateReleaseSigningConfiguration(envName: envName, config: config)
+    }
+
+    private func validateReleaseRequiredFields(envName: String, config: ReleaseConfiguration) throws {
         if config.scheme.isEmpty {
             throw ValidationError(message: """
                 Release environment '\(envName)': scheme cannot be empty.
@@ -307,45 +312,46 @@ public extension XprojectConfiguration {
                 Common types: ios, appletvos
                 """)
         }
+    }
 
-        // Validate signing configuration for manual signing
-        if let signing = config.signing {
-            if signing.signingStyle == "manual" {
-                if signing.signingCertificate == nil || signing.signingCertificate?.isEmpty == true {
-                    throw ValidationError(message: """
-                        Release environment '\(envName)': signingCertificate is required for manual signing.
+    private func validateReleaseSigningConfiguration(envName: String, config: ReleaseConfiguration) throws {
+        guard let signing = config.signing, signing.signingStyle == "manual" else {
+            return
+        }
 
-                        ✅ Example:
-                        xcode:
-                          release:
-                            \(envName):
-                              sign:
-                                signingStyle: manual
-                                signingCertificate: 'iPhone Distribution'
-                                teamID: 'YOUR_TEAM_ID'
-                                provisioningProfiles:
-                                  com.example.app: 'Distribution Profile'
-                        """)
-                }
+        if signing.signingCertificate == nil || signing.signingCertificate?.isEmpty == true {
+            throw ValidationError(message: """
+                Release environment '\(envName)': signingCertificate is required for manual signing.
 
-                if signing.provisioningProfiles == nil || signing.provisioningProfiles?.isEmpty == true {
-                    throw ValidationError(message: """
-                        Release environment '\(envName)': provisioningProfiles is required for manual signing.
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      sign:
+                        signingStyle: manual
+                        signingCertificate: 'iPhone Distribution'
+                        teamID: 'YOUR_TEAM_ID'
+                        provisioningProfiles:
+                          com.example.app: 'Distribution Profile'
+                """)
+        }
 
-                        ✅ Example:
-                        xcode:
-                          release:
-                            \(envName):
-                              sign:
-                                signingStyle: manual
-                                signingCertificate: 'iPhone Distribution'
-                                teamID: 'YOUR_TEAM_ID'
-                                provisioningProfiles:
-                                  com.example.app: 'Distribution Profile'
-                                  com.example.app.extension: 'Extension Profile'
-                        """)
-                }
-            }
+        if signing.provisioningProfiles == nil || signing.provisioningProfiles?.isEmpty == true {
+            throw ValidationError(message: """
+                Release environment '\(envName)': provisioningProfiles is required for manual signing.
+
+                ✅ Example:
+                xcode:
+                  release:
+                    \(envName):
+                      sign:
+                        signingStyle: manual
+                        signingCertificate: 'iPhone Distribution'
+                        teamID: 'YOUR_TEAM_ID'
+                        provisioningProfiles:
+                          com.example.app: 'Distribution Profile'
+                          com.example.app.extension: 'Extension Profile'
+                """)
         }
     }
 
