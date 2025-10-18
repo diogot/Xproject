@@ -55,7 +55,7 @@ A modern Swift command line tool for Xcode project build automation.
 - `xp setup` - Setup project dependencies and environment
 - `xp build` - Build the Xcode project for testing
 - `xp test` - Run unit tests with multi-destination support
-- `xp release` - Create a release build (TODO: Not yet implemented)
+- `xp release` - Create release builds with archive, IPA generation, and App Store upload
 - `xp config` - Manage and validate project configuration
 
 ### Global Options
@@ -87,6 +87,11 @@ xp config validate
 
 # Show current configuration with verbose output
 xp config show --verbose
+
+# Create release builds
+xp release production-ios
+xp release dev-ios --archive-only
+xp release staging-ios --skip-upload --dry-run
 ```
 
 ### Integration with Existing Projects
@@ -141,7 +146,9 @@ swift run xp --help
 - **Homebrew integration** - Automated tool installation and updates
 - **Clean architecture** - Separated CLI and business logic with explicit working directory handling
 - **Improved CLI output** - Clear info blocks with working directory and configuration display, structured environment variable formatting
+- **Release command** - Archive creation, IPA generation, and App Store upload with automatic/manual signing support
 
-### 🚧 In Development
-- **Release command** - Archive creation, IPA generation, App Store upload
+### 🚧 Future Enhancements
 - **Environment management** - Support for different deployment environments
+- **Version management** - Automated version bumping and git tagging
+- **Danger integration** - Code review automation
