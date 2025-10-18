@@ -22,6 +22,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Setup command**: Homebrew formula installation (deprecated bundler/cocoapods/submodules removed)
 - ✅ **Build command**: Complete implementation for building Xcode projects for testing
 - ✅ **Test command**: Full test orchestration with multi-scheme and multi-destination support
+- ✅ **Release command**: Complete implementation for iOS/tvOS app archiving, IPA generation, and App Store upload
 - ✅ **Working directory support**: Run commands from any directory with `-C/--working-directory`
 - ✅ **Multi-scheme and multi-destination testing**: Run tests across multiple iOS simulators
 - ✅ **Custom configuration files**: Use `--config` option to specify project-specific configs
@@ -43,8 +44,9 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 **Key Services:**
 - `ConfigurationService`: Thread-safe singleton for loading and caching YAML configs with custom config file support
 - `SetupService`: Handles project setup (currently Homebrew only)
-- `BuildService`: Handles building for tests, archiving, IPA generation, and uploads with Xcode discovery
+- `BuildService`: Handles building for tests with Xcode discovery
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
+- `ReleaseService`: Orchestrates release workflow (archive → IPA generation → App Store upload)
 
 **Key Utilities:**
 - `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
@@ -77,12 +79,14 @@ xp config show     # Display current configuration
 xp config validate # Validate configuration files with comprehensive checks
 xp build           # Build for testing (supports --scheme, --clean, --destination)
 xp test            # Run tests (supports --scheme, --clean, --skip-build, --destination)
-xp release         # TODO: Implement release functionality
+xp release         # Create release builds (archive, IPA, upload with --archive-only, --skip-upload, --upload-only)
 
 # Examples
 xp -C /path/to/project config show
 xp --working-directory MyProject build --scheme MyApp --clean
 xp test --config my-config.yml --scheme MyApp --clean --dry-run
+xp release production-ios
+xp release dev-ios --archive-only --dry-run
 xp setup --dry-run
 xp config --config custom.yml validate
 ```
@@ -228,10 +232,12 @@ Priority order for implementing remaining features:
 3. ✅ ~~Global --config option~~ - **COMPLETED**: Custom configuration file support across all commands
 4. ✅ ~~Enhanced error handling~~ - **COMPLETED**: Informative error messages with config file context
 5. ✅ ~~Dry-run functionality~~ - **COMPLETED**: Safe preview mode with executeReadOnly for discovery operations
+6. ✅ ~~Release command~~ - **COMPLETED**: Archive, IPA generation, and App Store upload with automatic/manual signing (139 tests passing)
 
 **Remaining Work:**
-1. Release command (migrate from xcode.rake) - Archive, IPA generation, and App Store upload
-2. Environment management features - Support for different deployment environments
+1. Environment management features - Support for different deployment environments
+2. Version management - Auto-increment build numbers, semantic versioning, git tagging
+3. Git operations - Commit, tag, and push automation
 
 ### Future Enhancements
 - Add Danger integration support for test command (--run-danger flag)

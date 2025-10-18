@@ -145,16 +145,31 @@ struct ConfigCommand: AsyncParsableCommand {
             return warnings
         }
 
-        guard let testsConfig = xcode.tests else {
+        // Validate test configuration
+        if let testsConfig = xcode.tests {
+            if testsConfig.schemes.isEmpty {
+                warnings.append("Test configuration has no schemes defined")
+            } else {
+                for schemeConfig in testsConfig.schemes where schemeConfig.testDestinations.isEmpty {
+                    warnings.append("Test scheme '\(schemeConfig.scheme)' has no test destinations")
+                }
+            }
+        } else {
             warnings.append("No test configuration found. Add 'tests' section under 'xcode' to run tests")
-            return warnings
         }
 
-        if testsConfig.schemes.isEmpty {
-            warnings.append("Test configuration has no schemes defined")
-        } else {
-            for schemeConfig in testsConfig.schemes where schemeConfig.testDestinations.isEmpty {
-                warnings.append("Test scheme '\(schemeConfig.scheme)' has no test destinations")
+        // Validate release configuration
+        if let release = xcode.release {
+            for (envName, releaseConfig) in release {
+                if releaseConfig.signing == nil {
+                    warnings.append("Release environment '\(envName)' has no signing configuration. IPA export may fail.")
+                } else if let signing = releaseConfig.signing {
+                    let hasBasicSigning = signing.teamID != nil || signing.provisioningProfiles != nil
+                    if !hasBasicSigning {
+                        // swiftlint:disable:next line_length
+                        warnings.append("Release environment '\(envName)' signing configuration may be incomplete (missing teamID or provisioningProfiles)")
+                    }
+                }
             }
         }
 

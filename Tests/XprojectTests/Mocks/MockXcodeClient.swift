@@ -19,11 +19,21 @@ public actor MockXcodeClient: XcodeClientProtocol {
         public let destination: String
     }
 
+    public struct ReleaseCall: Sendable {
+        public let environment: String
+    }
+
     private var _buildForTestingCalls: [BuildCall] = []
     private var _runTestsCalls: [TestCall] = []
+    private var _archiveCalls: [ReleaseCall] = []
+    private var _generateIPACalls: [ReleaseCall] = []
+    private var _uploadCalls: [ReleaseCall] = []
 
     private var shouldFailBuildForScheme: [String: Bool] = [:]
     private var shouldFailTestForDestination: [String: Bool] = [:]
+    private var shouldFailArchiveForEnvironment: [String: Bool] = [:]
+    private var shouldFailIPAForEnvironment: [String: Bool] = [:]
+    private var shouldFailUploadForEnvironment: [String: Bool] = [:]
 
     public init() {}
 
@@ -35,12 +45,36 @@ public actor MockXcodeClient: XcodeClientProtocol {
         _runTestsCalls
     }
 
+    public var archiveCalls: [ReleaseCall] {
+        _archiveCalls
+    }
+
+    public var generateIPACalls: [ReleaseCall] {
+        _generateIPACalls
+    }
+
+    public var uploadCalls: [ReleaseCall] {
+        _uploadCalls
+    }
+
     public func setShouldFailBuildForScheme(_ scheme: String, shouldFail: Bool) {
         shouldFailBuildForScheme[scheme] = shouldFail
     }
 
     public func setShouldFailTestForDestination(_ destination: String, shouldFail: Bool) {
         shouldFailTestForDestination[destination] = shouldFail
+    }
+
+    public func setShouldFailArchiveForEnvironment(_ environment: String, shouldFail: Bool) {
+        shouldFailArchiveForEnvironment[environment] = shouldFail
+    }
+
+    public func setShouldFailIPAForEnvironment(_ environment: String, shouldFail: Bool) {
+        shouldFailIPAForEnvironment[environment] = shouldFail
+    }
+
+    public func setShouldFailUploadForEnvironment(_ environment: String, shouldFail: Bool) {
+        shouldFailUploadForEnvironment[environment] = shouldFail
     }
 
     public func buildForTesting(scheme: String, clean: Bool, buildDestination: String) async throws {
@@ -66,15 +100,30 @@ public actor MockXcodeClient: XcodeClientProtocol {
     }
 
     public func archive(environment: String) async throws {
-        // Not used in tests
+        _archiveCalls.append(ReleaseCall(environment: environment))
+
+        let shouldFail = shouldFailArchiveForEnvironment[environment] ?? false
+        if shouldFail {
+            throw XcodeClientError.configurationError("Mock archive failure for \(environment)")
+        }
     }
 
     public func generateIPA(environment: String) async throws {
-        // Not used in tests
+        _generateIPACalls.append(ReleaseCall(environment: environment))
+
+        let shouldFail = shouldFailIPAForEnvironment[environment] ?? false
+        if shouldFail {
+            throw XcodeClientError.configurationError("Mock IPA generation failure for \(environment)")
+        }
     }
 
     public func upload(environment: String) async throws {
-        // Not used in tests
+        _uploadCalls.append(ReleaseCall(environment: environment))
+
+        let shouldFail = shouldFailUploadForEnvironment[environment] ?? false
+        if shouldFail {
+            throw XcodeClientError.configurationError("Mock upload failure for \(environment)")
+        }
     }
 
     public func clean() async throws {

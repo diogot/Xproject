@@ -158,9 +158,14 @@ struct XcodeClientTests {
         }
 
         // Then - Verify FileManager builder was used and directories were created
+        // Note: Paths are now absolute (prepended with working directory)
+        let workingDir = FileManager.default.temporaryDirectory.path
+        let expectedBuildPath = URL(fileURLWithPath: workingDir).appendingPathComponent("custom-build").path
+        let expectedReportsPath = URL(fileURLWithPath: workingDir).appendingPathComponent("custom-reports").path
+
         #expect(mockFileManager.createdDirectories.count == 2)
-        #expect(mockFileManager.createdDirectories.contains("custom-build"))
-        #expect(mockFileManager.createdDirectories.contains("custom-reports"))
+        #expect(mockFileManager.createdDirectories.contains(expectedBuildPath))
+        #expect(mockFileManager.createdDirectories.contains(expectedReportsPath))
     }
 
     @Test("SigningConfiguration struct works correctly")
@@ -416,5 +421,1067 @@ struct XcodeClientTests {
         } catch {
             Issue.record("Unexpected error type: \(error)")
         }
+    }
+
+    // MARK: - Archive Tests
+
+    @Test("archive command includes correct scheme and configuration")
+    func testArchiveCommandStructure() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: "TestApp.xcworkspace",
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production-ios": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.archive(environment: "production-ios")
+        } catch {
+            // Expected to fail on xcodebuild execution, we're just testing command structure
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let archiveCommand = commands.first { $0.command.contains("clean archive") }
+
+        #expect(archiveCommand != nil)
+        #expect(archiveCommand?.command.contains("-workspace 'TestApp.xcworkspace'") == true)
+        #expect(archiveCommand?.command.contains("-configuration 'Release'") == true)
+        #expect(archiveCommand?.command.contains("-scheme 'MyApp'") == true)
+        #expect(archiveCommand?.command.contains("-destination 'generic/platform=iOS'") == true)
+        #expect(archiveCommand?.command.contains("-archivePath 'build/MyApp.xcarchive'") == true)
+        #expect(archiveCommand?.command.contains("-parallelizeTargets") == true)
+    }
+
+    @Test("archive uses correct output path for xcarchive")
+    func testArchiveOutputPath() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: nil,
+            output: "MyApp-Production",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "custom-build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["staging": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.archive(environment: "staging")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let archiveCommand = commands.first { $0.command.contains("clean archive") }
+
+        #expect(archiveCommand?.command.contains("-archivePath 'custom-build/MyApp-Production.xcarchive'") == true)
+    }
+
+    @Test("archive creates build directory before execution")
+    func testArchiveCreatesDirectories() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Debug",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["dev": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.archive(environment: "dev")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then - Verify directories were created with absolute paths
+        #expect(mockFileManager.createdDirectories.contains("/test/project/build"))
+        #expect(mockFileManager.createdDirectories.contains("/test/project/reports"))
+    }
+
+    @Test("archive without configuration omits configuration argument")
+    func testArchiveWithoutConfiguration() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: nil,
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["dev": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.archive(environment: "dev")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let archiveCommand = commands.first { $0.command.contains("clean archive") }
+
+        #expect(archiveCommand != nil)
+        #expect(archiveCommand?.command.contains("-configuration") == false)
+    }
+
+    // MARK: - Generate IPA Tests
+
+    @Test("generateIPA command includes correct exportArchive arguments")
+    func testGenerateIPACommandStructure() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let signing = SigningConfiguration(
+            signingCertificate: "iPhone Distribution",
+            teamID: "ABC123",
+            signingStyle: "manual",
+            provisioningProfiles: ["com.example.app": "Distribution Profile"]
+        )
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: signing
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let exportCommand = commands.first { $0.command.contains("-exportArchive") }
+
+        #expect(exportCommand != nil)
+        #expect(exportCommand?.command.contains("-exportArchive") == true)
+        #expect(exportCommand?.command.contains("-archivePath 'build/MyApp.xcarchive'") == true)
+        #expect(exportCommand?.command.contains("-exportPath 'build/MyApp-ipa'") == true)
+        #expect(exportCommand?.command.contains("-exportOptionsPlist 'build/export.plist'") == true)
+    }
+
+    @Test("generateIPA with automatic signing includes allowProvisioningUpdates")
+    func testGenerateIPAWithAutomaticSigning() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let signing = SigningConfiguration(
+            signingCertificate: nil,
+            teamID: "ABC123",
+            signingStyle: "automatic",
+            provisioningProfiles: nil
+        )
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: signing
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["dev": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "dev")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let exportCommand = commands.first { $0.command.contains("-exportArchive") }
+
+        #expect(exportCommand != nil)
+        #expect(exportCommand?.command.contains("-allowProvisioningUpdates") == true)
+    }
+
+    @Test("generateIPA with manual signing does NOT include allowProvisioningUpdates")
+    func testGenerateIPAWithManualSigning() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let signing = SigningConfiguration(
+            signingCertificate: "iPhone Distribution",
+            teamID: "ABC123",
+            signingStyle: "manual",
+            provisioningProfiles: ["com.example.app": "Distribution Profile"]
+        )
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: signing
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let exportCommand = commands.first { $0.command.contains("-exportArchive") }
+
+        #expect(exportCommand != nil)
+        #expect(exportCommand?.command.contains("-allowProvisioningUpdates") == false)
+    }
+
+    @Test("generateIPA cleans export directory before execution")
+    func testGenerateIPACleansExportDirectory() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["dev": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "dev")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let cleanCommand = commands.first { $0.command.contains("rm -rf") && $0.command.contains("build/MyApp-ipa") }
+
+        #expect(cleanCommand != nil)
+    }
+
+    @Test("generateIPA uses custom build path for export")
+    func testGenerateIPACustomBuildPath() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("custom-output")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp-Staging",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "custom-output",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["staging": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "staging")
+        } catch {
+            // Expected to fail on xcodebuild execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let exportCommand = commands.first { $0.command.contains("-exportArchive") }
+
+        #expect(exportCommand?.command.contains("-archivePath 'custom-output/MyApp-Staging.xcarchive'") == true)
+        #expect(exportCommand?.command.contains("-exportPath 'custom-output/MyApp-Staging-ipa'") == true)
+        #expect(exportCommand?.command.contains("-exportOptionsPlist 'custom-output/export.plist'") == true)
+    }
+
+    // MARK: - Upload Tests
+
+    @Test("upload command uses correct IPA path")
+    func testUploadCommandStructure() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand != nil)
+        #expect(uploadCommand?.command.contains("xcrun altool --upload-app") == true)
+        #expect(uploadCommand?.command.contains("--type ios") == true)
+        #expect(uploadCommand?.command.contains("-f 'build/MyApp-ipa/MyApp.ipa'") == true)
+    }
+
+    @Test("upload includes app_store_account when provided")
+    func testUploadWithAppStoreAccount() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: "developer@example.com",
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("-u developer@example.com") == true)
+    }
+
+    @Test("upload includes APP_STORE_PASS environment variable when set")
+    func testUploadWithEnvironmentVariable() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: "developer@example.com",
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // Set environment variable
+        setenv("APP_STORE_PASS", "test_password", 1)
+        defer { unsetenv("APP_STORE_PASS") }
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("-p @env:APP_STORE_PASS") == true)
+    }
+
+    @Test("upload uses correct Xcode version prefix")
+    func testUploadUsesXcodeVersion() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "15.4",
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery for version 15.4
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "15.4")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("DEVELOPER_DIR=\"/Applications/Xcode.app/Contents/Developer\"") == true)
+    }
+
+    // MARK: - Safety Validation Tests
+
+    @Test("generateIPA rejects dangerous paths for deletion")
+    func testGenerateIPARejectsDangerousPaths() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("Users")  // Dangerous path component
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "/Users",  // Dangerous path - should fail validation
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When/Then - Should throw unsafePathDeletion error
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+            Issue.record("Should have thrown unsafePathDeletion error")
+        } catch XcodeClientError.unsafePathDeletion {
+            // Expected - dangerous path was rejected
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("generateIPA allows safe build paths for deletion")
+    func testGenerateIPAAllowsSafePaths() async throws {
+        // Given
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        // Create temporary directory for test
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let buildDir = tempDir.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        let releaseConfig = ReleaseConfiguration(
+            scheme: "MyApp",
+            configuration: "Release",
+            output: "MyApp",
+            destination: "iOS",
+            type: "ios",
+            appStoreAccount: nil,
+            signing: nil
+        )
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "16.0",
+                buildPath: "build",  // Safe path - contains "build"
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": releaseConfig]
+            ),
+            danger: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: tempDir.path,
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock Xcode discovery
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "/Applications/Xcode.app")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "16.0")
+        )
+
+        // When
+        do {
+            try await xcodeClient.generateIPA(environment: "production")
+        } catch XcodeClientError.unsafePathDeletion {
+            Issue.record("Should NOT have thrown unsafePathDeletion error for safe path")
+        } catch {
+            // Expected to fail on xcodebuild execution, but NOT on path validation
+        }
+
+        // Then - Verify rm command was attempted (path validation passed)
+        let commands = mockExecutor.executedCommands
+        let cleanCommand = commands.first { $0.command.contains("rm -rf") && $0.command.contains("build/MyApp-ipa") }
+        #expect(cleanCommand != nil)
     }
 }

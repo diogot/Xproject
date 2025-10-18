@@ -120,21 +120,27 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         }
 
         let exportPath = exportPath(filename: releaseConfig.output, config: config)
+
+        // Validate export path is safe to delete BEFORE doing any other operations
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        try validateSafeToDelete(exportPath)
+
         let exportPlistPath = try createExportPlist(signingConfiguration: releaseConfig.signing, config: config)
 
-        let xcodeArgs = [
+        var xcodeArgs = [
             "-exportArchive",
             "-archivePath '\(archivePath(filename: releaseConfig.output, config: config))'",
             "-exportPath '\(exportPath)'",
             "-exportOptionsPlist '\(exportPlistPath)'"
         ]
 
-        // Clean export directory
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(exportPath)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
+        // Add -allowProvisioningUpdates only for automatic signing
+        if releaseConfig.signing?.signingStyle == "automatic" {
+            xcodeArgs.append("-allowProvisioningUpdates")
         }
+
+        // Clean export directory
+        _ = try commandExecutor.executeOrThrow("rm -rf '\(exportPath)'")
 
         let reportName = "export-\(environment)"
         try await executeXcodeBuild(args: xcodeArgs, reportName: reportName, config: config)
@@ -172,11 +178,8 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
 
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
-        }
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        _ = try commandExecutor.executeOrThrow("rm -rf '\(buildPath)' '\(reportsPath)'")
     }
 
     // MARK: - Private Methods
@@ -212,11 +215,8 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let argsString = allArgs.joined(separator: " ")
 
         // Clean previous outputs
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
-        } else {
-            _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
-        }
+        // Note: Use non-streaming execute for rm commands since they produce no output
+        _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
 
         // Execute xcodebuild with xcpretty
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
@@ -288,10 +288,19 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         return version
     }
 
+    private func absolutePath(from path: String) -> String {
+        if path.hasPrefix("/") {
+            return path  // Already absolute
+        }
+        return URL(fileURLWithPath: workingDirectory)
+            .appendingPathComponent(path)
+            .path
+    }
+
     private func createDirectoriesIfNeeded(config: XprojectConfiguration) throws {
         let fileManager = fileManagerBuilder()
-        let buildPath = config.buildPath()
-        let reportsPath = config.reportsPath()
+        let buildPath = absolutePath(from: config.buildPath())
+        let reportsPath = absolutePath(from: config.reportsPath())
 
         try fileManager.createDirectory(atPath: buildPath, withIntermediateDirectories: true)
         try fileManager.createDirectory(atPath: reportsPath, withIntermediateDirectories: true)
@@ -356,12 +365,57 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
             }
         }
 
-        let plistPath = "\(config.buildPath())/export.plist"
+        let relativePlistPath = "\(config.buildPath())/export.plist"
+        let absolutePlistPath = absolutePath(from: relativePlistPath)
         let plistData = try PropertyListSerialization.data(fromPropertyList: plistDict, format: .xml, options: 0)
 
-        try plistData.write(to: URL(fileURLWithPath: plistPath))
+        try plistData.write(to: URL(fileURLWithPath: absolutePlistPath))
 
-        return plistPath
+        return relativePlistPath  // Return relative path for xcodebuild command
+    }
+
+    /// Validates that a path is safe to delete with rm -rf
+    /// - Parameter path: The path to validate
+    /// - Throws: XcodeClientError.unsafePathDeletion if the path is potentially dangerous
+    private func validateSafeToDelete(_ path: String) throws {
+        // Reject empty paths
+        guard !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw XcodeClientError.unsafePathDeletion(path)
+        }
+
+        let normalizedPath = path.trimmingCharacters(in: .whitespaces)
+
+        // Reject root and critical system directories
+        let dangerousPaths = [
+            "/",
+            "/System",
+            "/Library",
+            "/Users",
+            "/Applications",
+            "/bin",
+            "/sbin",
+            "/usr",
+            "/var",
+            "/etc",
+            "/tmp",
+            "/private"
+        ]
+
+        for dangerousPath in dangerousPaths {
+            if normalizedPath == dangerousPath || normalizedPath.hasPrefix(dangerousPath + "/") {
+                throw XcodeClientError.unsafePathDeletion(path)
+            }
+        }
+
+        // Must contain "build", "reports", or common artifact indicators
+        let safeIndicators = ["build", "reports", ".xcarchive", "-ipa", ".ipa", ".log", ".xml", ".xcresult"]
+        let containsSafeIndicator = safeIndicators.contains { indicator in
+            normalizedPath.lowercased().contains(indicator.lowercased())
+        }
+
+        guard containsSafeIndicator else {
+            throw XcodeClientError.unsafePathDeletion(path)
+        }
     }
 }
 
@@ -372,6 +426,7 @@ public enum XcodeClientError: Error, LocalizedError, Sendable {
     case xcodeVersionNotFound(String)
     case xcodeVersionFetchFailed(String)
     case configurationError(String)
+    case unsafePathDeletion(String)
 
     public var errorDescription: String? {
         switch self {
@@ -383,6 +438,8 @@ public enum XcodeClientError: Error, LocalizedError, Sendable {
             return "Failed to fetch Xcode version from '\(path)'"
         case .configurationError(let message):
             return "Configuration error: \(message)"
+        case .unsafePathDeletion(let path):
+            return "Refusing to delete potentially unsafe path: '\(path)'. Path must be non-empty and within the build directory."
         }
     }
 }
