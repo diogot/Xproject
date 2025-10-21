@@ -276,6 +276,217 @@ public final class EnvironmentService {
         }
     }
 
+    // MARK: - Swift Code Generation
+
+    /// Generate Swift files for all configured outputs
+    /// - Parameters:
+    ///   - environmentName: Name of environment being activated
+    ///   - variables: Environment variables from env.yml
+    ///   - workingDirectory: Project working directory
+    ///   - dryRun: If true, shows what would be done without executing
+    /// - Throws: EnvironmentError or file system errors
+    public func generateSwiftFiles(
+        environmentName: String,
+        variables: [String: Any],
+        workingDirectory: String,
+        dryRun: Bool
+    ) throws {
+        // Load environment configuration
+        let config = try loadEnvironmentConfig(workingDirectory: workingDirectory)
+
+        // Check if Swift generation is enabled
+        guard let swiftConfig = config.swiftGeneration, swiftConfig.enabled else {
+            return // Swift generation not configured, skip silently
+        }
+
+        // Generate each output file
+        for output in swiftConfig.outputs {
+            // Determine prefixes based on output type
+            var prefixes = output.prefixes
+            let outputType = output.type ?? .base
+
+            // Base type automatically includes all root-level variables
+            if outputType == .base {
+                let rootLevelKeys = variables.keys.filter { !(variables[$0] is [String: Any]) }
+                prefixes = rootLevelKeys + prefixes
+            }
+
+            // Filter variables by prefix
+            let filteredVars = filterVariables(variables, prefixes: prefixes)
+
+            // Convert to Swift properties
+            let properties = try convertToSwiftProperties(filteredVars)
+
+            // Generate Swift code
+            let swiftCode: String
+            switch outputType {
+            case .base:
+                swiftCode = SwiftTemplates.generateBaseClass(
+                    properties: properties,
+                    environmentName: environmentName
+                )
+            case .extension:
+                swiftCode = SwiftTemplates.generateExtension(
+                    properties: properties,
+                    environmentName: environmentName
+                )
+            }
+
+            // Write file
+            let fileURL = URL(fileURLWithPath: workingDirectory)
+                .appendingPathComponent(output.path)
+
+            try writeSwiftFile(
+                url: fileURL,
+                content: swiftCode,
+                dryRun: dryRun
+            )
+        }
+    }
+
+    /// Filter variables by namespace prefixes and convert to camelCase
+    /// - Parameters:
+    ///   - variables: All environment variables
+    ///   - prefixes: Namespace prefixes to include (e.g., ["apps", "features"])
+    /// - Returns: Filtered and transformed variables
+    private func filterVariables(_ variables: [String: Any], prefixes: [String]) -> [String: Any] {
+        var filtered: [String: Any] = [:]
+
+        for prefix in prefixes {
+            if let namespaceDict = variables[prefix] as? [String: Any] {
+                // This is a namespace (e.g., "apps", "features")
+                // Flatten the namespace and add all its variables
+                let flattened = flattenDictionary(namespaceDict)
+                for (key, value) in flattened {
+                    let camelKey = convertToCamelCase(key, prefix: "")
+                    filtered[camelKey] = value
+                }
+            } else if let rootValue = variables[prefix] {
+                // This is a root-level variable (e.g., "environment_name", "api_url")
+                let camelKey = convertToCamelCase(prefix, prefix: "")
+                filtered[camelKey] = rootValue
+            }
+        }
+
+        return filtered
+    }
+
+    /// Flatten nested dictionary to dot notation
+    /// - Parameter dict: Nested dictionary
+    /// - Parameter prefix: Current key prefix
+    /// - Returns: Flattened dictionary with underscore notation
+    private func flattenDictionary(_ dict: [String: Any], prefix: String = "") -> [String: Any] {
+        var result: [String: Any] = [:]
+
+        for (key, value) in dict {
+            let newKey = prefix.isEmpty ? key : "\(prefix)_\(key)"
+
+            if let nestedDict = value as? [String: Any] {
+                // Recursively flatten
+                let flattened = flattenDictionary(nestedDict, prefix: newKey)
+                result.merge(flattened) { _, new in new }
+            } else {
+                // Terminal value
+                result[newKey] = value
+            }
+        }
+
+        return result
+    }
+
+    /// Convert key to camelCase, removing prefix
+    /// - Parameters:
+    ///   - key: Original key (e.g., "api_url" or "bundle_identifier")
+    ///   - prefix: Prefix to remove (not used in namespace-based filtering, kept for compatibility)
+    /// - Returns: CamelCase key (e.g., "apiURL", "bundleIdentifier")
+    private func convertToCamelCase(_ key: String, prefix: String) -> String {
+        // Split by underscore and capitalize
+        let components = key.split(separator: "_").map(String.init)
+        guard !components.isEmpty else {
+            return key
+        }
+
+        // First component lowercase, rest capitalized
+        var camelCase = components[0].lowercased()
+        for component in components.dropFirst() {
+            camelCase += component.capitalized
+        }
+
+        // Special handling for URL suffix
+        // Convert "apiUrl" to "apiURL"
+        camelCase = camelCase.replacingOccurrences(
+            of: "Url",
+            with: "URL",
+            options: [],
+            range: camelCase.range(of: "Url")
+        )
+
+        return camelCase
+    }
+
+    /// Convert variables to Swift properties with type inference
+    /// - Parameter variables: Filtered variables
+    /// - Returns: Array of Swift properties
+    /// - Throws: EnvironmentError if type inference fails
+    private func convertToSwiftProperties(_ variables: [String: Any]) throws -> [SwiftProperty] {
+        var properties: [SwiftProperty] = []
+
+        for (name, value) in variables {
+            let (type, stringValue) = inferSwiftType(name: name, value: value)
+            properties.append(SwiftProperty(name: name, type: type, value: stringValue))
+        }
+
+        return properties
+    }
+
+    /// Infer Swift type from value
+    /// - Parameters:
+    ///   - name: Property name (used for URL detection)
+    ///   - value: Value from YAML
+    /// - Returns: Tuple of (type, string representation)
+    private func inferSwiftType(name: String, value: Any) -> (SwiftType, String) {
+        // Check for URL by name suffix
+        if name.hasSuffix("URL") || name.hasSuffix("Url") {
+            if let stringValue = value as? String {
+                return (.url, stringValue)
+            }
+        }
+
+        // Type inference by value
+        if let stringValue = value as? String {
+            return (.string, stringValue)
+        } else if let intValue = value as? Int {
+            return (.int, String(intValue))
+        } else if let boolValue = value as? Bool {
+            return (.bool, boolValue ? "true" : "false")
+        } else if let doubleValue = value as? Double {
+            // Treat as int if no decimal part
+            if doubleValue.truncatingRemainder(dividingBy: 1) == 0 {
+                return (.int, String(Int(doubleValue)))
+            }
+            // Otherwise treat as string
+            return (.string, String(doubleValue))
+        }
+
+        // Fallback to string
+        return (.string, String(describing: value))
+    }
+
+    /// Write Swift file to disk
+    private func writeSwiftFile(url: URL, content: String, dryRun: Bool) throws {
+        if dryRun {
+            print("Would write to: \(url.path)")
+            print(content)
+        } else {
+            // Ensure directory exists
+            let directory = url.deletingLastPathComponent()
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+
+            // Write file
+            try content.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
     // MARK: - Validation
 
     /// Validate environment configuration

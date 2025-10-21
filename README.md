@@ -181,8 +181,9 @@ Xproject includes a powerful environment management system for handling multiple
 - **Bundle ID suffixes**: Automatic suffix appending for app extensions (`.widget`, `.notification-content`)
 - **Per-configuration overrides**: Different variables for debug vs release builds
 - **Multiple targets**: Support for main app + extensions (widgets, notification extensions, etc.)
+- **Swift code generation**: Type-safe Swift files with namespace filtering, camelCase conversion, and automatic type inference
 - **Validation**: Comprehensive validation of configuration and environment files
-- **Dry-run mode**: Preview xcconfig generation without writing files
+- **Dry-run mode**: Preview xcconfig and Swift generation without writing files
 
 ### Available Commands
 
@@ -225,6 +226,39 @@ PROVISIONING_PROFILE_SPECIFIER = Development
 
 Build settings from xcconfig files will override project settings.
 
+### Swift Code Generation (Optional)
+
+Automatically generate type-safe Swift files from environment variables:
+
+```yaml
+# Add to env/config.yml
+swift_generation:
+  enabled: true
+  outputs:
+    # Base class - automatically includes ALL root-level variables
+    - path: MyApp/Generated/EnvironmentService.swift
+      prefixes: []
+      type: base
+    # Extension - specify namespaces to include
+    - path: MyApp/Generated/EnvironmentService+App.swift
+      prefixes: [apps, features]
+      type: extension
+```
+
+Generated Swift code:
+```swift
+public final class EnvironmentService {
+    public init() {}
+    public let apiURL = url("https://dev-api.example.com")
+    public let environmentName = "development"
+}
+
+extension EnvironmentService {
+    public var bundleIdentifier: String { "com.example.myapp.dev" }
+    public var debugMenu: Bool { true }
+}
+```
+
 ### .gitignore Recommendations
 
 Add these to your `.gitignore`:
@@ -232,6 +266,7 @@ Add these to your `.gitignore`:
 # Environment management
 env/.current
 **/Config/*.xcconfig
+**/Generated/EnvironmentService*.swift  # If using Swift generation
 ```
 
 **Documentation**: See `docs/environment-setup.md` for detailed setup guide and advanced features.
@@ -265,8 +300,8 @@ swift run xp --help
 - **Improved CLI output** - Clear info blocks with working directory and configuration display, structured environment variable formatting
 - **Release command** - Archive creation, IPA generation, and App Store upload with automatic/manual signing support
 - **Environment management** - Complete environment system with xcconfig generation, variable mapping, and multi-environment support
+- **Swift code generation** - Type-safe Swift code from environment variables with namespace filtering, camelCase conversion, and automatic type inference (String, URL, Int, Bool)
 
 ### 🚧 Future Enhancements
 - **Version management** - Automated version bumping and git tagging
 - **Danger integration** - Code review automation
-- **Swift code generation** - Generate Swift environment files with type-safe property access

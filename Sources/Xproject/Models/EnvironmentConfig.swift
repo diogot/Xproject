@@ -15,8 +15,17 @@ public struct EnvironmentConfig: Codable, Sendable {
     /// List of targets to generate xcconfig files for
     public let targets: [EnvironmentTarget]
 
-    public init(targets: [EnvironmentTarget]) {
+    /// Swift code generation configuration (optional)
+    public let swiftGeneration: SwiftGenerationConfig?
+
+    public init(targets: [EnvironmentTarget], swiftGeneration: SwiftGenerationConfig? = nil) {
         self.targets = targets
+        self.swiftGeneration = swiftGeneration
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case targets
+        case swiftGeneration = "swift_generation"
     }
 }
 
@@ -79,6 +88,46 @@ public struct ConfigurationSettings: Codable, Sendable {
     public init(variables: [String: String]? = nil) {
         self.variables = variables
     }
+}
+
+// MARK: - Swift Generation Configuration
+
+/// Configuration for Swift code generation from environment variables
+public struct SwiftGenerationConfig: Codable, Sendable {
+    /// Whether Swift generation is enabled
+    public let enabled: Bool
+
+    /// List of output configurations
+    public let outputs: [SwiftOutputConfig]
+
+    public init(enabled: Bool, outputs: [SwiftOutputConfig]) {
+        self.enabled = enabled
+        self.outputs = outputs
+    }
+}
+
+/// Configuration for a single Swift file output
+public struct SwiftOutputConfig: Codable, Sendable {
+    /// Output file path relative to working directory
+    public let path: String
+
+    /// Variable prefixes to include (e.g., ["all", "services"])
+    public let prefixes: [String]
+
+    /// Output type: "base" for standalone class, "extension" for class extension
+    public let type: SwiftOutputType?
+
+    public init(path: String, prefixes: [String], type: SwiftOutputType? = nil) {
+        self.path = path
+        self.prefixes = prefixes
+        self.type = type
+    }
+}
+
+/// Type of Swift output file
+public enum SwiftOutputType: String, Codable, Sendable {
+    case base
+    case `extension`
 }
 
 // MARK: - Environment Errors

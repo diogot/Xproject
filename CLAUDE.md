@@ -183,16 +183,59 @@ YourProject/
 - **Dot notation access**: Use paths like `apps.ios.bundle_identifier` to access nested YAML values
 - **Bundle ID suffixes**: Automatically append suffixes for app extensions (`.widget`, `.notification-content`)
 - **Configuration-specific variables**: Different variables for debug vs release builds
+- **Swift code generation**: Type-safe Swift code from environment variables with prefix filtering and type inference
 - **Validation**: Comprehensive validation of configuration and environment files
-- **Dry-run support**: Preview xcconfig generation without writing files
+- **Dry-run support**: Preview xcconfig and Swift generation without writing files
+
+### Swift Code Generation
+
+The environment system can automatically generate type-safe Swift files:
+
+```yaml
+swift_generation:
+  enabled: true
+  outputs:
+    # Base class - automatically includes ALL root-level variables
+    - path: MyApp/Generated/EnvironmentService.swift
+      prefixes: []  # Empty - base type auto-includes root-level
+      type: base
+    # Extension - explicitly specify namespaces
+    - path: MyApp/Generated/EnvironmentService+App.swift
+      prefixes: [apps, features]
+      type: extension
+```
+
+Features:
+- **Base type auto-includes root-level**: Base class automatically includes all root-level variables
+- **Namespace filtering**: Extensions filter by namespace (e.g., `apps`, `features`)
+- **CamelCase conversion**: `bundle_identifier` → `bundleIdentifier`, `api_url` → `apiURL`
+- **Type inference**: Automatic URL, String, Int, Bool detection
+- **Base class or extension**: Generate standalone class or extend existing
+- **URL handling**: Auto-detect URL properties by name suffix (`*URL`, `*Url`)
+
+Example generated code:
+```swift
+public final class EnvironmentService {
+    public init() {}
+    public let apiURL = url("https://dev-api.example.com")
+    public let environmentName = "development"
+}
+
+extension EnvironmentService {
+    public var bundleIdentifier: String { "com.example.app.dev" }
+    public var iosAppIconName: String { "AppIcon" }
+    public var debugMenu: Bool { true }
+}
+```
 
 ### Implementation Details
 
-- **Models**: `EnvironmentConfig`, `EnvironmentTarget`, `ConfigurationSettings` in Sources/Xproject/Models/EnvironmentConfig.swift
+- **Models**: `EnvironmentConfig`, `SwiftGenerationConfig`, `SwiftOutputConfig` in Sources/Xproject/Models/EnvironmentConfig.swift
 - **Service**: `EnvironmentService` in Sources/Xproject/Services/EnvironmentService.swift handles all environment operations
+- **Templates**: `SwiftTemplates` in Sources/Xproject/Templates/SwiftTemplates.swift with embedded code generation
 - **Utility**: `NestedDictionary` in Sources/Xproject/Utilities/NestedDictionary.swift provides dot notation access
 - **Commands**: `EnvironmentCommand` in Sources/XprojectCLI/Commands/EnvironmentCommand.swift with 5 subcommands
-- **Tests**: 17+ dedicated tests in Tests/XprojectTests/Services/EnvironmentServiceTests.swift
+- **Tests**: 28 dedicated tests (17 environment, 12 Swift generation) in Tests/XprojectTests/Services/ - 226 total tests passing
 
 See `docs/environment-setup.md` for detailed setup guide and examples.
 
@@ -340,7 +383,7 @@ Priority order for implementing remaining features:
 5. ✅ ~~Dry-run functionality~~ - **COMPLETED**: Safe preview mode with executeReadOnly for discovery operations
 6. ✅ ~~Release command~~ - **COMPLETED**: Archive, IPA generation, and App Store upload with automatic/manual signing (139 tests passing)
 
-7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, variable mapping, validation (216 tests passing)
+7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, Swift code generation, variable mapping, validation (226 tests passing)
 
 **Remaining Work:**
 1. Version management - Auto-increment build numbers, semantic versioning, git tagging

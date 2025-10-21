@@ -153,6 +153,8 @@ struct EnvLoadCommand: AsyncParsableCommand {
     var nameOrIndex: String?
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun: Bool = false
+    @Flag(name: .long, help: "Skip Swift code generation")
+    var skipSwift: Bool = false
 
     func run() async throws {
         let service = EnvironmentService()
@@ -187,6 +189,16 @@ struct EnvLoadCommand: AsyncParsableCommand {
             workingDirectory: workingDir,
             dryRun: dryRun
         )
+
+        // Generate Swift files
+        if !skipSwift {
+            try service.generateSwiftFiles(
+                environmentName: name,
+                variables: variables,
+                workingDirectory: workingDir,
+                dryRun: dryRun
+            )
+        }
 
         // Set current environment
         if !dryRun {
