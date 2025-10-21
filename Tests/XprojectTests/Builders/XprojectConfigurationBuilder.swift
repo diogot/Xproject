@@ -64,7 +64,8 @@ public class XprojectConfigurationBuilder {
             projectPaths: projectPaths,
             setup: setup,
             xcode: xcode,
-            danger: danger
+            danger: danger,
+            environment: nil
         )
     }
 

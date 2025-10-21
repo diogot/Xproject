@@ -14,6 +14,7 @@ public struct XprojectConfiguration: Codable, Sendable {
     public let setup: SetupConfiguration?
     public let xcode: XcodeConfiguration?
     public let danger: DangerConfiguration?
+    public let environment: EnvironmentFeature?
 
     enum CodingKeys: String, CodingKey {
         case appName = "app_name"
@@ -22,6 +23,7 @@ public struct XprojectConfiguration: Codable, Sendable {
         case setup
         case xcode
         case danger
+        case environment
     }
 }
 
@@ -41,6 +43,16 @@ public struct BrewConfiguration: Codable, Sendable {
     }
 }
 
+// MARK: - Environment Configuration
+
+public struct EnvironmentFeature: Codable, Sendable {
+    public let enabled: Bool
+
+    public init(enabled: Bool) {
+        self.enabled = enabled
+    }
+}
+
 // MARK: - Configuration Extensions
 
 public extension XprojectConfiguration {
@@ -51,8 +63,20 @@ public extension XprojectConfiguration {
 
     /// Check if a component is enabled
     func isEnabled(_ keyPath: String) -> Bool {
-        // Parse keypath like "setup.brew" and check if enabled
+        // Parse keypath like "setup.brew" or "environment" and check if enabled
         let components = keyPath.split(separator: ".")
+
+        // Handle single component paths like "environment"
+        if components.count == 1 {
+            switch components[0] {
+            case "environment":
+                return environment?.enabled ?? false
+            default:
+                return false
+            }
+        }
+
+        // Handle multi-component paths like "setup.brew"
         guard components.count >= 2 else {
             return false
         }

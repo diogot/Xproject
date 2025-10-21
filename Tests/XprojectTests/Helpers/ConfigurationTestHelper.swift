@@ -27,7 +27,8 @@ public struct ConfigurationTestHelper {
             projectPaths: ["test": projectPath],
             setup: nil,
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil
         )
     }
 
@@ -102,7 +103,8 @@ public struct ConfigurationTestHelper {
                 tests: testsConfig,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil
         )
     }
 }

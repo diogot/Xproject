@@ -34,6 +34,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Homebrew integration**: Automated tool installation and updates
 - ✅ **Clean architecture**: Separated CLI and business logic with explicit working directory handling
 - ✅ **Improved CLI output formatting**: Clear info blocks showing working directory and configuration at command start, with environment variables displayed in structured format
+- ✅ **Environment management**: Complete environment system with xcconfig generation, variable mapping, and multi-environment support
 
 ### Architecture Overview
 **Targets:**
@@ -47,10 +48,12 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `BuildService`: Handles building for tests with Xcode discovery
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
 - `ReleaseService`: Orchestrates release workflow (archive → IPA generation → App Store upload)
+- `EnvironmentService`: Manages environment configurations, xcconfig generation, and variable mapping
 
 **Key Utilities:**
 - `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
 - `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
+- `NestedDictionary`: Dot notation access for nested YAML structures (e.g., "apps.ios.bundle_identifier")
 
 ### Development Commands
 ```bash
@@ -80,6 +83,11 @@ xp config validate # Validate configuration files with comprehensive checks
 xp build           # Build for testing (supports --scheme, --clean, --destination)
 xp test            # Run tests (supports --scheme, --clean, --skip-build, --destination)
 xp release         # Create release builds (archive, IPA, upload with --archive-only, --skip-upload, --upload-only)
+xp env list        # List available environments
+xp env show        # Show environment variables (current or specific)
+xp env current     # Show currently activated environment
+xp env load    # Load an environment and generate xcconfig files
+xp env validate    # Validate environment configuration
 
 # Examples
 xp -C /path/to/project config show
@@ -89,7 +97,104 @@ xp release production-ios
 xp release dev-ios --archive-only --dry-run
 xp setup --dry-run
 xp config --config custom.yml validate
+xp env list
+xp env load dev --dry-run
+xp env load production
+xp env show dev
 ```
+
+## Environment Management
+
+Xproject includes a complete environment management system for handling multiple deployment environments (dev, staging, production, etc.) with automatic xcconfig file generation.
+
+### Overview
+
+The environment system allows you to:
+- Define multiple environments (dev, staging, production, etc.)
+- Generate environment-specific `.xcconfig` files automatically
+- Manage configuration variables using YAML
+- Support multiple targets with bundle ID suffixes
+- Per-configuration variable overrides (debug vs release)
+
+### Directory Structure
+
+```
+YourProject/
+├── env/
+│   ├── config.yml              # Environment system configuration
+│   ├── .current                # Currently active environment (gitignored)
+│   ├── dev/
+│   │   └── env.yml            # Development environment variables
+│   ├── staging/
+│   │   └── env.yml            # Staging environment variables
+│   └── production/
+│       └── env.yml            # Production environment variables
+├── YourApp/
+│   └── Config/                 # Generated xcconfig files (gitignored)
+│       ├── YourApp.debug.xcconfig
+│       └── YourApp.release.xcconfig
+└── Xproject.yml                # Enable with environment.enabled: true
+```
+
+### Quick Start
+
+1. **Enable in Xproject.yml:**
+   ```yaml
+   environment:
+     enabled: true
+   ```
+
+2. **Create env/config.yml:**
+   ```yaml
+   targets:
+     - name: MyApp
+       xcconfig_path: MyApp/Config
+       shared_variables:
+         PRODUCT_BUNDLE_IDENTIFIER: apps.bundle_identifier
+         BUNDLE_DISPLAY_NAME: apps.display_name
+         API_URL: api_url
+       configurations:
+         debug: {}
+         release:
+           variables:
+             PROVISIONING_PROFILE_SPECIFIER: apps.ios.provision_profile
+   ```
+
+3. **Create environment files (e.g., env/dev/env.yml):**
+   ```yaml
+   environment_name: development
+   api_url: https://dev-api.example.com
+
+   apps:
+     bundle_identifier: com.example.myapp.dev
+     display_name: MyApp Dev
+     ios:
+       app_icon_name: AppIcon
+       provision_profile: Development
+   ```
+
+4. **Activate environment:**
+   ```bash
+   xp env load dev
+   ```
+
+### Key Features
+
+- **Dot notation access**: Use paths like `apps.ios.bundle_identifier` to access nested YAML values
+- **Bundle ID suffixes**: Automatically append suffixes for app extensions (`.widget`, `.notification-content`)
+- **Configuration-specific variables**: Different variables for debug vs release builds
+- **Validation**: Comprehensive validation of configuration and environment files
+- **Dry-run support**: Preview xcconfig generation without writing files
+
+### Implementation Details
+
+- **Models**: `EnvironmentConfig`, `EnvironmentTarget`, `ConfigurationSettings` in Sources/Xproject/Models/EnvironmentConfig.swift
+- **Service**: `EnvironmentService` in Sources/Xproject/Services/EnvironmentService.swift handles all environment operations
+- **Utility**: `NestedDictionary` in Sources/Xproject/Utilities/NestedDictionary.swift provides dot notation access
+- **Commands**: `EnvironmentCommand` in Sources/XprojectCLI/Commands/EnvironmentCommand.swift with 5 subcommands
+- **Tests**: 17+ dedicated tests in Tests/XprojectTests/Services/EnvironmentServiceTests.swift
+
+See `docs/environment-setup.md` for detailed setup guide and examples.
 
 ## Current System Overview (Reference Only)
 
@@ -235,10 +340,11 @@ Priority order for implementing remaining features:
 5. ✅ ~~Dry-run functionality~~ - **COMPLETED**: Safe preview mode with executeReadOnly for discovery operations
 6. ✅ ~~Release command~~ - **COMPLETED**: Archive, IPA generation, and App Store upload with automatic/manual signing (139 tests passing)
 
+7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, variable mapping, validation (216 tests passing)
+
 **Remaining Work:**
-1. Environment management features - Support for different deployment environments
-2. Version management - Auto-increment build numbers, semantic versioning, git tagging
-3. Git operations - Commit, tag, and push automation
+1. Version management - Auto-increment build numbers, semantic versioning, git tagging
+2. Git operations - Commit, tag, and push automation
 
 ### Future Enhancements
 - Add Danger integration support for test command (--run-danger flag)
