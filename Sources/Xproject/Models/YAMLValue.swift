@@ -58,17 +58,24 @@ public enum YAMLValue: Sendable {
         } else if value is NSNull {
             self = .null
         } else if let number = value as? NSNumber {
-            // Handle NSNumber (from YAML parsing)
-            // NSNumber can represent bool, int, or double
-            if CFBooleanGetTypeID() == CFGetTypeID(number) {
-                self = .bool(number.boolValue)
-            } else if number.objCType.pointee == 0x64 { // 'd' for double
-                self = .double(number.doubleValue)
-            } else {
-                self = .int(number.intValue)
-            }
+            self = try Self.fromNSNumber(number)
         } else {
             throw YAMLValueError.unsupportedType(type: String(describing: type(of: value)))
+        }
+    }
+
+    /// Convert NSNumber to YAMLValue
+    /// - Parameter number: NSNumber from YAML parsing
+    /// - Returns: YAMLValue representing the number
+    private static func fromNSNumber(_ number: NSNumber) throws -> YAMLValue {
+        // Handle NSNumber (from YAML parsing)
+        // NSNumber can represent bool, int, or double
+        if CFBooleanGetTypeID() == CFGetTypeID(number) {
+            return .bool(number.boolValue)
+        } else if number.objCType.pointee == 0x64 { // 'd' for double
+            return .double(number.doubleValue)
+        } else {
+            return .int(number.intValue)
         }
     }
 }

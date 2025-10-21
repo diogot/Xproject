@@ -26,7 +26,7 @@ struct EnvironmentCommand: AsyncParsableCommand {
             EnvShowCommand.self,
             EnvCurrentCommand.self,
             EnvLoadCommand.self,
-            EnvValidateCommand.self,
+            EnvValidateCommand.self
         ]
     )
 }
@@ -110,7 +110,7 @@ struct EnvShowCommand: AsyncParsableCommand {
                     print("\(prefix)\(key):")
                     printYAML(nestedDict, indent: indent + 1)
                 } else {
-                    print("\(prefix)\(key): \(dict[key]!)")
+                    print("\(prefix)\(key): \(dict[key] ?? "<nil>")")
                 }
             }
         }

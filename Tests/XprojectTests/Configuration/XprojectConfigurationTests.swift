@@ -20,7 +20,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect(throws: Never.self) {
@@ -35,7 +35,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -52,7 +52,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -156,7 +156,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -177,7 +177,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -256,7 +256,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -293,7 +293,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: nil,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -329,7 +329,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: xcodeConfig,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -372,7 +372,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: xcodeConfig,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {
@@ -413,7 +413,7 @@ struct XprojectConfigurationTests {
                 setup: nil,
                 xcode: xcodeConfig,
                 danger: nil,
-            environment: nil
+                environment: nil
             )
 
             #expect {

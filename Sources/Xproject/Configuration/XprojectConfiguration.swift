@@ -3,6 +3,8 @@
 // Xproject
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 
 // MARK: - Main Configuration

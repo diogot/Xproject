@@ -143,19 +143,19 @@ public enum EnvironmentError: Error, LocalizedError {
         switch self {
         case .configNotFound:
             return "env/config.yml not found. Run 'xp env validate' to check setup."
-        case .environmentNotFound(let name):
+        case let .environmentNotFound(name):
             return "Environment '\(name)' not found in env/ directory"
         case .noCurrentEnvironment:
             return "No environment loaded. Run 'xp env load <name>' first."
-        case .invalidYAML(let path):
+        case let .invalidYAML(path):
             return "Invalid YAML in \(path)"
-        case .missingVariable(let varName, let path):
+        case let .missingVariable(varName, path):
             return "Variable '\(varName)' not found at path '\(path)' in environment"
         case .environmentNotEnabled:
             return "Environment management is not enabled. Add 'environment: { enabled: true }' to Xproject.yml"
         case .invalidEnvironmentDirectory:
             return "Invalid environment directory structure. env/ directory must exist in project root."
-        case .xcconfigDirectoryNotFound(let path):
+        case let .xcconfigDirectoryNotFound(path):
             return "XCConfig directory not found: \(path). Create the directory first."
         }
     }

@@ -1,6 +1,6 @@
 //
 // EnvironmentServiceTests.swift
-// XprojectTests
+// Xproject
 //
 
 import Foundation

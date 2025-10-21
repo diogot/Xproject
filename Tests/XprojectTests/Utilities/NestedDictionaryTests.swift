@@ -9,7 +9,6 @@ import Testing
 
 @Suite("NestedDictionary Tests")
 struct NestedDictionaryTests {
-
     // MARK: - Simple Access Tests
 
     @Test("Access simple string value")
@@ -21,7 +20,7 @@ struct NestedDictionaryTests {
 
     @Test("Access simple int value")
     func testSimpleIntAccess() throws {
-        let dict = try NestedDictionary(anyYaml: ["port": 8080])
+        let dict = try NestedDictionary(anyYaml: ["port": 8_080])
         let result = try dict.value(at: "port")
         #expect(result == "8080")
     }
