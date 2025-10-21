@@ -233,7 +233,6 @@ Automatically generate type-safe Swift files from environment variables:
 ```yaml
 # Add to env/config.yml
 swift_generation:
-  enabled: true
   outputs:
     # Base class - automatically includes ALL root-level variables
     - path: MyApp/Generated/EnvironmentService.swift

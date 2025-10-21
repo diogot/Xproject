@@ -294,8 +294,8 @@ public final class EnvironmentService {
         // Load environment configuration
         let config = try loadEnvironmentConfig(workingDirectory: workingDirectory)
 
-        // Check if Swift generation is enabled
-        guard let swiftConfig = config.swiftGeneration, swiftConfig.enabled else {
+        // Check if Swift generation is configured
+        guard let swiftConfig = config.swiftGeneration else {
             return // Swift generation not configured, skip silently
         }
 

@@ -94,14 +94,10 @@ public struct ConfigurationSettings: Codable, Sendable {
 
 /// Configuration for Swift code generation from environment variables
 public struct SwiftGenerationConfig: Codable, Sendable {
-    /// Whether Swift generation is enabled
-    public let enabled: Bool
-
     /// List of output configurations
     public let outputs: [SwiftOutputConfig]
 
-    public init(enabled: Bool, outputs: [SwiftOutputConfig]) {
-        self.enabled = enabled
+    public init(outputs: [SwiftOutputConfig]) {
         self.outputs = outputs
     }
 }
