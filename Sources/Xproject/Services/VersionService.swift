@@ -44,18 +44,7 @@ public final class VersionService: Sendable {
     private func createProjectExecutor(for projectPath: String) throws -> CommandExecuting {
         try validateProjectExists(at: projectPath)
         let projectDir = getProjectDirectory(from: projectPath)
-
-        // Preserve executor settings but use project directory
-        if let concreteExecutor = executor as? CommandExecutor {
-            return CommandExecutor(
-                workingDirectory: projectDir,
-                dryRun: concreteExecutor.dryRun,
-                verbose: concreteExecutor.verbose
-            )
-        } else {
-            // For mocks/tests, return the original executor
-            return executor
-        }
+        return executor.withWorkingDirectory(projectDir)
     }
 
     // MARK: - Version Reading

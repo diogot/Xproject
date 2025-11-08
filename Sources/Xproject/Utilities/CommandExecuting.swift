@@ -12,7 +12,9 @@ public protocol CommandExecuting: Sendable {
     func executeOrThrow(_ command: String, environment: [String: String]?) throws -> CommandResult
     func executeReadOnly(_ command: String, environment: [String: String]?) throws -> CommandResult
     func executeWithStreamingOutput(_ command: String, environment: [String: String]?) async throws -> CommandResult
+    func executeWithArguments(command: String, arguments: [String], environment: [String: String]?) throws -> CommandResult
     func commandExists(_ command: String) -> Bool
+    func withWorkingDirectory(_ path: String) -> CommandExecuting
 }
 
 public extension CommandExecuting {
@@ -49,5 +51,9 @@ public extension CommandExecuting {
         }
 
         return result
+    }
+
+    func executeWithArguments(command: String, arguments: [String]) throws -> CommandResult {
+        return try executeWithArguments(command: command, arguments: arguments, environment: nil)
     }
 }

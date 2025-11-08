@@ -102,19 +102,17 @@ public final class GitService: Sendable {
     ///   - files: Files to commit (if empty, commits all changes)
     /// - Throws: GitServiceError if commit fails
     public func commit(message: String, files: [String] = []) throws {
-        // Add files
+        // Add files using arguments array to avoid shell escaping issues
         if files.isEmpty {
             _ = try executor.execute("git add -A")
         } else {
             for file in files {
-                let escapedFile = file.replacingOccurrences(of: "'", with: "'\\''")
-                _ = try executor.execute("git add '\(escapedFile)'")
+                _ = try executor.executeWithArguments(command: "/usr/bin/git", arguments: ["add", file])
             }
         }
 
-        // Commit with message
-        let escapedMessage = message.replacingOccurrences(of: "'", with: "'\\''")
-        let result = try executor.execute("git commit -m '\(escapedMessage)'")
+        // Commit with message using arguments array to avoid shell injection
+        let result = try executor.executeWithArguments(command: "/usr/bin/git", arguments: ["commit", "-m", message])
 
         guard result.exitCode == 0 else {
             throw GitServiceError.commitFailed(output: result.error)

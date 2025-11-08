@@ -427,9 +427,7 @@ public final class EnvironmentService {
         // Convert "apiUrl" to "apiURL"
         camelCase = camelCase.replacingOccurrences(
             of: "Url",
-            with: "URL",
-            options: [],
-            range: camelCase.range(of: "Url")
+            with: "URL"
         )
 
         return camelCase
