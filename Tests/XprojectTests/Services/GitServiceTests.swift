@@ -127,7 +127,7 @@ final class GitServiceTests: XCTestCase {
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git commit -m 'Test commit'",
+            for: "/usr/bin/git commit -m Test commit",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "[main abc1234] Test commit", error: "")
         )
 
@@ -138,15 +138,15 @@ final class GitServiceTests: XCTestCase {
     func testCommitWithSpecificFiles() throws {
         // Given
         mockExecutor.setResponse(
-            for: "git add 'file1.swift'",
+            for: "/usr/bin/git add file1.swift",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git add 'file2.swift'",
+            for: "/usr/bin/git add file2.swift",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git commit -m 'Test commit'",
+            for: "/usr/bin/git commit -m Test commit",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
 
@@ -161,7 +161,7 @@ final class GitServiceTests: XCTestCase {
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git commit -m 'Test commit'",
+            for: "/usr/bin/git commit -m Test commit",
             response: MockCommandExecutor.MockResponse(exitCode: 1, output: "", error: "nothing to commit")
         )
 
@@ -191,15 +191,15 @@ final class GitServiceTests: XCTestCase {
 
         // Setup commit operations
         mockExecutor.setResponse(
-            for: "git add 'Test.xcodeproj/project.pbxproj'",
+            for: "/usr/bin/git add Test.xcodeproj/project.pbxproj",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git add 'Info.plist'",
+            for: "/usr/bin/git add Info.plist",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
         mockExecutor.setResponse(
-            for: "git commit -m '[skip ci] Bumping build number to 1.0.0-100'",
+            for: "/usr/bin/git commit -m [skip ci] Bumping build number to 1.0.0-100",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
         )
 
