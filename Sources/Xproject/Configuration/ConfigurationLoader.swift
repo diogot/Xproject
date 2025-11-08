@@ -213,7 +213,8 @@ public final class ConfigurationLoader: Sendable {
             setup: override.setup ?? base.setup,
             xcode: override.xcode ?? base.xcode,
             danger: override.danger ?? base.danger,
-            environment: override.environment ?? base.environment
+            environment: override.environment ?? base.environment,
+            version: override.version ?? base.version
         )
     }
 
@@ -230,7 +231,8 @@ public final class ConfigurationLoader: Sendable {
                 setup: config.setup,
                 xcode: config.xcode,
                 danger: config.danger,
-                environment: config.environment
+                environment: config.environment,
+                version: config.version
             )
         }
 

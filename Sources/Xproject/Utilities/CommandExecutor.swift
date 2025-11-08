@@ -7,8 +7,8 @@ import Foundation
 
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let workingDirectory: String
-    private let dryRun: Bool
-    private let verbose: Bool
+    internal let dryRun: Bool
+    internal let verbose: Bool
 
     // Patterns for sensitive environment variables that should be masked in output
     private static let sensitiveEnvPatterns = [

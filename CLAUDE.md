@@ -239,6 +239,114 @@ extension EnvironmentService {
 
 See `docs/environment-setup.md` for detailed setup guide and examples.
 
+## Version Management
+
+Xproject includes a complete version management system for handling semantic versioning, build numbers from git commits, and automated git tagging.
+
+### Overview
+
+The version management system allows you to:
+- Bump semantic versions (major.minor.patch) using agvtool
+- Calculate build numbers from git commit count with configurable offset
+- Commit version changes automatically with `[skip ci]` prefix
+- Create version tags in standardized format
+- Push branches and tags to remote repositories
+
+**Important**: The "target" parameter (e.g., "ios", "tvos") refers to a **configuration key** in `project_path`, not an Xcode build target. Each target maps to a specific `.xcodeproj` file, which may be in a subdirectory:
+
+```yaml
+project_path:
+  ios: MyApp.xcodeproj          # Root-level project
+  tvos: TV/TV.xcodeproj          # Subdirectory project
+```
+
+When you run `xp version bump patch ios`, agvtool updates **all Xcode targets** within `MyApp.xcodeproj`. Similarly, `xp version bump patch tvos` updates all targets in `TV/TV.xcodeproj`. This matches the behavior of Apple's agvtool, which operates on entire projects, not individual targets.
+
+### Configuration
+
+Add version configuration to your `Xproject.yml`:
+
+```yaml
+version:
+  build_number_offset: -6854  # Offset for git commit count
+  tag_format: "{env}-{target}/{version}-{build}"  # Optional custom format
+```
+
+### Available Commands
+
+```bash
+# Show current version and build
+xp version show [target]
+
+# Bump version (patch/minor/major)
+xp version bump patch [target]          # 1.0.0 → 1.0.1
+xp version bump minor [target]          # 1.0.0 → 1.1.0
+xp version bump major [target]          # 1.0.0 → 2.0.0
+
+# Commit version bump changes
+xp version commit [target]              # Commits with [skip ci] prefix
+
+# Create git tag
+xp version tag [target]                 # Creates tag: ios/1.0.0-100
+xp version tag [target] --environment production  # Creates tag: production-ios/1.0.0-100
+
+# Push to remote
+xp version push                         # Push current branch with tags
+xp version push --remote upstream       # Push to specific remote
+
+# All commands support --dry-run
+xp version bump patch --dry-run
+xp version tag --dry-run
+```
+
+### Common Workflow
+
+```bash
+# 1. Check current version
+xp version show
+
+# 2. Bump version
+xp version bump patch
+
+# 3. Commit changes
+xp version commit
+
+# 4. Create tag
+xp version tag --environment production
+
+# 5. Push to remote
+xp version push
+```
+
+### Build Number Calculation
+
+Build numbers are automatically calculated from git commit count:
+- Gets current commit count with `git rev-list HEAD --count`
+- Applies configured offset from `version.build_number_offset`
+- Example: 7000 commits + offset -6854 = build number 146
+
+### Tag Format
+
+Tags follow the format: `[environment-]target/version-build`
+- Without environment: `ios/1.0.0-146`
+- With environment: `production-ios/1.0.0-146`
+
+### Implementation Details
+
+- **Models**: `Version`, `VersionConfiguration` in Sources/Xproject/Models/
+- **Services**:
+  - `VersionService` in Sources/Xproject/Services/VersionService.swift - Handles agvtool operations and build number calculation
+  - `GitService` in Sources/Xproject/Services/GitService.swift - Handles git operations (commit, tag, push)
+- **Commands**: `VersionCommand` in Sources/XprojectCLI/Commands/VersionCommand.swift with 5 subcommands
+- **Tests**: 56 dedicated tests (19 Version + 17 VersionService + 20 GitService) - All passing
+
+### Safety Features
+
+- **Repository clean check**: Warns if uncommitted changes exist
+- **Expected files validation**: Ensures only version-related files changed
+- **Tag existence check**: Prevents duplicate tags
+- **Dry-run mode**: Preview all operations before execution
+
 ## Current System Overview (Reference Only)
 
 This is the existing Nebula iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.

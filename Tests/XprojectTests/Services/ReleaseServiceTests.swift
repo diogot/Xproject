@@ -53,7 +53,8 @@ struct ReleaseServiceTests {
                 release: releaseConfig
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
     }
 
@@ -350,7 +351,8 @@ struct ReleaseServiceTests {
             setup: nil,
             xcode: nil,
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let releaseService = ReleaseService(
@@ -413,7 +415,8 @@ struct ReleaseServiceTests {
                 release: ["dev-ios": releaseConfig]
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -480,7 +483,8 @@ struct ReleaseServiceTests {
                 release: ["production-ios": releaseConfig]
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -543,7 +547,8 @@ struct ReleaseServiceTests {
                 release: ["production-tvos": releaseConfig]
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -610,7 +615,8 @@ struct ReleaseServiceTests {
                 ]
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)

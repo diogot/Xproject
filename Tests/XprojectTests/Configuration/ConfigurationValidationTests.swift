@@ -27,7 +27,8 @@ struct ConfigurationValidationTests {
                 release: releaseConfig
             ),
             danger: nil,
-            environment: nil
+            environment: nil,
+            version: nil
         )
     }
 

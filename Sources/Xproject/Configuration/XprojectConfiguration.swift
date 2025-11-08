@@ -17,6 +17,7 @@ public struct XprojectConfiguration: Codable, Sendable {
     public let xcode: XcodeConfiguration?
     public let danger: DangerConfiguration?
     public let environment: EnvironmentFeature?
+    public let version: VersionConfiguration?
 
     enum CodingKeys: String, CodingKey {
         case appName = "app_name"
@@ -26,6 +27,7 @@ public struct XprojectConfiguration: Codable, Sendable {
         case xcode
         case danger
         case environment
+        case version
     }
 }
 
@@ -52,6 +54,23 @@ public struct EnvironmentFeature: Codable, Sendable {
 
     public init(enabled: Bool) {
         self.enabled = enabled
+    }
+}
+
+// MARK: - Version Configuration
+
+public struct VersionConfiguration: Codable, Sendable {
+    public let buildNumberOffset: Int
+    public let tagFormat: String?
+
+    enum CodingKeys: String, CodingKey {
+        case buildNumberOffset = "build_number_offset"
+        case tagFormat = "tag_format"
+    }
+
+    public init(buildNumberOffset: Int = 0, tagFormat: String? = nil) {
+        self.buildNumberOffset = buildNumberOffset
+        self.tagFormat = tagFormat
     }
 }
 

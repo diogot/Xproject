@@ -14,6 +14,7 @@ public class XprojectConfigurationBuilder {
     private var setup: SetupConfiguration?
     private var xcode: XcodeConfiguration?
     private var danger: DangerConfiguration?
+    private var version: VersionConfiguration?
 
     public init() {}
 
@@ -57,6 +58,11 @@ public class XprojectConfigurationBuilder {
         return self
     }
 
+    public func withVersion(_ version: VersionConfiguration) -> XprojectConfigurationBuilder {
+        self.version = version
+        return self
+    }
+
     public func build() -> XprojectConfiguration {
         return XprojectConfiguration(
             appName: appName,
@@ -65,7 +71,8 @@ public class XprojectConfigurationBuilder {
             setup: setup,
             xcode: xcode,
             danger: danger,
-            environment: nil
+            environment: nil,
+            version: version
         )
     }
 
