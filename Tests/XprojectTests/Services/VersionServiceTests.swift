@@ -3,42 +3,33 @@
 // XprojectTests
 //
 
-import XCTest
+import Foundation
+import Testing
 @testable import Xproject
 
-final class VersionServiceTests: XCTestCase {
-    var mockExecutor: MockCommandExecutor!
-    var service: VersionService!
-    var workingDirectory: String!
+func withVersionService(_ test: (VersionService, MockCommandExecutor, String) throws -> Void) throws {
+    let tempDir = NSTemporaryDirectory()
+    let workingDirectory = (tempDir as NSString).appendingPathComponent("xproject-test-\(UUID().uuidString)")
 
-    override func setUp() {
-        super.setUp()
-        // Create unique temp directory for this test run
-        let tempDir = NSTemporaryDirectory()
-        workingDirectory = (tempDir as NSString).appendingPathComponent("xproject-test-\(UUID().uuidString)")
-
-        // Create working directory and test project
-        try? FileManager.default.createDirectory(atPath: workingDirectory, withIntermediateDirectories: true)
-        let projectPath = (workingDirectory as NSString).appendingPathComponent("TestApp.xcodeproj")
-        try? FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
-
-        mockExecutor = MockCommandExecutor(workingDirectory: workingDirectory)
-        service = VersionService(workingDirectory: workingDirectory, executor: mockExecutor)
-    }
-
-    override func tearDown() {
-        // Clean up temp directory
+    defer {
         try? FileManager.default.removeItem(atPath: workingDirectory)
-
-        mockExecutor = nil
-        service = nil
-        workingDirectory = nil
-        super.tearDown()
     }
 
-    // MARK: - Get Current Version Tests
+    try FileManager.default.createDirectory(atPath: workingDirectory, withIntermediateDirectories: true)
+    let projectPath = (workingDirectory as NSString).appendingPathComponent("TestApp.xcodeproj")
+    try FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
 
-    func testGetCurrentVersionSuccess() throws {
+    let mockExecutor = MockCommandExecutor(workingDirectory: workingDirectory)
+    let service = VersionService(workingDirectory: workingDirectory, executor: mockExecutor)
+
+    try test(service, mockExecutor, workingDirectory)
+}
+
+// MARK: - Get Current Version Tests
+
+@Test
+func getCurrentVersionSuccess() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -49,10 +40,13 @@ final class VersionServiceTests: XCTestCase {
         let version = try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then
-        XCTAssertEqual(version, Version(major: 1, minor: 2, patch: 3))
+        #expect(version == Version(major: 1, minor: 2, patch: 3))
     }
+}
 
-    func testGetCurrentVersionWithoutPatch() throws {
+@Test
+func getCurrentVersionWithoutPatch() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -63,10 +57,13 @@ final class VersionServiceTests: XCTestCase {
         let version = try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then
-        XCTAssertEqual(version, Version(major: 2, minor: 1, patch: 0))
+        #expect(version == Version(major: 2, minor: 1, patch: 0))
     }
+}
 
-    func testGetCurrentVersionAgvtoolFailure() {
+@Test
+func getCurrentVersionAgvtoolFailure() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -74,15 +71,21 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")) { error in
-            guard case VersionServiceError.agvtoolFailed = error else {
-                XCTFail("Expected agvtoolFailed error")
+        do {
+            _ = try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .agvtoolFailed = error else {
+                #expect(Bool(false), "Expected agvtoolFailed error")
                 return
             }
         }
     }
+}
 
-    func testGetCurrentVersionInvalidFormat() {
+@Test
+func getCurrentVersionInvalidFormat() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -90,17 +93,23 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")) { error in
-            guard case VersionServiceError.invalidVersionFormat = error else {
-                XCTFail("Expected invalidVersionFormat error")
+        do {
+            _ = try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .invalidVersionFormat = error else {
+                #expect(Bool(false), "Expected invalidVersionFormat error")
                 return
             }
         }
     }
+}
 
-    // MARK: - Set Version Tests
+// MARK: - Set Version Tests
 
-    func testSetVersionSuccess() throws {
+@Test
+func setVersionSuccess() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool new-marketing-version 2.0.0",
@@ -108,16 +117,17 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(
-            try service.setVersion(
-                Version(major: 2, minor: 0, patch: 0),
-                target: "ios",
-                projectPath: "TestApp.xcodeproj"
-            )
+        try service.setVersion(
+            Version(major: 2, minor: 0, patch: 0),
+            target: "ios",
+            projectPath: "TestApp.xcodeproj"
         )
     }
+}
 
-    func testSetVersionFailure() {
+@Test
+func setVersionFailure() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool new-marketing-version 2.0.0",
@@ -125,23 +135,27 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(
+        do {
             try service.setVersion(
                 Version(major: 2, minor: 0, patch: 0),
                 target: "ios",
                 projectPath: "TestApp.xcodeproj"
             )
-        ) { error in
-            guard case VersionServiceError.agvtoolFailed = error else {
-                XCTFail("Expected agvtoolFailed error")
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .agvtoolFailed = error else {
+                #expect(Bool(false), "Expected agvtoolFailed error")
                 return
             }
         }
     }
+}
 
-    // MARK: - Get Current Build Tests
+// MARK: - Get Current Build Tests
 
-    func testGetCurrentBuildNoOffset() throws {
+@Test
+func getCurrentBuildNoOffset() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-list HEAD --count",
@@ -152,10 +166,13 @@ final class VersionServiceTests: XCTestCase {
         let build = try service.getCurrentBuild(offset: 0)
 
         // Then
-        XCTAssertEqual(build, 100)
+        #expect(build == 100)
     }
+}
 
-    func testGetCurrentBuildWithOffset() throws {
+@Test
+func getCurrentBuildWithOffset() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-list HEAD --count",
@@ -166,10 +183,13 @@ final class VersionServiceTests: XCTestCase {
         let build = try service.getCurrentBuild(offset: -50)
 
         // Then
-        XCTAssertEqual(build, 50)
+        #expect(build == 50)
     }
+}
 
-    func testGetCurrentBuildGitFailure() {
+@Test
+func getCurrentBuildGitFailure() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-list HEAD --count",
@@ -177,15 +197,21 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentBuild(offset: 0)) { error in
-            guard case VersionServiceError.gitFailed = error else {
-                XCTFail("Expected gitFailed error")
+        do {
+            _ = try service.getCurrentBuild(offset: 0)
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .gitFailed = error else {
+                #expect(Bool(false), "Expected gitFailed error")
                 return
             }
         }
     }
+}
 
-    func testGetCurrentBuildInvalidNumber() {
+@Test
+func getCurrentBuildInvalidNumber() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-list HEAD --count",
@@ -193,17 +219,23 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentBuild(offset: 0)) { error in
-            guard case VersionServiceError.invalidBuildNumber = error else {
-                XCTFail("Expected invalidBuildNumber error")
+        do {
+            _ = try service.getCurrentBuild(offset: 0)
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .invalidBuildNumber = error else {
+                #expect(Bool(false), "Expected invalidBuildNumber error")
                 return
             }
         }
     }
+}
 
-    // MARK: - Bump Version Tests
+// MARK: - Bump Version Tests
 
-    func testBumpVersionPatch() throws {
+@Test
+func bumpVersionPatch() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -218,10 +250,13 @@ final class VersionServiceTests: XCTestCase {
         let newVersion = try service.bumpVersion(.patch, target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then
-        XCTAssertEqual(newVersion, Version(major: 1, minor: 0, patch: 1))
+        #expect(newVersion == Version(major: 1, minor: 0, patch: 1))
     }
+}
 
-    func testBumpVersionMinor() throws {
+@Test
+func bumpVersionMinor() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -236,10 +271,13 @@ final class VersionServiceTests: XCTestCase {
         let newVersion = try service.bumpVersion(.minor, target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then
-        XCTAssertEqual(newVersion, Version(major: 1, minor: 3, patch: 0))
+        #expect(newVersion == Version(major: 1, minor: 3, patch: 0))
     }
+}
 
-    func testBumpVersionMajor() throws {
+@Test
+func bumpVersionMajor() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -254,12 +292,15 @@ final class VersionServiceTests: XCTestCase {
         let newVersion = try service.bumpVersion(.major, target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then
-        XCTAssertEqual(newVersion, Version(major: 2, minor: 0, patch: 0))
+        #expect(newVersion == Version(major: 2, minor: 0, patch: 0))
     }
+}
 
-    // MARK: - Validation Tests
+// MARK: - Validation Tests
 
-    func testValidateAgvtoolSuccess() throws {
+@Test
+func validateAgvtoolSuccess() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "which agvtool",
@@ -267,10 +308,13 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.validateAgvtool())
+        try service.validateAgvtool()
     }
+}
 
-    func testValidateAgvtoolNotFound() {
+@Test
+func validateAgvtoolNotFound() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "which agvtool",
@@ -278,15 +322,21 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.validateAgvtool()) { error in
-            guard case VersionServiceError.agvtoolNotFound = error else {
-                XCTFail("Expected agvtoolNotFound error")
+        do {
+            try service.validateAgvtool()
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .agvtoolNotFound = error else {
+                #expect(Bool(false), "Expected agvtoolNotFound error")
                 return
             }
         }
     }
+}
 
-    func testValidateGitRepositorySuccess() throws {
+@Test
+func validateGitRepositorySuccess() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --git-dir",
@@ -294,10 +344,13 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.validateGitRepository())
+        try service.validateGitRepository()
     }
+}
 
-    func testValidateGitRepositoryNotFound() {
+@Test
+func validateGitRepositoryNotFound() throws {
+    try withVersionService { service, mockExecutor, _ in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --git-dir",
@@ -305,22 +358,28 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.validateGitRepository()) { error in
-            guard case VersionServiceError.notGitRepository = error else {
-                XCTFail("Expected notGitRepository error")
+        do {
+            try service.validateGitRepository()
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .notGitRepository = error else {
+                #expect(Bool(false), "Expected notGitRepository error")
                 return
             }
         }
     }
+}
 
-    // MARK: - Subdirectory Project Tests
+// MARK: - Subdirectory Project Tests
 
-    func testGetVersionFromSubdirectoryProject() throws {
+@Test
+func getVersionFromSubdirectoryProject() throws {
+    try withVersionService { service, mockExecutor, workingDirectory in
         // Given: Create subdirectory project structure
         let subdirPath = (workingDirectory as NSString).appendingPathComponent("TV")
-        try? FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true)
         let projectPath = (subdirPath as NSString).appendingPathComponent("TV.xcodeproj")
-        try? FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
 
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
@@ -331,15 +390,18 @@ final class VersionServiceTests: XCTestCase {
         let version = try service.getCurrentVersion(target: "tvos", projectPath: "TV/TV.xcodeproj")
 
         // Then
-        XCTAssertEqual(version, Version(major: 3, minor: 0, patch: 0))
+        #expect(version == Version(major: 3, minor: 0, patch: 0))
     }
+}
 
-    func testSetVersionInSubdirectoryProject() throws {
+@Test
+func setVersionInSubdirectoryProject() throws {
+    try withVersionService { service, mockExecutor, workingDirectory in
         // Given: Create subdirectory project structure
         let subdirPath = (workingDirectory as NSString).appendingPathComponent("TV")
-        try? FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true)
         let projectPath = (subdirPath as NSString).appendingPathComponent("TV.xcodeproj")
-        try? FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: projectPath, withIntermediateDirectories: true)
 
         mockExecutor.setResponse(
             for: "agvtool new-marketing-version 3.1.0",
@@ -347,33 +409,40 @@ final class VersionServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(
-            try service.setVersion(
-                Version(major: 3, minor: 1, patch: 0),
-                target: "tvos",
-                projectPath: "TV/TV.xcodeproj"
-            )
+        try service.setVersion(
+            Version(major: 3, minor: 1, patch: 0),
+            target: "tvos",
+            projectPath: "TV/TV.xcodeproj"
         )
     }
+}
 
-    // MARK: - Project Validation Tests
+// MARK: - Project Validation Tests
 
-    func testProjectNotFoundError() {
+@Test
+func projectNotFoundError() throws {
+    try withVersionService { service, _, _ in
         // Given: Project path that doesn't exist
         let nonExistentPath = "NonExistent/App.xcodeproj"
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentVersion(target: "ios", projectPath: nonExistentPath)) { error in
-            guard case VersionServiceError.projectNotFound(let path) = error else {
-                XCTFail("Expected projectNotFound error")
+        do {
+            _ = try service.getCurrentVersion(target: "ios", projectPath: nonExistentPath)
+            #expect(Bool(false), "Expected error to be thrown")
+        } catch let error as VersionServiceError {
+            guard case .projectNotFound(let path) = error else {
+                #expect(Bool(false), "Expected projectNotFound error")
                 return
             }
-            XCTAssertEqual(path, nonExistentPath)
+            #expect(path == nonExistentPath)
         }
     }
+}
 
-    func testProjectValidationWithRootLevelProject() throws {
-        // Given: Root-level project (already created in setUp)
+@Test
+func projectValidationWithRootLevelProject() throws {
+    try withVersionService { service, mockExecutor, _ in
+        // Given: Root-level project (already created in withVersionService)
         mockExecutor.setResponse(
             for: "agvtool mvers -terse1",
             response: MockCommandExecutor.MockResponse(exitCode: 0, output: "1.0.0", error: "")
@@ -383,6 +452,6 @@ final class VersionServiceTests: XCTestCase {
         let version = try service.getCurrentVersion(target: "ios", projectPath: "TestApp.xcodeproj")
 
         // Then: Should work without error
-        XCTAssertEqual(version, Version(major: 1, minor: 0, patch: 0))
+        #expect(version == Version(major: 1, minor: 0, patch: 0))
     }
 }

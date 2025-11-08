@@ -3,31 +3,22 @@
 // XprojectTests
 //
 
-import XCTest
+import Testing
 @testable import Xproject
 
-final class GitServiceTests: XCTestCase {
-    var mockExecutor: MockCommandExecutor!
-    var service: GitService!
-    var workingDirectory: String!
+func withGitService(_ test: (GitService, MockCommandExecutor) throws -> Void) rethrows {
+    let workingDirectory = "/tmp/test-project"
+    let mockExecutor = MockCommandExecutor(workingDirectory: workingDirectory)
+    let service = GitService(workingDirectory: workingDirectory, executor: mockExecutor)
 
-    override func setUp() {
-        super.setUp()
-        workingDirectory = "/tmp/test-project"
-        mockExecutor = MockCommandExecutor(workingDirectory: workingDirectory)
-        service = GitService(workingDirectory: workingDirectory, executor: mockExecutor)
-    }
+    try test(service, mockExecutor)
+}
 
-    override func tearDown() {
-        mockExecutor = nil
-        service = nil
-        workingDirectory = nil
-        super.tearDown()
-    }
+// MARK: - Repository Clean Tests
 
-    // MARK: - Repository Clean Tests
-
-    func testIsRepositoryCleanWhenClean() throws {
+@Test
+func isRepositoryCleanWhenClean() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --quiet",
@@ -42,10 +33,13 @@ final class GitServiceTests: XCTestCase {
         let isClean = try service.isRepositoryClean()
 
         // Then
-        XCTAssertTrue(isClean)
+        #expect(isClean)
     }
+}
 
-    func testIsRepositoryCleanWithModifiedFiles() throws {
+@Test
+func isRepositoryCleanWithModifiedFiles() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --quiet",
@@ -56,10 +50,13 @@ final class GitServiceTests: XCTestCase {
         let isClean = try service.isRepositoryClean()
 
         // Then
-        XCTAssertFalse(isClean)
+        #expect(!isClean)
     }
+}
 
-    func testIsRepositoryCleanWithUntrackedFiles() throws {
+@Test
+func isRepositoryCleanWithUntrackedFiles() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --quiet",
@@ -74,12 +71,15 @@ final class GitServiceTests: XCTestCase {
         let isClean = try service.isRepositoryClean()
 
         // Then
-        XCTAssertFalse(isClean)
+        #expect(!isClean)
     }
+}
 
-    // MARK: - Get Modified Files Tests
+// MARK: - Get Modified Files Tests
 
-    func testGetModifiedFilesWithNoChanges() throws {
+@Test
+func getModifiedFilesWithNoChanges() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --name-only",
@@ -94,10 +94,13 @@ final class GitServiceTests: XCTestCase {
         let files = try service.getModifiedFiles()
 
         // Then
-        XCTAssertTrue(files.isEmpty)
+        #expect(files.isEmpty)
     }
+}
 
-    func testGetModifiedFilesWithChanges() throws {
+@Test
+func getModifiedFilesWithChanges() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --name-only",
@@ -112,15 +115,18 @@ final class GitServiceTests: XCTestCase {
         let files = try service.getModifiedFiles()
 
         // Then
-        XCTAssertEqual(files.count, 3)
-        XCTAssertTrue(files.contains("file1.swift"))
-        XCTAssertTrue(files.contains("file2.swift"))
-        XCTAssertTrue(files.contains("newfile.txt"))
+        #expect(files.count == 3)
+        #expect(files.contains("file1.swift"))
+        #expect(files.contains("file2.swift"))
+        #expect(files.contains("newfile.txt"))
     }
+}
 
-    // MARK: - Commit Tests
+// MARK: - Commit Tests
 
-    func testCommitSuccess() throws {
+@Test
+func commitSuccess() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git add -A",
@@ -132,10 +138,13 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.commit(message: "Test commit"))
+        try service.commit(message: "Test commit")
     }
+}
 
-    func testCommitWithSpecificFiles() throws {
+@Test
+func commitWithSpecificFiles() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "/usr/bin/git add file1.swift",
@@ -151,10 +160,13 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.commit(message: "Test commit", files: ["file1.swift", "file2.swift"]))
+        try service.commit(message: "Test commit", files: ["file1.swift", "file2.swift"])
     }
+}
 
-    func testCommitFailure() {
+@Test
+func commitFailure() {
+    withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git add -A",
@@ -166,15 +178,21 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.commit(message: "Test commit")) { error in
+        do {
+            try service.commit(message: "Test commit")
+            #expect(Bool(false), "Expected commitFailed error")
+        } catch {
             guard case GitServiceError.commitFailed = error else {
-                XCTFail("Expected commitFailed error")
+                #expect(Bool(false), "Expected commitFailed error")
                 return
             }
         }
     }
+}
 
-    func testCommitVersionBumpSuccess() throws {
+@Test
+func commitVersionBumpSuccess() throws {
+    try withGitService { service, mockExecutor in
         // Given - Setup modified files check
         mockExecutor.setResponse(
             for: "git diff --name-only",
@@ -204,16 +222,17 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(
-            try service.commitVersionBump(
-                version: Version(major: 1, minor: 0, patch: 0),
-                build: 100,
-                files: ["Test.xcodeproj/project.pbxproj", "Info.plist"]
-            )
+        try service.commitVersionBump(
+            version: Version(major: 1, minor: 0, patch: 0),
+            build: 100,
+            files: ["Test.xcodeproj/project.pbxproj", "Info.plist"]
         )
     }
+}
 
-    func testCommitVersionBumpWithUnexpectedChanges() {
+@Test
+func commitVersionBumpWithUnexpectedChanges() {
+    withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git diff --name-only",
@@ -229,23 +248,27 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(
+        do {
             try service.commitVersionBump(
                 version: Version(major: 1, minor: 0, patch: 0),
                 build: 100,
                 files: ["Test.xcodeproj/project.pbxproj"]
             )
-        ) { error in
+            #expect(Bool(false), "Expected unexpectedChanges error")
+        } catch {
             guard case GitServiceError.unexpectedChanges = error else {
-                XCTFail("Expected unexpectedChanges error")
+                #expect(Bool(false), "Expected unexpectedChanges error")
                 return
             }
         }
     }
+}
 
-    // MARK: - Tag Tests
+// MARK: - Tag Tests
 
-    func testTagExistsTrue() throws {
+@Test
+func tagExistsTrue() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'v1.0.0'",
@@ -256,10 +279,13 @@ final class GitServiceTests: XCTestCase {
         let exists = try service.tagExists("v1.0.0")
 
         // Then
-        XCTAssertTrue(exists)
+        #expect(exists)
     }
+}
 
-    func testTagExistsFalse() throws {
+@Test
+func tagExistsFalse() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'v1.0.0'",
@@ -270,10 +296,13 @@ final class GitServiceTests: XCTestCase {
         let exists = try service.tagExists("v1.0.0")
 
         // Then
-        XCTAssertFalse(exists)
+        #expect(!exists)
     }
+}
 
-    func testCreateTagSuccess() throws {
+@Test
+func createTagSuccess() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'v1.0.0'",
@@ -285,10 +314,13 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.createTag("v1.0.0"))
+        try service.createTag("v1.0.0")
     }
+}
 
-    func testCreateTagAlreadyExists() {
+@Test
+func createTagAlreadyExists() {
+    withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'v1.0.0'",
@@ -296,16 +328,22 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.createTag("v1.0.0")) { error in
+        do {
+            try service.createTag("v1.0.0")
+            #expect(Bool(false), "Expected tagAlreadyExists error")
+        } catch {
             guard case GitServiceError.tagAlreadyExists(let tag) = error else {
-                XCTFail("Expected tagAlreadyExists error")
+                #expect(Bool(false), "Expected tagAlreadyExists error")
                 return
             }
-            XCTAssertEqual(tag, "v1.0.0")
+            #expect(tag == "v1.0.0")
         }
     }
+}
 
-    func testCreateVersionTagWithoutEnvironment() throws {
+@Test
+func createVersionTagWithoutEnvironment() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'ios/1.0.0-100'",
@@ -324,10 +362,13 @@ final class GitServiceTests: XCTestCase {
         )
 
         // Then
-        XCTAssertEqual(tag, "ios/1.0.0-100")
+        #expect(tag == "ios/1.0.0-100")
     }
+}
 
-    func testCreateVersionTagWithEnvironment() throws {
+@Test
+func createVersionTagWithEnvironment() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git tag -l 'production-ios/1.0.0-100'",
@@ -347,12 +388,15 @@ final class GitServiceTests: XCTestCase {
         )
 
         // Then
-        XCTAssertEqual(tag, "production-ios/1.0.0-100")
+        #expect(tag == "production-ios/1.0.0-100")
     }
+}
 
-    // MARK: - Push Tests
+// MARK: - Push Tests
 
-    func testGetCurrentBranchSuccess() throws {
+@Test
+func getCurrentBranchSuccess() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --abbrev-ref HEAD",
@@ -363,10 +407,13 @@ final class GitServiceTests: XCTestCase {
         let branch = try service.getCurrentBranch()
 
         // Then
-        XCTAssertEqual(branch, "main")
+        #expect(branch == "main")
     }
+}
 
-    func testGetCurrentBranchFailure() {
+@Test
+func getCurrentBranchFailure() {
+    withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --abbrev-ref HEAD",
@@ -374,15 +421,21 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.getCurrentBranch()) { error in
+        do {
+            _ = try service.getCurrentBranch()
+            #expect(Bool(false), "Expected unableToGetBranch error")
+        } catch {
             guard case GitServiceError.unableToGetBranch = error else {
-                XCTFail("Expected unableToGetBranch error")
+                #expect(Bool(false), "Expected unableToGetBranch error")
                 return
             }
         }
     }
+}
 
-    func testPushWithTagsSuccess() throws {
+@Test
+func pushWithTagsSuccess() throws {
+    try withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --abbrev-ref HEAD",
@@ -394,10 +447,13 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertNoThrow(try service.pushWithTags())
+        try service.pushWithTags()
     }
+}
 
-    func testPushWithTagsFailure() {
+@Test
+func pushWithTagsFailure() {
+    withGitService { service, mockExecutor in
         // Given
         mockExecutor.setResponse(
             for: "git rev-parse --abbrev-ref HEAD",
@@ -409,9 +465,12 @@ final class GitServiceTests: XCTestCase {
         )
 
         // When/Then
-        XCTAssertThrowsError(try service.pushWithTags()) { error in
+        do {
+            try service.pushWithTags()
+            #expect(Bool(false), "Expected pushFailed error")
+        } catch {
             guard case GitServiceError.pushFailed = error else {
-                XCTFail("Expected pushFailed error")
+                #expect(Bool(false), "Expected pushFailed error")
                 return
             }
         }

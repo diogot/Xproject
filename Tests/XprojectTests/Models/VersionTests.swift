@@ -3,151 +3,195 @@
 // XprojectTests
 //
 
-import XCTest
+import Testing
 @testable import Xproject
 
-final class VersionTests: XCTestCase {
+// MARK: - Initialization Tests
 
-    // MARK: - Initialization Tests
+@Test
+func initWithIntegers() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    #expect(version.major == 1)
+    #expect(version.minor == 2)
+    #expect(version.patch == 3)
+}
 
-    func testInitWithIntegers() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        XCTAssertEqual(version.major, 1)
-        XCTAssertEqual(version.minor, 2)
-        XCTAssertEqual(version.patch, 3)
+@Test
+func initWithIntegersDefaultPatch() {
+    let version = Version(major: 1, minor: 2)
+    #expect(version.major == 1)
+    #expect(version.minor == 2)
+    #expect(version.patch == 0)
+}
+
+// MARK: - String Parsing Tests
+
+@Test
+func parseValidVersionWithPatch() throws {
+    let version = try Version(string: "1.2.3")
+    #expect(version.major == 1)
+    #expect(version.minor == 2)
+    #expect(version.patch == 3)
+}
+
+@Test
+func parseValidVersionWithoutPatch() throws {
+    let version = try Version(string: "1.2")
+    #expect(version.major == 1)
+    #expect(version.minor == 2)
+    #expect(version.patch == 0)
+}
+
+@Test
+func parseInvalidFormatTooFewComponents() {
+    var caughtError: VersionError?
+    do {
+        _ = try Version(string: "1")
+    } catch let error as VersionError {
+        caughtError = error
+    } catch {
+        #expect(Bool(false), "Unexpected error type")
     }
 
-    func testInitWithIntegersDefaultPatch() {
-        let version = Version(major: 1, minor: 2)
-        XCTAssertEqual(version.major, 1)
-        XCTAssertEqual(version.minor, 2)
-        XCTAssertEqual(version.patch, 0)
+    guard let error = caughtError, case .invalidFormat("1") = error else {
+        #expect(Bool(false), "Expected VersionError.invalidFormat(\"1\")")
+        return
+    }
+}
+
+@Test
+func parseInvalidFormatTooManyComponents() {
+    var caughtError: VersionError?
+    do {
+        _ = try Version(string: "1.2.3.4")
+    } catch let error as VersionError {
+        caughtError = error
+    } catch {
+        #expect(Bool(false), "Unexpected error type")
     }
 
-    // MARK: - String Parsing Tests
+    guard let error = caughtError, case .invalidFormat("1.2.3.4") = error else {
+        #expect(Bool(false), "Expected VersionError.invalidFormat(\"1.2.3.4\")")
+        return
+    }
+}
 
-    func testParseValidVersionWithPatch() throws {
-        let version = try Version(string: "1.2.3")
-        XCTAssertEqual(version.major, 1)
-        XCTAssertEqual(version.minor, 2)
-        XCTAssertEqual(version.patch, 3)
+@Test
+func parseInvalidFormatNonNumeric() {
+    var caughtError: VersionError?
+    do {
+        _ = try Version(string: "1.2.x")
+    } catch let error as VersionError {
+        caughtError = error
+    } catch {
+        #expect(Bool(false), "Unexpected error type")
     }
 
-    func testParseValidVersionWithoutPatch() throws {
-        let version = try Version(string: "1.2")
-        XCTAssertEqual(version.major, 1)
-        XCTAssertEqual(version.minor, 2)
-        XCTAssertEqual(version.patch, 0)
+    guard let error = caughtError, case .invalidFormat("1.2.x") = error else {
+        #expect(Bool(false), "Expected VersionError.invalidFormat(\"1.2.x\")")
+        return
+    }
+}
+
+@Test
+func parseInvalidFormatNonNumericMajor() {
+    var caughtError: VersionError?
+    do {
+        _ = try Version(string: "a.2.3")
+    } catch let error as VersionError {
+        caughtError = error
+    } catch {
+        #expect(Bool(false), "Unexpected error type")
     }
 
-    func testParseInvalidFormatTooFewComponents() {
-        XCTAssertThrowsError(try Version(string: "1")) { error in
-            guard case VersionError.invalidFormat("1") = error else {
-                XCTFail("Expected invalidFormat error")
-                return
-            }
-        }
+    guard let error = caughtError, case .invalidFormat("a.2.3") = error else {
+        #expect(Bool(false), "Expected VersionError.invalidFormat(\"a.2.3\")")
+        return
     }
+}
 
-    func testParseInvalidFormatTooManyComponents() {
-        XCTAssertThrowsError(try Version(string: "1.2.3.4")) { error in
-            guard case VersionError.invalidFormat("1.2.3.4") = error else {
-                XCTFail("Expected invalidFormat error")
-                return
-            }
-        }
-    }
+// MARK: - Bump Tests
 
-    func testParseInvalidFormatNonNumeric() {
-        XCTAssertThrowsError(try Version(string: "1.2.x")) { error in
-            guard case VersionError.invalidFormat("1.2.x") = error else {
-                XCTFail("Expected invalidFormat error")
-                return
-            }
-        }
-    }
+@Test
+func bumpPatch() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    let bumped = version.bumped(.patch)
+    #expect(bumped.major == 1)
+    #expect(bumped.minor == 2)
+    #expect(bumped.patch == 4)
+}
 
-    func testParseInvalidFormatNonNumericMajor() {
-        XCTAssertThrowsError(try Version(string: "a.2.3")) { error in
-            guard case VersionError.invalidFormat("a.2.3") = error else {
-                XCTFail("Expected invalidFormat error")
-                return
-            }
-        }
-    }
+@Test
+func bumpMinor() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    let bumped = version.bumped(.minor)
+    #expect(bumped.major == 1)
+    #expect(bumped.minor == 3)
+    #expect(bumped.patch == 0)
+}
 
-    // MARK: - Bump Tests
+@Test
+func bumpMajor() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    let bumped = version.bumped(.major)
+    #expect(bumped.major == 2)
+    #expect(bumped.minor == 0)
+    #expect(bumped.patch == 0)
+}
 
-    func testBumpPatch() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        let bumped = version.bumped(.patch)
-        XCTAssertEqual(bumped.major, 1)
-        XCTAssertEqual(bumped.minor, 2)
-        XCTAssertEqual(bumped.patch, 4)
-    }
+@Test
+func bumpPatchFromZero() {
+    let version = Version(major: 1, minor: 0, patch: 0)
+    let bumped = version.bumped(.patch)
+    #expect(bumped == Version(major: 1, minor: 0, patch: 1))
+}
 
-    func testBumpMinor() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        let bumped = version.bumped(.minor)
-        XCTAssertEqual(bumped.major, 1)
-        XCTAssertEqual(bumped.minor, 3)
-        XCTAssertEqual(bumped.patch, 0)
-    }
+@Test
+func bumpMinorFromZero() {
+    let version = Version(major: 1, minor: 0, patch: 0)
+    let bumped = version.bumped(.minor)
+    #expect(bumped == Version(major: 1, minor: 1, patch: 0))
+}
 
-    func testBumpMajor() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        let bumped = version.bumped(.major)
-        XCTAssertEqual(bumped.major, 2)
-        XCTAssertEqual(bumped.minor, 0)
-        XCTAssertEqual(bumped.patch, 0)
-    }
+@Test
+func bumpMajorFromZero() {
+    let version = Version(major: 1, minor: 0, patch: 0)
+    let bumped = version.bumped(.major)
+    #expect(bumped == Version(major: 2, minor: 0, patch: 0))
+}
 
-    func testBumpPatchFromZero() {
-        let version = Version(major: 1, minor: 0, patch: 0)
-        let bumped = version.bumped(.patch)
-        XCTAssertEqual(bumped, Version(major: 1, minor: 0, patch: 1))
-    }
+// MARK: - String Representation Tests
 
-    func testBumpMinorFromZero() {
-        let version = Version(major: 1, minor: 0, patch: 0)
-        let bumped = version.bumped(.minor)
-        XCTAssertEqual(bumped, Version(major: 1, minor: 1, patch: 0))
-    }
+@Test
+func descriptionString() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    #expect(version.description == "1.2.3")
+}
 
-    func testBumpMajorFromZero() {
-        let version = Version(major: 1, minor: 0, patch: 0)
-        let bumped = version.bumped(.major)
-        XCTAssertEqual(bumped, Version(major: 2, minor: 0, patch: 0))
-    }
+@Test
+func descriptionWithZeroPatch() {
+    let version = Version(major: 1, minor: 2, patch: 0)
+    #expect(version.description == "1.2.0")
+}
 
-    // MARK: - String Representation Tests
+@Test
+func fullVersionWithBuild() {
+    let version = Version(major: 1, minor: 2, patch: 3)
+    #expect(version.fullVersion(build: 456) == "1.2.3-456")
+}
 
-    func testDescription() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        XCTAssertEqual(version.description, "1.2.3")
-    }
+// MARK: - Equality Tests
 
-    func testDescriptionWithZeroPatch() {
-        let version = Version(major: 1, minor: 2, patch: 0)
-        XCTAssertEqual(version.description, "1.2.0")
-    }
+@Test
+func equality() {
+    let version1 = Version(major: 1, minor: 2, patch: 3)
+    let version2 = Version(major: 1, minor: 2, patch: 3)
+    #expect(version1 == version2)
+}
 
-    func testFullVersionWithBuild() {
-        let version = Version(major: 1, minor: 2, patch: 3)
-        XCTAssertEqual(version.fullVersion(build: 456), "1.2.3-456")
-    }
-
-    // MARK: - Equality Tests
-
-    func testEquality() {
-        let version1 = Version(major: 1, minor: 2, patch: 3)
-        let version2 = Version(major: 1, minor: 2, patch: 3)
-        XCTAssertEqual(version1, version2)
-    }
-
-    func testInequality() {
-        let version1 = Version(major: 1, minor: 2, patch: 3)
-        let version2 = Version(major: 1, minor: 2, patch: 4)
-        XCTAssertNotEqual(version1, version2)
-    }
+@Test
+func inequality() {
+    let version1 = Version(major: 1, minor: 2, patch: 3)
+    let version2 = Version(major: 1, minor: 2, patch: 4)
+    #expect(version1 != version2)
 }

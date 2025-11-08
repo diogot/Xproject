@@ -242,7 +242,7 @@ public enum GitServiceError: Error, LocalizedError, Sendable {
             ✅ Make sure all changes are staged and there are no conflicts.
             """
 
-        case .tagCreationFailed(let tag, let output):
+        case let .tagCreationFailed(tag, output):
             return """
             Failed to create git tag '\(tag)'.
 
@@ -274,7 +274,7 @@ public enum GitServiceError: Error, LocalizedError, Sendable {
             ✅ Make sure you're in a git repository with a valid branch.
             """
 
-        case .unexpectedChanges(let expected, let found):
+        case let .unexpectedChanges(expected, found):
             return """
             Found unexpected uncommitted changes.
 

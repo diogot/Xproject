@@ -191,7 +191,7 @@ public enum VersionServiceError: Error, LocalizedError, Sendable {
               tvos: TV/TV.xcodeproj
             """
 
-        case .agvtoolFailed(let command, let output):
+        case let .agvtoolFailed(command, output):
             return """
             agvtool command failed: \(command)
 
@@ -200,7 +200,7 @@ public enum VersionServiceError: Error, LocalizedError, Sendable {
             ✅ Make sure you're in the project directory and the project has a valid Info.plist
             """
 
-        case .gitFailed(let command, let output):
+        case let .gitFailed(command, output):
             return """
             git command failed: \(command)
 
