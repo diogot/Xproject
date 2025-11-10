@@ -106,8 +106,10 @@ struct BumpPatchCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Argument(help: "Target name (defaults to first in config)") var target: String?
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Argument(help: "Target name (defaults to first in config)")
+    var target: String?
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         try await bumpVersion(type: .patch, target: target, globalOptions: globalOptions, dryRun: dryRun)
@@ -121,8 +123,10 @@ struct BumpMinorCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Argument(help: "Target name (defaults to first in config)") var target: String?
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Argument(help: "Target name (defaults to first in config)")
+    var target: String?
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         try await bumpVersion(type: .minor, target: target, globalOptions: globalOptions, dryRun: dryRun)
@@ -136,8 +140,10 @@ struct BumpMajorCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Argument(help: "Target name (defaults to first in config)") var target: String?
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Argument(help: "Target name (defaults to first in config)")
+    var target: String?
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         try await bumpVersion(type: .major, target: target, globalOptions: globalOptions, dryRun: dryRun)
@@ -153,8 +159,10 @@ struct VersionCommitCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Argument(help: "Target name (defaults to first in config)") var target: String?
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Argument(help: "Target name (defaults to first in config)")
+    var target: String?
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         let configService = ConfigurationService(
@@ -215,9 +223,12 @@ struct VersionTagCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Argument(help: "Target name (defaults to first in config)") var target: String?
-    @Option(name: .long, help: "Environment name (e.g., production)") var environment: String?
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Argument(help: "Target name (defaults to first in config)")
+    var target: String?
+    @Option(name: .long, help: "Environment name (e.g., production)")
+    var environment: String?
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         let configService = ConfigurationService(
@@ -283,8 +294,10 @@ struct VersionPushCommand: AsyncParsableCommand {
     )
 
     @OptionGroup var globalOptions: GlobalOptions
-    @Option(name: .long, help: "Remote name") var remote = "origin"
-    @Flag(name: .long, help: "Show what would be done without executing") var dryRun = false
+    @Option(name: .long, help: "Remote name")
+    var remote = "origin"
+    @Flag(name: .long, help: "Show what would be done without executing")
+    var dryRun = false
 
     func run() async throws {
         let executor = CommandExecutor(

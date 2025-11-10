@@ -5,6 +5,7 @@
 
 import Foundation
 
+// swiftlint:disable:next type_body_length
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let workingDirectory: String
     internal let dryRun: Bool
