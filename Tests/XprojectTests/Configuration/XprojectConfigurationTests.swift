@@ -19,7 +19,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect(throws: Never.self) {
@@ -33,7 +35,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -49,7 +53,9 @@ struct XprojectConfigurationTests {
                 projectPaths: [:],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -72,7 +78,9 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: false)
             ),
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         // Test direct property access
@@ -98,7 +106,9 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         // Should be enabled by default
@@ -113,7 +123,9 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: false, formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         // Should be disabled when explicitly set to false
@@ -128,7 +140,9 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: true, formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         // Should be enabled when explicitly set to true
@@ -148,7 +162,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["test": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -168,7 +184,9 @@ struct XprojectConfigurationTests {
                 projectPaths: [:],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -192,7 +210,9 @@ struct XprojectConfigurationTests {
             projectPaths: ["ios": "TestApp.xcodeproj"],
             setup: nil,
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         #expect {
@@ -214,7 +234,9 @@ struct XprojectConfigurationTests {
             projectPaths: [:],
             setup: nil,
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         #expect {
@@ -244,7 +266,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": "NonExistentApp.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -280,7 +304,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": "TestApp.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -315,7 +341,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -357,7 +385,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {
@@ -397,7 +427,9 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
 
             #expect {

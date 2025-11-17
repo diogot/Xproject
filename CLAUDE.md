@@ -34,6 +34,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Homebrew integration**: Automated tool installation and updates
 - ✅ **Clean architecture**: Separated CLI and business logic with explicit working directory handling
 - ✅ **Improved CLI output formatting**: Clear info blocks showing working directory and configuration at command start, with environment variables displayed in structured format
+- ✅ **Environment management**: Complete environment system with xcconfig generation, variable mapping, and multi-environment support
 
 ### Architecture Overview
 **Targets:**
@@ -47,10 +48,12 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `BuildService`: Handles building for tests with Xcode discovery
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
 - `ReleaseService`: Orchestrates release workflow (archive → IPA generation → App Store upload)
+- `EnvironmentService`: Manages environment configurations, xcconfig generation, and variable mapping
 
 **Key Utilities:**
 - `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
 - `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
+- `NestedDictionary`: Dot notation access for nested YAML structures (e.g., "apps.ios.bundle_identifier")
 
 ### Development Commands
 ```bash
@@ -80,6 +83,11 @@ xp config validate # Validate configuration files with comprehensive checks
 xp build           # Build for testing (supports --scheme, --clean, --destination)
 xp test            # Run tests (supports --scheme, --clean, --skip-build, --destination)
 xp release         # Create release builds (archive, IPA, upload with --archive-only, --skip-upload, --upload-only)
+xp env list        # List available environments
+xp env show        # Show environment variables (current or specific)
+xp env current     # Show currently activated environment
+xp env load    # Load an environment and generate xcconfig files
+xp env validate    # Validate environment configuration
 
 # Examples
 xp -C /path/to/project config show
@@ -89,7 +97,255 @@ xp release production-ios
 xp release dev-ios --archive-only --dry-run
 xp setup --dry-run
 xp config --config custom.yml validate
+xp env list
+xp env load dev --dry-run
+xp env load production
+xp env show dev
 ```
+
+## Environment Management
+
+Xproject includes a complete environment management system for handling multiple deployment environments (dev, staging, production, etc.) with automatic xcconfig file generation.
+
+### Overview
+
+The environment system allows you to:
+- Define multiple environments (dev, staging, production, etc.)
+- Generate environment-specific `.xcconfig` files automatically
+- Manage configuration variables using YAML
+- Support multiple targets with bundle ID suffixes
+- Per-configuration variable overrides (debug vs release)
+
+### Directory Structure
+
+```
+YourProject/
+├── env/
+│   ├── config.yml              # Environment system configuration
+│   ├── .current                # Currently active environment (gitignored)
+│   ├── dev/
+│   │   └── env.yml            # Development environment variables
+│   ├── staging/
+│   │   └── env.yml            # Staging environment variables
+│   └── production/
+│       └── env.yml            # Production environment variables
+├── YourApp/
+│   └── Config/                 # Generated xcconfig files (gitignored)
+│       ├── YourApp.debug.xcconfig
+│       └── YourApp.release.xcconfig
+└── Xproject.yml                # Enable with environment.enabled: true
+```
+
+### Quick Start
+
+1. **Enable in Xproject.yml:**
+   ```yaml
+   environment:
+     enabled: true
+   ```
+
+2. **Create env/config.yml:**
+   ```yaml
+   targets:
+     - name: MyApp
+       xcconfig_path: MyApp/Config
+       shared_variables:
+         PRODUCT_BUNDLE_IDENTIFIER: apps.bundle_identifier
+         BUNDLE_DISPLAY_NAME: apps.display_name
+         API_URL: api_url
+       configurations:
+         debug: {}
+         release:
+           variables:
+             PROVISIONING_PROFILE_SPECIFIER: apps.ios.provision_profile
+   ```
+
+3. **Create environment files (e.g., env/dev/env.yml):**
+   ```yaml
+   environment_name: development
+   api_url: https://dev-api.example.com
+
+   apps:
+     bundle_identifier: com.example.myapp.dev
+     display_name: MyApp Dev
+     ios:
+       app_icon_name: AppIcon
+       provision_profile: Development
+   ```
+
+4. **Activate environment:**
+   ```bash
+   xp env load dev
+   ```
+
+### Key Features
+
+- **Dot notation access**: Use paths like `apps.ios.bundle_identifier` to access nested YAML values
+- **Bundle ID suffixes**: Automatically append suffixes for app extensions (`.widget`, `.notification-content`)
+- **Configuration-specific variables**: Different variables for debug vs release builds
+- **Swift code generation**: Type-safe Swift code from environment variables with prefix filtering and type inference
+- **Validation**: Comprehensive validation of configuration and environment files
+- **Dry-run support**: Preview xcconfig and Swift generation without writing files
+
+### Swift Code Generation
+
+The environment system can automatically generate type-safe Swift files:
+
+```yaml
+swift_generation:
+  enabled: true
+  outputs:
+    # Base class - automatically includes ALL root-level variables
+    - path: MyApp/Generated/EnvironmentService.swift
+      prefixes: []  # Empty - base type auto-includes root-level
+      type: base
+    # Extension - explicitly specify namespaces
+    - path: MyApp/Generated/EnvironmentService+App.swift
+      prefixes: [apps, features]
+      type: extension
+```
+
+Features:
+- **Base type auto-includes root-level**: Base class automatically includes all root-level variables
+- **Namespace filtering**: Extensions filter by namespace (e.g., `apps`, `features`)
+- **CamelCase conversion**: `bundle_identifier` → `bundleIdentifier`, `api_url` → `apiURL`
+- **Type inference**: Automatic URL, String, Int, Bool detection
+- **Base class or extension**: Generate standalone class or extend existing
+- **URL handling**: Auto-detect URL properties by name suffix (`*URL`, `*Url`)
+
+Example generated code:
+```swift
+public final class EnvironmentService {
+    public init() {}
+    public let apiURL = url("https://dev-api.example.com")
+    public let environmentName = "development"
+}
+
+extension EnvironmentService {
+    public var bundleIdentifier: String { "com.example.app.dev" }
+    public var iosAppIconName: String { "AppIcon" }
+    public var debugMenu: Bool { true }
+}
+```
+
+### Implementation Details
+
+- **Models**: `EnvironmentConfig`, `SwiftGenerationConfig`, `SwiftOutputConfig` in Sources/Xproject/Models/EnvironmentConfig.swift
+- **Service**: `EnvironmentService` in Sources/Xproject/Services/EnvironmentService.swift handles all environment operations
+- **Templates**: `SwiftTemplates` in Sources/Xproject/Templates/SwiftTemplates.swift with embedded code generation
+- **Utility**: `NestedDictionary` in Sources/Xproject/Utilities/NestedDictionary.swift provides dot notation access
+- **Commands**: `EnvironmentCommand` in Sources/XprojectCLI/Commands/EnvironmentCommand.swift with 5 subcommands
+- **Tests**: 28 dedicated tests (17 environment, 12 Swift generation) in Tests/XprojectTests/Services/ - 226 total tests passing
+
+See `docs/environment-setup.md` for detailed setup guide and examples.
+
+## Version Management
+
+Xproject includes a complete version management system for handling semantic versioning, build numbers from git commits, and automated git tagging.
+
+### Overview
+
+The version management system allows you to:
+- Bump semantic versions (major.minor.patch) using agvtool
+- Calculate build numbers from git commit count with configurable offset
+- Commit version changes automatically with `[skip ci]` prefix
+- Create version tags in standardized format
+- Push branches and tags to remote repositories
+
+**Important**: The "target" parameter (e.g., "ios", "tvos") refers to a **configuration key** in `project_path`, not an Xcode build target. Each target maps to a specific `.xcodeproj` file, which may be in a subdirectory:
+
+```yaml
+project_path:
+  ios: MyApp.xcodeproj          # Root-level project
+  tvos: TV/TV.xcodeproj          # Subdirectory project
+```
+
+When you run `xp version bump patch ios`, agvtool updates **all Xcode targets** within `MyApp.xcodeproj`. Similarly, `xp version bump patch tvos` updates all targets in `TV/TV.xcodeproj`. This matches the behavior of Apple's agvtool, which operates on entire projects, not individual targets.
+
+### Configuration
+
+Add version configuration to your `Xproject.yml`:
+
+```yaml
+version:
+  build_number_offset: -6854  # Offset for git commit count
+  tag_format: "{env}-{target}/{version}-{build}"  # Optional custom format
+```
+
+### Available Commands
+
+```bash
+# Show current version and build
+xp version show [target]
+
+# Bump version (patch/minor/major)
+xp version bump patch [target]          # 1.0.0 → 1.0.1
+xp version bump minor [target]          # 1.0.0 → 1.1.0
+xp version bump major [target]          # 1.0.0 → 2.0.0
+
+# Commit version bump changes
+xp version commit [target]              # Commits with [skip ci] prefix
+
+# Create git tag
+xp version tag [target]                 # Creates tag: ios/1.0.0-100
+xp version tag [target] --environment production  # Creates tag: production-ios/1.0.0-100
+
+# Push to remote
+xp version push                         # Push current branch with tags
+xp version push --remote upstream       # Push to specific remote
+
+# All commands support --dry-run
+xp version bump patch --dry-run
+xp version tag --dry-run
+```
+
+### Common Workflow
+
+```bash
+# 1. Check current version
+xp version show
+
+# 2. Bump version
+xp version bump patch
+
+# 3. Commit changes
+xp version commit
+
+# 4. Create tag
+xp version tag --environment production
+
+# 5. Push to remote
+xp version push
+```
+
+### Build Number Calculation
+
+Build numbers are automatically calculated from git commit count:
+- Gets current commit count with `git rev-list HEAD --count`
+- Applies configured offset from `version.build_number_offset`
+- Example: 7000 commits + offset -6854 = build number 146
+
+### Tag Format
+
+Tags follow the format: `[environment-]target/version-build`
+- Without environment: `ios/1.0.0-146`
+- With environment: `production-ios/1.0.0-146`
+
+### Implementation Details
+
+- **Models**: `Version`, `VersionConfiguration` in Sources/Xproject/Models/
+- **Services**:
+  - `VersionService` in Sources/Xproject/Services/VersionService.swift - Handles agvtool operations and build number calculation
+  - `GitService` in Sources/Xproject/Services/GitService.swift - Handles git operations (commit, tag, push)
+- **Commands**: `VersionCommand` in Sources/XprojectCLI/Commands/VersionCommand.swift with 5 subcommands
+- **Tests**: 56 dedicated tests (19 Version + 17 VersionService + 20 GitService) - All passing
+
+### Safety Features
+
+- **Repository clean check**: Warns if uncommitted changes exist
+- **Expected files validation**: Ensures only version-related files changed
+- **Tag existence check**: Prevents duplicate tags
+- **Dry-run mode**: Preview all operations before execution
 
 ## Current System Overview (Reference Only)
 
@@ -235,10 +491,11 @@ Priority order for implementing remaining features:
 5. ✅ ~~Dry-run functionality~~ - **COMPLETED**: Safe preview mode with executeReadOnly for discovery operations
 6. ✅ ~~Release command~~ - **COMPLETED**: Archive, IPA generation, and App Store upload with automatic/manual signing (139 tests passing)
 
+7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, Swift code generation, variable mapping, validation (226 tests passing)
+
 **Remaining Work:**
-1. Environment management features - Support for different deployment environments
-2. Version management - Auto-increment build numbers, semantic versioning, git tagging
-3. Git operations - Commit, tag, and push automation
+1. Version management - Auto-increment build numbers, semantic versioning, git tagging
+2. Git operations - Commit, tag, and push automation
 
 ### Future Enhancements
 - Add Danger integration support for test command (--run-danger flag)

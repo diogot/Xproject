@@ -5,10 +5,11 @@
 
 import Foundation
 
+// swiftlint:disable:next type_body_length
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let workingDirectory: String
-    private let dryRun: Bool
-    private let verbose: Bool
+    internal let dryRun: Bool
+    internal let verbose: Bool
 
     // Patterns for sensitive environment variables that should be masked in output
     private static let sensitiveEnvPatterns = [
@@ -356,6 +357,75 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         await collector.appendError(remainingErrorData)
     }
 
+    /// Execute a command with arguments array (safer than shell string interpolation)
+    @discardableResult
+    public func executeWithArguments(
+        command: String,
+        arguments: [String],
+        environment: [String: String]? = nil
+    ) throws -> CommandResult {
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+        let fullCommand = ([command] + arguments).joined(separator: " ")
+
+        if dryRun {
+            printEnvironmentBlock(environment)
+            print("[DRY RUN] Would run: \(fullCommand)")
+
+            return CommandResult(
+                exitCode: 0,
+                output: "",
+                error: "",
+                command: fullCommand
+            )
+        }
+
+        if verbose {
+            printVerboseCommandInfo(command: fullCommand, workingDirectory: workingDirectoryURL, environment: environment)
+        }
+
+        let process = Process()
+
+        // Set command with arguments array (no shell interpolation)
+        process.executableURL = URL(fileURLWithPath: command)
+        process.arguments = arguments
+
+        // Set working directory
+        process.currentDirectoryURL = workingDirectoryURL
+
+        // Set environment
+        if let environment = environment {
+            var processEnvironment = ProcessInfo.processInfo.environment
+            for (key, value) in environment {
+                processEnvironment[key] = value
+            }
+            process.environment = processEnvironment
+        }
+
+        // Setup output capture
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        // Execute
+        try process.run()
+        process.waitUntilExit()
+
+        // Capture output
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let error = String(data: errorData, encoding: .utf8) ?? ""
+
+        return CommandResult(
+            exitCode: process.terminationStatus,
+            output: output.trimmingCharacters(in: .whitespacesAndNewlines),
+            error: error.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: fullCommand
+        )
+    }
+
     /// Check if a command exists in PATH
     public func commandExists(_ command: String) -> Bool {
         do {
@@ -364,6 +434,15 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         } catch {
             return false
         }
+    }
+
+    /// Create a new executor with a different working directory, preserving other settings
+    public func withWorkingDirectory(_ path: String) -> CommandExecuting {
+        return CommandExecutor(
+            workingDirectory: path,
+            dryRun: self.dryRun,
+            verbose: self.verbose
+        )
     }
 }
 

@@ -161,6 +161,16 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         return try execute(command, environment: environment)
     }
 
+    public func executeWithArguments(
+        command: String,
+        arguments: [String],
+        environment: [String: String]? = nil
+    ) throws -> CommandResult {
+        // For testing, treat this like a regular execute with the full command
+        let fullCommand = ([command] + arguments).joined(separator: " ")
+        return try execute(fullCommand, environment: environment)
+    }
+
     public func commandExists(_ command: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -174,6 +184,19 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         _executedCommands.append(executedCommand)
 
         return _commandExists[command] ?? true // Default to exists
+    }
+
+    public func withWorkingDirectory(_ path: String) -> CommandExecuting {
+        // For mocks, return a new mock with the new working directory
+        // This preserves the test setup while allowing working directory changes
+        let newMock = MockCommandExecutor(workingDirectory: path, verbose: verbose)
+        // Copy over the configured responses
+        lock.lock()
+        defer { lock.unlock() }
+        newMock._responses = _responses
+        newMock._defaultResponse = _defaultResponse
+        newMock._commandExists = _commandExists
+        return newMock
     }
 }
 

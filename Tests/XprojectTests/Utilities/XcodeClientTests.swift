@@ -20,7 +20,9 @@ struct XcodeClientTests {
                 projectPaths: ["test": "Test.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil
+                danger: nil,
+                environment: nil,
+                version: nil
             )
         )
 
@@ -55,7 +57,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -88,7 +92,9 @@ struct XcodeClientTests {
             projectPaths: ["test": "Test.xcodeproj"],
             setup: nil,
             xcode: nil,
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -129,7 +135,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -225,7 +233,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -279,7 +289,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -335,7 +347,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -400,7 +414,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -453,7 +469,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production-ios": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -522,7 +540,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["staging": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -585,7 +605,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -646,7 +668,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -729,7 +753,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -813,7 +839,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -894,7 +922,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -968,7 +998,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1041,7 +1073,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["staging": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1108,7 +1142,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1174,7 +1210,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1237,7 +1275,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1304,7 +1344,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1379,7 +1421,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1449,7 +1493,9 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)

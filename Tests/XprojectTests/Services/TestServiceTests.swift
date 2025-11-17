@@ -227,7 +227,9 @@ struct TestServiceTests {
                 tests: nil,  // No test configuration
                 release: nil
             ),
-            danger: nil
+            danger: nil,
+            environment: nil,
+            version: nil
         )
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
