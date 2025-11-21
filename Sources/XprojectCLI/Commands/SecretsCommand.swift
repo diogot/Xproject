@@ -30,7 +30,8 @@ struct SecretsCommand: AsyncParsableCommand {
             SecretsGenerateCommand.self,
             SecretsEncryptCommand.self,
             SecretsShowCommand.self,
-            SecretsDecryptCommand.self
+            SecretsDecryptCommand.self,
+            SecretsValidateCommand.self
         ]
     )
 }
@@ -260,6 +261,98 @@ struct SecretsDecryptCommand: AsyncParsableCommand {
             print("\(key):")
             print("  \(value)")
             print("")
+        }
+    }
+}
+
+// MARK: - Validate Command
+
+struct SecretsValidateCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "validate",
+        abstract: "Validate EJSON files",
+        discussion: """
+        Validates all EJSON files in environment directories without decryption.
+
+        Checks:
+        - File exists and contains valid JSON
+        - Public key is present and has valid format (64-char hex)
+        - Reports encryption status of each secret (warning if plaintext)
+
+        This command does NOT require the private key.
+        """
+    )
+
+    @OptionGroup var globalOptions: GlobalOptions
+    @Argument(help: "Environment name (optional - validates all if not specified)")
+    var environment: String?
+
+    func run() async throws {
+        let workingDir = globalOptions.resolvedWorkingDirectory
+        let ejsonService = EJSONService(workingDirectory: workingDir)
+
+        if let environment = environment {
+            // Validate specific environment
+            let ejsonPath = "env/\(environment)/keys.ejson"
+            let result = ejsonService.validateFile(path: ejsonPath)
+            printValidationResult(environment: environment, path: ejsonPath, result: result)
+
+            if !result.isValid {
+                throw ExitCode.failure
+            }
+        } else {
+            // Validate all environments
+            let results = ejsonService.validateAllEnvironments()
+
+            if results.isEmpty {
+                print("No EJSON files found in env/*/keys.ejson")
+                return
+            }
+
+            var hasErrors = false
+            for (environment, result) in results.sorted(by: { $0.key < $1.key }) {
+                let ejsonPath = "env/\(environment)/keys.ejson"
+                printValidationResult(environment: environment, path: ejsonPath, result: result)
+
+                if !result.isValid {
+                    hasErrors = true
+                }
+                print("")
+            }
+
+            if hasErrors {
+                print("✗ Validation failed for one or more environments")
+                throw ExitCode.failure
+            } else {
+                print("✓ All EJSON files are valid")
+            }
+        }
+    }
+
+    private func printValidationResult(
+        environment: String,
+        path: String,
+        result: EJSONService.ValidationResult
+    ) {
+        let statusIcon = result.isValid ? "✓" : "✗"
+        print("\(statusIcon) \(environment) (\(path))")
+
+        if let publicKey = result.publicKey {
+            print("  Public Key: \(publicKey.prefix(16))...")
+        }
+
+        print("  Secrets: \(result.secretCount) total, \(result.encryptedCount) encrypted, \(result.plaintextCount) plaintext")
+
+        // Print issues
+        let errors = result.issues.filter { $0.severity == .error }
+        let warnings = result.issues.filter { $0.severity == .warning }
+
+        for issue in errors {
+            print("  ✗ ERROR: \(issue.message)")
+        }
+
+        for issue in warnings {
+            print("  ⚠ WARNING: \(issue.message)")
         }
     }
 }

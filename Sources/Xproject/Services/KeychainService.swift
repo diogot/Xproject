@@ -5,6 +5,11 @@
 // Service for storing and retrieving secrets from macOS Keychain
 //
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 import Foundation
 import Security
 
@@ -18,13 +23,23 @@ import Security
 /// 1. Environment variable: `EJSON_PRIVATE_KEY_{ENVIRONMENT}`
 /// 2. Environment variable: `EJSON_PRIVATE_KEY`
 /// 3. macOS Keychain
-/// 4. Error if not found
+/// 4. Interactive prompt (if TTY available and enabled)
+/// 5. Error if not found
 public final class KeychainService: Sendable {
     /// Service name for EJSON private keys (unique per app)
     private let serviceName: String
 
-    public init(appName: String) {
+    /// Whether interactive prompting is enabled (defaults to true)
+    private let interactiveEnabled: Bool
+
+    /// Initializes the KeychainService
+    ///
+    /// - Parameters:
+    ///   - appName: The application name (used in keychain service name)
+    ///   - interactiveEnabled: Whether to prompt for keys interactively (default: true)
+    public init(appName: String, interactiveEnabled: Bool = true) {
         self.serviceName = "dev.xproject.ejson.\(appName)"
+        self.interactiveEnabled = interactiveEnabled
     }
 
     // MARK: - Public Methods
@@ -35,6 +50,7 @@ public final class KeychainService: Sendable {
     /// 1. Environment variable: `EJSON_PRIVATE_KEY_{ENVIRONMENT}` (uppercased)
     /// 2. Environment variable: `EJSON_PRIVATE_KEY` (global fallback)
     /// 3. macOS Keychain (service: dev.xproject.ejson.{appName}, account: environment)
+    /// 4. Interactive prompt (if TTY available and interactiveEnabled is true)
     ///
     /// - Parameter environment: The environment name (e.g., "dev", "staging", "production")
     /// - Returns: The private key as a string
@@ -55,8 +71,62 @@ public final class KeychainService: Sendable {
         do {
             return try getPassword(service: serviceName, account: environment)
         } catch {
+            // Priority 4: Interactive prompt (if enabled and TTY available)
+            if interactiveEnabled && Self.isInteractive() {
+                return try promptForPrivateKey(environment: environment)
+            }
             throw SecretError.privateKeyNotFound(environment: environment)
         }
+    }
+
+    // MARK: - Interactive Mode
+
+    /// Checks if the current session is interactive (has a TTY)
+    ///
+    /// - Returns: True if stdin is a terminal
+    public static func isInteractive() -> Bool {
+        return isatty(STDIN_FILENO) != 0
+    }
+
+    /// Prompts the user interactively for a private key
+    ///
+    /// - Parameter environment: The environment name
+    /// - Returns: The private key entered by the user
+    /// - Throws: `SecretError.privateKeyNotFound` if no key is entered
+    /// - Throws: `SecretError.keychainAccessFailed` if saving to keychain fails
+    public func promptForPrivateKey(environment: String) throws -> String {
+        print("")
+        print("EJSON private key not found for environment: \(environment)")
+        print("")
+        print("The private key was not found in:")
+        print("  1. Environment variable: EJSON_PRIVATE_KEY_\(environment.uppercased())")
+        print("  2. Environment variable: EJSON_PRIVATE_KEY")
+        print("  3. macOS Keychain (service: \(serviceName), account: \(environment))")
+        print("")
+        print("Enter EJSON private key (64-character hex string): ", terminator: "")
+
+        guard let key = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !key.isEmpty else {
+            throw SecretError.privateKeyNotFound(environment: environment)
+        }
+
+        // Validate key format (64 hex characters)
+        guard key.count == 64,
+              key.range(of: "^[0-9a-fA-F]{64}$", options: .regularExpression) != nil else {
+            print("Invalid key format. Expected 64-character hex string.")
+            throw SecretError.privateKeyNotFound(environment: environment)
+        }
+
+        // Ask if user wants to save to keychain
+        print("Save to keychain for future use? [Y/n]: ", terminator: "")
+        let saveResponse = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "y"
+
+        if saveResponse.isEmpty || saveResponse == "y" || saveResponse == "yes" {
+            try setEJSONPrivateKey(key, environment: environment)
+            print("✓ Private key saved to keychain")
+        }
+
+        return key
     }
 
     /// Stores an EJSON private key in the macOS Keychain
