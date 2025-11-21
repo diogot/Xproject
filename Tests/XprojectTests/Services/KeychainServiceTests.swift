@@ -292,7 +292,7 @@ struct KeychainServiceTests {
         #expect(result == true || result == false)
     }
 
-    @Test("Non-interactive service throws when key not found (no prompt)")
+    @Test("Non-interactive service throws privateKeyNotFound without prompting")
     func testNonInteractiveThrowsWithoutPrompt() throws {
         // Given - create service with interactive disabled
         let service = KeychainService(appName: Self.testAppName, interactiveEnabled: false)
@@ -306,36 +306,16 @@ struct KeychainServiceTests {
         // Make sure no keychain entry exists
         try? service.deleteEJSONPrivateKey(environment: environment)
 
-        // When/Then - should throw without attempting to prompt
+        // When/Then - should throw privateKeyNotFound without attempting to prompt
         do {
             _ = try service.getEJSONPrivateKey(environment: environment)
             #expect(Bool(false), "Expected privateKeyNotFound error")
         } catch let error as SecretError {
             guard case .privateKeyNotFound(let env) = error else {
-                #expect(Bool(false), "Expected privateKeyNotFound error")
+                #expect(Bool(false), "Expected privateKeyNotFound error, got \(error)")
                 return
             }
             #expect(env == environment)
-        }
-    }
-
-    @Test("Interactive disabled flag is respected")
-    func testInteractiveDisabledFlag() throws {
-        // Given - create service with interactive disabled explicitly
-        let service = KeychainService(appName: Self.testAppName, interactiveEnabled: false)
-        let environment = "interactive_disabled_test"
-
-        // Clear environment variables
-        let specificEnvVar = "EJSON_PRIVATE_KEY_\(environment.uppercased())"
-        unsetenv(specificEnvVar.cString(using: .utf8))
-        unsetenv("EJSON_PRIVATE_KEY")
-
-        // Make sure no keychain entry exists
-        try? service.deleteEJSONPrivateKey(environment: environment)
-
-        // When/Then - should throw error without prompting
-        #expect(throws: SecretError.self) {
-            _ = try service.getEJSONPrivateKey(environment: environment)
         }
     }
 }
