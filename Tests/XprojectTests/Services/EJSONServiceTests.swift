@@ -340,4 +340,222 @@ struct EJSONServiceTests {
         // Then
         #expect(encryptedFiles.isEmpty)
     }
+
+    // MARK: - Validation
+
+    @Test("Validate valid EJSON file with all encrypted secrets")
+    func testValidateValidEncryptedFile() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+        let (publicKey, _) = try service.generateKeyPair()
+
+        // Create a valid EJSON file with encrypted values
+        let testFile = tempDir.appendingPathComponent("keys.ejson")
+        let encryptedValue = try service.encrypt("secret", publicKey: publicKey)
+        let testJSON = """
+        {
+          "_public_key": "\(publicKey)",
+          "api_key": "\(encryptedValue)"
+        }
+        """
+        try testJSON.write(to: testFile, atomically: true, encoding: .utf8)
+
+        // When
+        let result = service.validateFile(path: "keys.ejson")
+
+        // Then
+        #expect(result.isValid)
+        #expect(result.publicKey == publicKey)
+        #expect(result.secretCount == 1)
+        #expect(result.encryptedCount == 1)
+        #expect(result.plaintextCount == 0)
+        #expect(result.issues.isEmpty)
+    }
+
+    @Test("Validate EJSON file with plaintext secrets (warnings)")
+    func testValidateFileWithPlaintextSecrets() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+        let (publicKey, _) = try service.generateKeyPair()
+
+        // Create a file with plaintext secrets
+        let testFile = tempDir.appendingPathComponent("keys.ejson")
+        let testJSON = """
+        {
+          "_public_key": "\(publicKey)",
+          "api_key": "plaintext_secret"
+        }
+        """
+        try testJSON.write(to: testFile, atomically: true, encoding: .utf8)
+
+        // When
+        let result = service.validateFile(path: "keys.ejson")
+
+        // Then - still valid but with warnings
+        #expect(result.isValid)
+        #expect(result.secretCount == 1)
+        #expect(result.encryptedCount == 0)
+        #expect(result.plaintextCount == 1)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].severity == .warning)
+        #expect(result.issues[0].message.contains("api_key"))
+    }
+
+    @Test("Validate non-existent file returns error")
+    func testValidateNonExistentFile() {
+        // Given
+        let service = EJSONService(workingDirectory: "/tmp")
+
+        // When
+        let result = service.validateFile(path: "non_existent.ejson")
+
+        // Then
+        #expect(!result.isValid)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].severity == .error)
+        #expect(result.issues[0].message.contains("not found"))
+    }
+
+    @Test("Validate invalid JSON file returns error")
+    func testValidateInvalidJSONFile() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+
+        // Create an invalid JSON file
+        let testFile = tempDir.appendingPathComponent("invalid.ejson")
+        try "not valid json {".write(to: testFile, atomically: true, encoding: .utf8)
+
+        // When
+        let result = service.validateFile(path: "invalid.ejson")
+
+        // Then
+        #expect(!result.isValid)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].severity == .error)
+        #expect(result.issues[0].message.contains("not valid JSON"))
+    }
+
+    @Test("Validate file missing public key returns error")
+    func testValidateMissingPublicKey() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+
+        // Create a file without _public_key
+        let testFile = tempDir.appendingPathComponent("keys.ejson")
+        let testJSON = """
+        {
+          "api_key": "some_value"
+        }
+        """
+        try testJSON.write(to: testFile, atomically: true, encoding: .utf8)
+
+        // When
+        let result = service.validateFile(path: "keys.ejson")
+
+        // Then
+        #expect(!result.isValid)
+        #expect(result.publicKey == nil)
+        let errors = result.issues.filter { $0.severity == .error }
+        #expect(errors.contains { $0.message.contains("Missing _public_key") })
+    }
+
+    @Test("Validate file with invalid public key format returns error")
+    func testValidateInvalidPublicKeyFormat() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+
+        // Create a file with invalid public key (too short)
+        let testFile = tempDir.appendingPathComponent("keys.ejson")
+        let testJSON = """
+        {
+          "_public_key": "abc123",
+          "api_key": "value"
+        }
+        """
+        try testJSON.write(to: testFile, atomically: true, encoding: .utf8)
+
+        // When
+        let result = service.validateFile(path: "keys.ejson")
+
+        // Then
+        #expect(!result.isValid)
+        let errors = result.issues.filter { $0.severity == .error }
+        #expect(errors.contains { $0.message.contains("Invalid public key format") })
+    }
+
+    @Test("isValidPublicKey validates correctly")
+    func testIsValidPublicKey() {
+        // Given
+        let service = EJSONService(workingDirectory: "/tmp")
+
+        // Valid key (64 hex chars)
+        let validKey = String(repeating: "0", count: 64)
+        #expect(service.isValidPublicKey(validKey))
+
+        let validKeyMixed = "0123456789abcdefABCDEF0123456789abcdefABCDEF0123456789abcdefABCD"
+        #expect(service.isValidPublicKey(validKeyMixed))
+
+        // Invalid keys
+        #expect(!service.isValidPublicKey("abc123")) // Too short
+        #expect(!service.isValidPublicKey(String(repeating: "0", count: 63))) // 63 chars
+        #expect(!service.isValidPublicKey(String(repeating: "0", count: 65))) // 65 chars
+        #expect(!service.isValidPublicKey(String(repeating: "g", count: 64))) // Invalid hex
+    }
+
+    @Test("Validate all environments")
+    func testValidateAllEnvironments() throws {
+        // Given
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("ejson_test_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let service = EJSONService(workingDirectory: tempDir.path)
+
+        // Create multiple environments
+        let environments = ["dev", "staging"]
+        for env in environments {
+            let envDir = tempDir.appendingPathComponent("env/\(env)")
+            try FileManager.default.createDirectory(at: envDir, withIntermediateDirectories: true)
+
+            let (publicKey, _) = try service.generateKeyPair()
+            let testFile = envDir.appendingPathComponent("keys.ejson")
+            let testJSON = """
+            {
+              "_public_key": "\(publicKey)",
+              "\(env)_key": "value"
+            }
+            """
+            try testJSON.write(to: testFile, atomically: true, encoding: .utf8)
+        }
+
+        // When
+        let results = service.validateAllEnvironments()
+
+        // Then
+        #expect(results.count == 2)
+        #expect(results["dev"] != nil)
+        #expect(results["staging"] != nil)
+        #expect(results["dev"]!.isValid)
+        #expect(results["staging"]!.isValid)
+    }
 }

@@ -156,6 +156,180 @@ public final class EJSONService {
         }
     }
 
+    // MARK: - Validation
+
+    /// Result of validating an EJSON file
+    public struct ValidationResult: Sendable {
+        /// Whether the file is valid
+        public let isValid: Bool
+        /// List of validation issues (warnings or errors)
+        public let issues: [ValidationIssue]
+        /// The public key if found
+        public let publicKey: String?
+        /// Total number of secrets (excluding _public_key)
+        public let secretCount: Int
+        /// Number of encrypted secrets
+        public let encryptedCount: Int
+        /// Number of plaintext secrets
+        public let plaintextCount: Int
+
+        public init(
+            isValid: Bool,
+            issues: [ValidationIssue],
+            publicKey: String?,
+            secretCount: Int,
+            encryptedCount: Int,
+            plaintextCount: Int
+        ) {
+            self.isValid = isValid
+            self.issues = issues
+            self.publicKey = publicKey
+            self.secretCount = secretCount
+            self.encryptedCount = encryptedCount
+            self.plaintextCount = plaintextCount
+        }
+    }
+
+    /// A validation issue found during EJSON validation
+    public struct ValidationIssue: Sendable {
+        public enum Severity: Sendable {
+            case warning
+            case error
+        }
+
+        public let severity: Severity
+        public let message: String
+
+        public init(severity: Severity, message: String) {
+            self.severity = severity
+            self.message = message
+        }
+    }
+
+    /// Validates an EJSON file without decrypting it
+    ///
+    /// Checks:
+    /// - File exists and is valid JSON
+    /// - Public key is present and has valid format (64-char hex)
+    /// - Reports encryption status of each secret
+    ///
+    /// - Parameter path: Path to the EJSON file (relative to working directory)
+    /// - Returns: ValidationResult with details about the file
+    public func validateFile(path: String) -> ValidationResult {
+        let fullPath = resolvePath(path)
+        var issues: [ValidationIssue] = []
+        var publicKey: String?
+        var secretCount = 0
+        var encryptedCount = 0
+        var plaintextCount = 0
+
+        // Check file exists
+        guard fileManager.fileExists(atPath: fullPath) else {
+            return ValidationResult(
+                isValid: false,
+                issues: [ValidationIssue(severity: .error, message: "File not found: \(path)")],
+                publicKey: nil,
+                secretCount: 0,
+                encryptedCount: 0,
+                plaintextCount: 0
+            )
+        }
+
+        // Read and parse JSON
+        guard let data = fileManager.contents(atPath: fullPath),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return ValidationResult(
+                isValid: false,
+                issues: [ValidationIssue(severity: .error, message: "File is not valid JSON")],
+                publicKey: nil,
+                secretCount: 0,
+                encryptedCount: 0,
+                plaintextCount: 0
+            )
+        }
+
+        // Check public key
+        if let pk = json["_public_key"] as? String {
+            publicKey = pk
+            if !isValidPublicKey(pk) {
+                issues.append(ValidationIssue(
+                    severity: .error,
+                    message: "Invalid public key format (expected 64-character hex string)"
+                ))
+            }
+        } else {
+            issues.append(ValidationIssue(
+                severity: .error,
+                message: "Missing _public_key field"
+            ))
+        }
+
+        // Check secrets
+        for (key, value) in json where key != "_public_key" {
+            secretCount += 1
+            if let stringValue = value as? String {
+                if stringValue.hasPrefix("EJ[1:") {
+                    encryptedCount += 1
+                } else {
+                    plaintextCount += 1
+                    issues.append(ValidationIssue(
+                        severity: .warning,
+                        message: "Secret '\(key)' is not encrypted"
+                    ))
+                }
+            } else {
+                issues.append(ValidationIssue(
+                    severity: .warning,
+                    message: "Secret '\(key)' is not a string value"
+                ))
+            }
+        }
+
+        let hasErrors = issues.contains { $0.severity == .error }
+        return ValidationResult(
+            isValid: !hasErrors,
+            issues: issues,
+            publicKey: publicKey,
+            secretCount: secretCount,
+            encryptedCount: encryptedCount,
+            plaintextCount: plaintextCount
+        )
+    }
+
+    /// Validates all EJSON files in all environment directories
+    ///
+    /// - Returns: Dictionary mapping environment names to their validation results
+    public func validateAllEnvironments() -> [String: ValidationResult] {
+        let envDir = resolvePath("env")
+        var results: [String: ValidationResult] = [:]
+
+        guard fileManager.fileExists(atPath: envDir),
+              let contents = try? fileManager.contentsOfDirectory(atPath: envDir) else {
+            return results
+        }
+
+        for item in contents {
+            let keysPath = "env/\(item)/keys.ejson"
+            let fullKeysPath = resolvePath(keysPath)
+
+            if fileManager.fileExists(atPath: fullKeysPath) {
+                results[item] = validateFile(path: keysPath)
+            }
+        }
+
+        return results
+    }
+
+    /// Checks if a public key has valid format (64-character hex string)
+    ///
+    /// - Parameter key: The public key to validate
+    /// - Returns: True if the key is valid
+    public func isValidPublicKey(_ key: String) -> Bool {
+        guard key.count == 64 else { return false }
+        let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
+        return key.unicodeScalars.allSatisfy { hexCharacters.contains($0) }
+    }
+
     // MARK: - Batch Operations
 
     /// Encrypts all EJSON files in all environment directories
