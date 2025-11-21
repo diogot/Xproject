@@ -58,6 +58,8 @@ A modern Swift command line tool for Xcode project build automation.
 - `xp release` - Create release builds with archive, IPA generation, and App Store upload
 - `xp config` - Manage and validate project configuration
 - `xp env` - Manage environment configurations (dev, staging, production)
+- `xp secrets` - Manage encrypted secrets with EJSON and XOR obfuscation
+- `xp version` - Manage semantic versioning and build numbers
 
 ### Global Options
 
@@ -99,6 +101,19 @@ xp env list
 xp env load dev --dry-run
 xp env load production
 xp env show dev
+
+# Secret management
+xp secrets generate dev
+xp secrets encrypt
+xp secrets show dev
+xp secrets decrypt dev  # Dev only
+
+# Version management
+xp version show
+xp version bump patch
+xp version commit
+xp version tag --environment production
+xp version push
 ```
 
 ### Integration with Existing Projects
@@ -270,6 +285,82 @@ env/.current
 
 **Documentation**: See `docs/environment-setup.md` for detailed setup guide and advanced features.
 
+## Secret Management
+
+Xproject includes a **dual-layer security system** for managing API keys and secrets:
+- **Layer 1: EJSON encryption** (at-rest) - Secrets encrypted in repository using asymmetric cryptography
+- **Layer 2: XOR obfuscation** (in-binary) - Prevents extraction from compiled app with `strings` command
+
+### Quick Start
+
+1. **Enable in your Xproject.yml:**
+   ```yaml
+   secrets:
+     enabled: true
+     swift_generation:
+       outputs:
+         - path: MyApp/Generated/AppKeys.swift
+           prefixes: [all, ios]
+   ```
+
+2. **Create encrypted secrets file (`env/dev/keys.ejson`):**
+   ```json
+   {
+     "_public_key": "a1b2c3d4...",
+     "shopify_api_key": "EJ[1:...]",
+     "mux_key": "EJ[1:...]"
+   }
+   ```
+
+3. **Generate obfuscated Swift code:**
+   ```bash
+   xp env load dev  # Automatically generates AppKeys.swift
+   # or manually:
+   xp secrets generate dev
+   ```
+
+### Features
+
+- **Dual-layer protection**: EJSON (repo) + XOR obfuscation (binary)
+- **No plaintext in binaries**: Defeats `strings` command extraction
+- **macOS Keychain integration**: Secure private key storage
+- **ENV var support**: `EJSON_PRIVATE_KEY` for CI/CD
+- **Smart Swift generation**: CamelCase conversion, URL/API suffix handling
+- **Type-safe code**: Automatic type inference (String, URL, Int, Bool)
+
+### Generated Code Example
+
+```swift
+// ✅ Secure - Obfuscated byte arrays
+final class AppKeys {
+    private static let _shopifyApiKey: [UInt8] = [135, 89, 20, 175, ...]
+
+    static var shopifyApiKey: String {
+        String(bytes: _shopifyApiKey.deobfuscated, encoding: .utf8)!
+    }
+}
+```
+
+### Available Commands
+
+```bash
+xp secrets generate <env>     # Generate obfuscated AppKeys.swift
+xp secrets encrypt [env]       # Encrypt EJSON files
+xp secrets show <env>          # Display file info
+xp secrets decrypt <env>       # Decrypt and display (dev only)
+```
+
+### .gitignore Recommendations
+
+```gitignore
+# Secret management
+**/Generated/AppKeys*.swift
+env/*/.ejson_keypair
+env/*/keys.json
+```
+
+**Security Note:** This protects against casual inspection and automated scanning, but not against determined reverse engineering. Never store critical secrets in mobile apps - use server-side authentication.
+
 ## Development
 
 ```bash
@@ -282,6 +373,23 @@ swift build
 # Run in development
 swift run xp --help
 ```
+
+## Dependencies
+
+Xproject uses Swift Package Manager (SPM) for dependency management. All dependencies are automatically resolved during build.
+
+### External Dependencies
+- **Yams** - YAML parsing for configuration files
+- **swift-ejson** (EJSONKit) - EJSON encryption/decryption for secret management
+  - Includes libsodium (NaCl cryptography) via precompiled xcframework
+- **ArgumentParser** - CLI argument parsing
+
+### System Requirements
+- **Swift 6.2+** (included with Xcode 16.4+)
+- **macOS 15+**
+- **Xcode Command Line Tools** (for `xcodebuild`, `agvtool`, `git`)
+
+**No additional installation required** - all dependencies managed via SPM.
 
 ## Features
 
@@ -300,7 +408,10 @@ swift run xp --help
 - **Release command** - Archive creation, IPA generation, and App Store upload with automatic/manual signing support
 - **Environment management** - Complete environment system with xcconfig generation, variable mapping, and multi-environment support
 - **Swift code generation** - Type-safe Swift code from environment variables with namespace filtering, camelCase conversion, and automatic type inference (String, URL, Int, Bool)
+- **Version management** - Automated version bumping (patch/minor/major), build numbers from git commits, and git tagging
+- **Git operations** - Automated version commit, tag creation with environment support, and push to remote
+- **Secret management** - Dual-layer security (EJSON + XOR obfuscation) for API keys with binary protection against `strings` extraction
 
 ### 🚧 Future Enhancements
-- **Version management** - Automated version bumping and git tagging
+- **Code generation** - SwiftGen integration for resources
 - **Danger integration** - Code review automation

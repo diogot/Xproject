@@ -18,6 +18,7 @@ public struct XprojectConfiguration: Codable, Sendable {
     public let danger: DangerConfiguration?
     public let environment: EnvironmentFeature?
     public let version: VersionConfiguration?
+    public let secrets: SecretConfiguration?
 
     enum CodingKeys: String, CodingKey {
         case appName = "app_name"
@@ -28,6 +29,7 @@ public struct XprojectConfiguration: Codable, Sendable {
         case danger
         case environment
         case version
+        case secrets
     }
 }
 

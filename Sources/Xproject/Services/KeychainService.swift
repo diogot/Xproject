@@ -1,0 +1,178 @@
+//
+// KeychainService.swift
+// Xproject
+//
+// Service for storing and retrieving secrets from macOS Keychain
+//
+
+import Foundation
+import Security
+
+/// Service for interacting with macOS Keychain to store EJSON private keys
+///
+/// This service provides secure storage for EJSON private keys using the macOS Keychain.
+/// Keys are stored with service name "dev.xproject.ejson.{appName}" and account name
+/// matching the environment name. This ensures each project has unique keychain entries.
+///
+/// Priority for retrieving keys:
+/// 1. Environment variable: `EJSON_PRIVATE_KEY_{ENVIRONMENT}`
+/// 2. Environment variable: `EJSON_PRIVATE_KEY`
+/// 3. macOS Keychain
+/// 4. Error if not found
+public final class KeychainService: Sendable {
+    /// Service name for EJSON private keys (unique per app)
+    private let serviceName: String
+
+    public init(appName: String) {
+        self.serviceName = "dev.xproject.ejson.\(appName)"
+    }
+
+    // MARK: - Public Methods
+
+    /// Retrieves the EJSON private key for a specific environment
+    ///
+    /// Checks the following locations in order:
+    /// 1. Environment variable: `EJSON_PRIVATE_KEY_{ENVIRONMENT}` (uppercased)
+    /// 2. Environment variable: `EJSON_PRIVATE_KEY` (global fallback)
+    /// 3. macOS Keychain (service: dev.xproject.ejson.{appName}, account: environment)
+    ///
+    /// - Parameter environment: The environment name (e.g., "dev", "staging", "production")
+    /// - Returns: The private key as a string
+    /// - Throws: `SecretError.privateKeyNotFound` if key is not found in any location
+    public func getEJSONPrivateKey(environment: String) throws -> String {
+        // Priority 1: Environment variable EJSON_PRIVATE_KEY_{ENVIRONMENT}
+        let envVarName = "EJSON_PRIVATE_KEY_\(environment.uppercased())"
+        if let key = ProcessInfo.processInfo.environment[envVarName], !key.isEmpty {
+            return key
+        }
+
+        // Priority 2: Global environment variable EJSON_PRIVATE_KEY
+        if let key = ProcessInfo.processInfo.environment["EJSON_PRIVATE_KEY"], !key.isEmpty {
+            return key
+        }
+
+        // Priority 3: macOS Keychain
+        do {
+            return try getPassword(service: serviceName, account: environment)
+        } catch {
+            throw SecretError.privateKeyNotFound(environment: environment)
+        }
+    }
+
+    /// Stores an EJSON private key in the macOS Keychain
+    ///
+    /// - Parameters:
+    ///   - key: The private key to store
+    ///   - environment: The environment name (used as account name)
+    /// - Throws: `SecretError.keychainAccessFailed` if storage fails
+    public func setEJSONPrivateKey(_ key: String, environment: String) throws {
+        try setPassword(service: serviceName, account: environment, password: key)
+    }
+
+    /// Deletes an EJSON private key from the macOS Keychain
+    ///
+    /// - Parameter environment: The environment name (used as account name)
+    /// - Throws: `SecretError.keychainAccessFailed` if deletion fails
+    public func deleteEJSONPrivateKey(environment: String) throws {
+        try deletePassword(service: serviceName, account: environment)
+    }
+
+    // MARK: - Keychain Operations
+
+    /// Retrieves a password from the macOS Keychain
+    ///
+    /// - Parameters:
+    ///   - service: The service name
+    ///   - account: The account name
+    /// - Returns: The password as a string
+    /// - Throws: `SecretError.keychainAccessFailed` if retrieval fails
+    public func getPassword(service: String, account: String) throws -> String {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess else {
+            let errorMessage = SecCopyErrorMessageString(status, nil) as String? ?? "Unknown error"
+            throw SecretError.keychainAccessFailed(reason: "Failed to retrieve password: \(errorMessage)")
+        }
+
+        guard let passwordData = item as? Data,
+              let password = String(data: passwordData, encoding: .utf8) else {
+            throw SecretError.keychainAccessFailed(reason: "Failed to decode password data")
+        }
+
+        return password
+    }
+
+    /// Stores a password in the macOS Keychain
+    ///
+    /// If an entry already exists, it will be updated.
+    ///
+    /// - Parameters:
+    ///   - service: The service name
+    ///   - account: The account name
+    ///   - password: The password to store
+    /// - Throws: `SecretError.keychainAccessFailed` if storage fails
+    public func setPassword(service: String, account: String, password: String) throws {
+        guard let passwordData = password.data(using: .utf8) else {
+            throw SecretError.keychainAccessFailed(reason: "Failed to encode password")
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+
+        // Try to update existing item first
+        let attributes: [String: Any] = [
+            kSecValueData as String: passwordData
+        ]
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+
+        if updateStatus == errSecItemNotFound {
+            // Item doesn't exist, add it
+            var addQuery = query
+            addQuery[kSecValueData as String] = passwordData
+
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+
+            guard addStatus == errSecSuccess else {
+                let errorMessage = SecCopyErrorMessageString(addStatus, nil) as String? ?? "Unknown error"
+                throw SecretError.keychainAccessFailed(reason: "Failed to add password: \(errorMessage)")
+            }
+        } else if updateStatus != errSecSuccess {
+            let errorMessage = SecCopyErrorMessageString(updateStatus, nil) as String? ?? "Unknown error"
+            throw SecretError.keychainAccessFailed(reason: "Failed to update password: \(errorMessage)")
+        }
+    }
+
+    /// Deletes a password from the macOS Keychain
+    ///
+    /// - Parameters:
+    ///   - service: The service name
+    ///   - account: The account name
+    /// - Throws: `SecretError.keychainAccessFailed` if deletion fails
+    public func deletePassword(service: String, account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            let errorMessage = SecCopyErrorMessageString(status, nil) as String? ?? "Unknown error"
+            throw SecretError.keychainAccessFailed(reason: "Failed to delete password: \(errorMessage)")
+        }
+    }
+}

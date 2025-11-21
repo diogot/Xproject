@@ -200,6 +200,13 @@ struct EnvLoadCommand: AsyncParsableCommand {
             )
         }
 
+        // Generate secrets if configured
+        try generateSecretsIfEnabled(
+            environment: name,
+            workingDir: workingDir,
+            dryRun: dryRun
+        )
+
         // Set current environment
         if !dryRun {
             try service.setCurrentEnvironment(
@@ -264,6 +271,79 @@ struct EnvLoadCommand: AsyncParsableCommand {
 
         // Parse input
         return try parseEnvironmentInput(input, service: service, workingDirectory: workingDirectory)
+    }
+
+    private func generateSecretsIfEnabled(
+        environment: String,
+        workingDir: String,
+        dryRun: Bool
+    ) throws {
+        // Load configuration to check if secrets are enabled
+        let configService = ConfigurationService(
+            workingDirectory: workingDir,
+            customConfigPath: globalOptions.config
+        )
+
+        let config = try configService.configuration
+
+        // Check if secrets are enabled
+        guard let secretsConfig = config.secrets, secretsConfig.enabled else {
+            return // Secrets not enabled, skip
+        }
+
+        guard let swiftGeneration = secretsConfig.swiftGeneration else {
+            return // No Swift generation configured, skip
+        }
+
+        // Check if EJSON file exists for this environment
+        let ejsonPath = (workingDir as NSString).appendingPathComponent("env/\(environment)/keys.ejson")
+        guard FileManager.default.fileExists(atPath: ejsonPath) else {
+            return // No secrets file, skip silently
+        }
+
+        // Generate secrets
+        let keychainService = KeychainService(appName: config.appName)
+        let ejsonService = EJSONService(workingDirectory: workingDir)
+
+        do {
+            // Get private key
+            let privateKey = try keychainService.getEJSONPrivateKey(environment: environment)
+
+            // Decrypt secrets
+            let secrets = try ejsonService.decryptFile(path: "env/\(environment)/keys.ejson", privateKey: privateKey)
+
+            // Filter to string values only
+            let stringSecrets = secrets.compactMapValues { $0 as? String }
+
+            // Generate Swift files
+            for output in swiftGeneration.outputs {
+                let swiftCode = AppKeysTemplate.generateAppKeys(
+                    secrets: stringSecrets,
+                    prefixes: output.prefixes,
+                    environment: environment
+                )
+
+                if dryRun {
+                    print("Would generate secrets: \(output.path)")
+                } else {
+                    let fullPath = (workingDir as NSString).appendingPathComponent(output.path)
+                    let directory = (fullPath as NSString).deletingLastPathComponent
+
+                    // Create directory if needed
+                    try FileManager.default.createDirectory(
+                        atPath: directory,
+                        withIntermediateDirectories: true
+                    )
+
+                    // Write file
+                    try swiftCode.write(toFile: fullPath, atomically: true, encoding: String.Encoding.utf8)
+                    print("Generated secrets: \(output.path)")
+                }
+            }
+        } catch {
+            // If secrets generation fails, just warn but don't fail the whole operation
+            print("⚠️  Warning: Could not generate secrets: \(error.localizedDescription)")
+        }
     }
 }
 

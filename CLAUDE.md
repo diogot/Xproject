@@ -35,6 +35,9 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Clean architecture**: Separated CLI and business logic with explicit working directory handling
 - ✅ **Improved CLI output formatting**: Clear info blocks showing working directory and configuration at command start, with environment variables displayed in structured format
 - ✅ **Environment management**: Complete environment system with xcconfig generation, variable mapping, and multi-environment support
+- ✅ **Version management**: Automated version bumping (patch/minor/major), build numbers from git commits, and git tagging
+- ✅ **Git operations**: Automated version commit, tag creation with environment support, and push to remote
+- ✅ **Secret management**: Dual-layer security (EJSON encryption + XOR obfuscation) for API keys with binary protection (48 tests passing)
 
 ### Architecture Overview
 **Targets:**
@@ -49,11 +52,16 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
 - `ReleaseService`: Orchestrates release workflow (archive → IPA generation → App Store upload)
 - `EnvironmentService`: Manages environment configurations, xcconfig generation, and variable mapping
+- `VersionService`: Handles version bumping and build number calculation from git commits
+- `GitService`: Git operations (commit, tag, push) with safety checks
+- `EJSONService`: EJSON encryption/decryption wrapper around swift-ejson library
+- `KeychainService`: macOS Keychain integration for secure private key storage
 
 **Key Utilities:**
 - `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
 - `CommandExecutor`: Utility for executing shell commands safely with dry-run support and executeReadOnly for discovery operations
 - `NestedDictionary`: Dot notation access for nested YAML structures (e.g., "apps.ios.bundle_identifier")
+- `StringObfuscator`: XOR-based obfuscation for preventing binary string extraction
 
 ### Development Commands
 ```bash
@@ -88,6 +96,15 @@ xp env show        # Show environment variables (current or specific)
 xp env current     # Show currently activated environment
 xp env load    # Load an environment and generate xcconfig files
 xp env validate    # Validate environment configuration
+xp secrets generate <env>  # Generate obfuscated AppKeys.swift
+xp secrets encrypt [env]   # Encrypt EJSON files
+xp secrets show <env>      # Display encrypted file info
+xp secrets decrypt <env>   # Decrypt and display (dev only)
+xp version show            # Show current version
+xp version bump <level>    # Bump version (patch/minor/major)
+xp version commit          # Commit version changes
+xp version tag             # Create version tag
+xp version push            # Push to remote with tags
 
 # Examples
 xp -C /path/to/project config show
@@ -101,6 +118,10 @@ xp env list
 xp env load dev --dry-run
 xp env load production
 xp env show dev
+xp secrets generate dev
+xp version bump patch
+xp version tag --environment production
+xp version push
 ```
 
 ## Environment Management
@@ -347,6 +368,99 @@ Tags follow the format: `[environment-]target/version-build`
 - **Tag existence check**: Prevents duplicate tags
 - **Dry-run mode**: Preview all operations before execution
 
+## Secret Management
+
+Xproject includes a complete secret management system for handling API keys and sensitive data with dual-layer security: EJSON encryption (at-rest) and XOR obfuscation (in-binary).
+
+### Overview
+
+The secret management system provides:
+- **Dual-layer protection**: EJSON asymmetric encryption for repository storage + XOR obfuscation to prevent binary extraction
+- **No plaintext in binaries**: Secrets stored as obfuscated byte arrays, defeating `strings` command
+- **macOS Keychain integration**: Secure storage for EJSON private keys
+- **CI/CD support**: Environment variable priority (`EJSON_PRIVATE_KEY_{ENV}` > `EJSON_PRIVATE_KEY` > Keychain)
+- **Smart Swift generation**: Automatic CamelCase conversion, URL/API suffix handling, type inference
+- **Automatic integration**: Secrets generated automatically during `xp env load`
+
+### Configuration
+
+Add to your `Xproject.yml`:
+
+```yaml
+secrets:
+  enabled: true
+  swift_generation:
+    outputs:
+      - path: MyApp/Generated/AppKeys.swift
+        prefixes: [all, ios]      # Filter secrets by prefix
+      - path: MyTVApp/Generated/AppKeys.swift
+        prefixes: [all, tvos]
+```
+
+### Directory Structure
+
+```
+YourProject/
+├── env/
+│   ├── dev/
+│   │   ├── env.yml
+│   │   └── keys.ejson          # Encrypted secrets
+│   ├── production/
+│   │   ├── env.yml
+│   │   └── keys.ejson
+└── MyApp/
+    └── Generated/
+        └── AppKeys.swift        # Generated obfuscated code (gitignored)
+```
+
+### Security Architecture
+
+**Layer 1: EJSON Encryption (At-Rest)**
+- Asymmetric encryption using NaCl Box (Curve25519 + Salsa20 + Poly1305)
+- Public key in repository, private key in keychain or ENV vars
+- Compatible with Shopify EJSON specification
+
+**Layer 2: XOR Obfuscation (In-Binary)**
+- Prevents extraction with `strings` command
+- Random XOR key stored alongside obfuscated data
+- Inspired by [cocoapods-keys](https://github.com/orta/cocoapods-keys)
+
+### Implementation Details
+
+- **Models**: `SecretConfiguration`, `EJSONFile`, `SecretError` in Sources/Xproject/Models/SecretConfig.swift
+- **Services**:
+  - `EJSONService` - Swift wrapper around swift-ejson library
+  - `KeychainService` - macOS Keychain integration with ENV var priority
+- **Utilities**: `StringObfuscator` - XOR-based obfuscation
+- **Templates**: `AppKeysTemplate` - Generates obfuscated Swift code
+- **Commands**: `SecretsCommand` with 4 subcommands (generate, encrypt, show, decrypt)
+- **Tests**: 48 dedicated tests (12 StringObfuscator + 13 KeychainService + 13 EJSONService + 10 AppKeysTemplate)
+- **Dependencies**: swift-ejson library via SPM (includes libsodium for NaCl cryptography)
+
+### Key Features
+
+- **Swift 6 compatibility**: Uses `@preconcurrency import EJSONKit` and `@unchecked Sendable`
+- **Test serialization**: KeychainService and EJSONService tests run serialized for thread safety
+- **Generated code structure**: Private byte arrays with computed property accessors
+- **Prefix filtering**: Separate secrets for iOS (`ios_*`), tvOS (`tvos_*`), shared (`all_*`), services (`services_*`)
+- **Type inference**: Automatic detection of String, URL, Int, Bool types
+- **CamelCase naming**: `shopify_api_key` → `shopifyAPIKey`, `api_url` → `apiURL`
+
+### Security Note
+
+This system protects against:
+- ✅ Casual `strings` extraction from binaries
+- ✅ Automated secret scanning tools
+- ✅ Source code leaks (EJSON encryption)
+- ✅ Accidental exposure in App Store analysis
+
+This system does NOT protect against:
+- ❌ Runtime debugging (LLDB, Frida)
+- ❌ Memory dumps during execution
+- ❌ Determined reverse engineering
+
+**Best Practice:** Never store critical secrets in mobile apps. Use server-side authentication with OAuth or similar protocols. This system is for protecting third-party API keys (analytics, SDKs) that must be embedded in the app.
+
 ## Current System Overview (Reference Only)
 
 This is the existing Nebula iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.
@@ -492,10 +606,12 @@ Priority order for implementing remaining features:
 6. ✅ ~~Release command~~ - **COMPLETED**: Archive, IPA generation, and App Store upload with automatic/manual signing (139 tests passing)
 
 7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, Swift code generation, variable mapping, validation (226 tests passing)
+8. ✅ ~~Version management~~ - **COMPLETED**: Auto-increment build numbers, semantic versioning, git tagging (56 tests passing)
+9. ✅ ~~Git operations~~ - **COMPLETED**: Commit, tag, and push automation with safety checks
+10. ✅ ~~Secret management~~ - **COMPLETED**: Dual-layer security with EJSON encryption and XOR obfuscation (48 tests passing, 274 total)
 
 **Remaining Work:**
-1. Version management - Auto-increment build numbers, semantic versioning, git tagging
-2. Git operations - Commit, tag, and push automation
+- None for core functionality - all planned features complete!
 
 ### Future Enhancements
 - Add Danger integration support for test command (--run-danger flag)
