@@ -310,8 +310,7 @@ struct SecretsValidateCommand: AsyncParsableCommand {
             }
 
             var hasErrors = false
-            for environment in results.keys.sorted() {
-                let result = results[environment]!
+            for (environment, result) in results.sorted(by: { $0.key < $1.key }) {
                 let ejsonPath = "env/\(environment)/keys.ejson"
                 printValidationResult(environment: environment, path: ejsonPath, result: result)
 

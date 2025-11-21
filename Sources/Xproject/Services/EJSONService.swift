@@ -215,7 +215,7 @@ public final class EJSONService {
     ///
     /// - Parameter path: Path to the EJSON file (relative to working directory)
     /// - Returns: ValidationResult with details about the file
-    public func validateFile(path: String) -> ValidationResult {
+    public func validateFile(path: String) -> ValidationResult { // swiftlint:disable:this function_body_length
         let fullPath = resolvePath(path)
         var issues: [ValidationIssue] = []
         var publicKey: String?
@@ -325,7 +325,9 @@ public final class EJSONService {
     /// - Parameter key: The public key to validate
     /// - Returns: True if the key is valid
     public func isValidPublicKey(_ key: String) -> Bool {
-        guard key.count == 64 else { return false }
+        guard key.count == 64 else {
+            return false
+        }
         let hexCharacters = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
         return key.unicodeScalars.allSatisfy { hexCharacters.contains($0) }
     }

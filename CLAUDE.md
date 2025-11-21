@@ -37,7 +37,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Environment management**: Complete environment system with xcconfig generation, variable mapping, and multi-environment support
 - ✅ **Version management**: Automated version bumping (patch/minor/major), build numbers from git commits, and git tagging
 - ✅ **Git operations**: Automated version commit, tag creation with environment support, and push to remote
-- ✅ **Secret management**: Dual-layer security (EJSON encryption + XOR obfuscation) for API keys with binary protection (48 tests passing)
+- ✅ **Secret management**: Dual-layer security (EJSON encryption + XOR obfuscation) for API keys with binary protection (59 tests passing)
 
 ### Architecture Overview
 **Targets:**
@@ -100,6 +100,7 @@ xp secrets generate <env>  # Generate obfuscated AppKeys.swift
 xp secrets encrypt [env]   # Encrypt EJSON files
 xp secrets show <env>      # Display encrypted file info
 xp secrets decrypt <env>   # Decrypt and display (dev only)
+xp secrets validate [env]  # Validate EJSON file structure
 xp version show            # Show current version
 xp version bump <level>    # Bump version (patch/minor/major)
 xp version commit          # Commit version changes
@@ -372,6 +373,8 @@ Tags follow the format: `[environment-]target/version-build`
 
 Xproject includes a complete secret management system for handling API keys and sensitive data with dual-layer security: EJSON encryption (at-rest) and XOR obfuscation (in-binary).
 
+See `docs/secrets-management.md` for the complete user guide with setup instructions, CI/CD integration, and troubleshooting.
+
 ### Overview
 
 The secret management system provides:
@@ -608,7 +611,7 @@ Priority order for implementing remaining features:
 7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, Swift code generation, variable mapping, validation (226 tests passing)
 8. ✅ ~~Version management~~ - **COMPLETED**: Auto-increment build numbers, semantic versioning, git tagging (56 tests passing)
 9. ✅ ~~Git operations~~ - **COMPLETED**: Commit, tag, and push automation with safety checks
-10. ✅ ~~Secret management~~ - **COMPLETED**: Dual-layer security with EJSON encryption and XOR obfuscation (48 tests passing, 274 total)
+10. ✅ ~~Secret management~~ - **COMPLETED**: Dual-layer security with EJSON encryption and XOR obfuscation (59 tests passing, 345 total)
 
 **Remaining Work:**
 - None for core functionality - all planned features complete!
