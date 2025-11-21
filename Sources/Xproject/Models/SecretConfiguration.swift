@@ -178,12 +178,12 @@ public enum SecretError: Error, LocalizedError, Sendable {
             The private key was not found in:
             1. Environment variable: EJSON_PRIVATE_KEY_\(environment.uppercased())
             2. Environment variable: EJSON_PRIVATE_KEY
-            3. macOS Keychain (service: xproject_ejson_private_key, account: \(environment))
+            3. macOS Keychain (service: dev.xproject.ejson.<app_name>, account: \(environment))
 
             ✅ Store the private key in one of these locations:
                export EJSON_PRIVATE_KEY_\(environment.uppercased())="your-64-char-hex-key"
                # or
-               security add-generic-password -s xproject_ejson_private_key -a \(environment) -w "your-key"
+               security add-generic-password -s dev.xproject.ejson.<app_name> -a \(environment) -w "your-key"
             """
 
         case .encryptionFailed(let reason):

@@ -178,7 +178,7 @@ public enum AppKeysTemplate {
     ///
     /// Examples:
     /// - `all_api_key` → `apiKey`
-    /// - `ios_shopify_api_url` → `shopifyApiURL`
+    /// - `ios_shopify_api_url` → `shopifyAPIURL`
     /// - `services_mux_key` → `muxKey`
     private static func convertToPropertyName(_ key: String) -> String {
         // Remove prefix (all_, ios_, tvos_, services_, etc.)
