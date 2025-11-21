@@ -28,7 +28,8 @@ struct ConfigurationValidationTests {
             ),
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
     }
 

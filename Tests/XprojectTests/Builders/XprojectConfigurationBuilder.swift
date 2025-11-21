@@ -72,7 +72,8 @@ public class XprojectConfigurationBuilder {
             xcode: xcode,
             danger: danger,
             environment: nil,
-            version: version
+            version: version,
+            secrets: nil
         )
     }
 

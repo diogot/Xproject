@@ -21,7 +21,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect(throws: Never.self) {
@@ -37,7 +38,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -55,7 +57,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -80,7 +83,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         // Test direct property access
@@ -108,7 +112,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         // Should be enabled by default
@@ -125,7 +130,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         // Should be disabled when explicitly set to false
@@ -142,7 +148,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         // Should be enabled when explicitly set to true
@@ -164,7 +171,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -186,7 +194,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -212,7 +221,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         #expect {
@@ -236,7 +246,8 @@ struct XprojectConfigurationTests {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
 
         #expect {
@@ -268,7 +279,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -306,7 +318,8 @@ struct XprojectConfigurationTests {
                 xcode: nil,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -343,7 +356,8 @@ struct XprojectConfigurationTests {
                 xcode: xcodeConfig,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -387,7 +401,8 @@ struct XprojectConfigurationTests {
                 xcode: xcodeConfig,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {
@@ -429,7 +444,8 @@ struct XprojectConfigurationTests {
                 xcode: xcodeConfig,
                 danger: nil,
                 environment: nil,
-                version: nil
+                version: nil,
+                secrets: nil
             )
 
             #expect {

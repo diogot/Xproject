@@ -214,7 +214,8 @@ public final class ConfigurationLoader: Sendable {
             xcode: override.xcode ?? base.xcode,
             danger: override.danger ?? base.danger,
             environment: override.environment ?? base.environment,
-            version: override.version ?? base.version
+            version: override.version ?? base.version,
+            secrets: override.secrets ?? base.secrets
         )
     }
 
@@ -232,7 +233,8 @@ public final class ConfigurationLoader: Sendable {
                 xcode: config.xcode,
                 danger: config.danger,
                 environment: config.environment,
-                version: config.version
+                version: config.version,
+                secrets: config.secrets
             )
         }
 

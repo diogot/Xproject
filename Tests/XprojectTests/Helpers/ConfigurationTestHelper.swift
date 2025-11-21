@@ -29,7 +29,8 @@ public struct ConfigurationTestHelper {
             xcode: nil,
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
     }
 
@@ -106,7 +107,8 @@ public struct ConfigurationTestHelper {
             ),
             danger: nil,
             environment: nil,
-            version: nil
+            version: nil,
+            secrets: nil
         )
     }
 }
