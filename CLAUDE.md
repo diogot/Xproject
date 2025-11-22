@@ -621,3 +621,12 @@ Priority order for implementing remaining features:
 - Implement pre-test, build, test, and post-test Danger phases
 - Support for additional configuration formats (TOML, Swift configs)
 - Plugin-based architecture for extensibility
+
+## Documentation
+
+The `docs/` directory contains user guides and reference documentation:
+
+- `environment-setup.md` - Detailed setup guide for the environment management system
+- `secrets-management.md` - Complete user guide for secret management with EJSON encryption
+- `swift-testing_api.md` - Swift Testing framework API reference
+- `swift-testing-playbook.md` - Best practices and patterns for Swift Testing
