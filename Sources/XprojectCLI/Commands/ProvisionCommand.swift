@@ -66,8 +66,10 @@ struct ProvisionEncryptCommand: AsyncParsableCommand {
         let provisionService = ProvisionService(
             workingDirectory: workingDir,
             appName: config.appName,
+            fileManager: .default,
             dryRun: dryRun,
-            verbose: globalOptions.verbose
+            verbose: globalOptions.verbose,
+            interactiveEnabled: true
         )
 
         let sourcePath = source ?? provisionConfig.resolvedSourcePath
@@ -142,8 +144,10 @@ struct ProvisionDecryptCommand: AsyncParsableCommand {
         let provisionService = ProvisionService(
             workingDirectory: workingDir,
             appName: config.appName,
+            fileManager: .default,
             dryRun: dryRun,
-            verbose: globalOptions.verbose
+            verbose: globalOptions.verbose,
+            interactiveEnabled: true
         )
 
         let archivePath = provisionConfig.resolvedArchivePath
@@ -199,7 +203,10 @@ struct ProvisionListCommand: AsyncParsableCommand {
         let provisionService = ProvisionService(
             workingDirectory: workingDir,
             appName: config.appName,
-            verbose: globalOptions.verbose
+            fileManager: .default,
+            dryRun: false,
+            verbose: globalOptions.verbose,
+            interactiveEnabled: true
         )
 
         let archivePath = provisionConfig.resolvedArchivePath
@@ -246,8 +253,10 @@ struct ProvisionInstallCommand: AsyncParsableCommand {
         let provisionService = ProvisionService(
             workingDirectory: workingDir,
             appName: config.appName,
+            fileManager: .default,
             dryRun: dryRun,
-            verbose: globalOptions.verbose
+            verbose: globalOptions.verbose,
+            interactiveEnabled: true
         )
 
         let extractPath = provisionConfig.resolvedExtractPath
@@ -348,7 +357,10 @@ struct ProvisionCleanupCommand: AsyncParsableCommand {
             let provisionService = ProvisionService(
                 workingDirectory: workingDir,
                 appName: config.appName,
-                verbose: globalOptions.verbose
+                fileManager: .default,
+                dryRun: false,
+                verbose: globalOptions.verbose,
+                interactiveEnabled: true
             )
 
             let result = try provisionService.cleanup(extractPath: extractPath)

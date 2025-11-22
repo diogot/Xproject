@@ -59,6 +59,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -120,6 +123,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -152,6 +158,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -186,6 +195,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -220,6 +232,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -246,6 +261,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -277,6 +295,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -297,6 +318,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -319,6 +343,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -351,6 +378,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -379,6 +409,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -411,6 +444,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -450,6 +486,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -474,6 +513,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -502,6 +544,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -537,6 +582,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -573,6 +621,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: "NonExistentApp_\(UUID().uuidString)",
+            fileManager: .default,
+            dryRun: false,
+            verbose: false,
             interactiveEnabled: false
         )
 
@@ -606,7 +657,9 @@ struct ProvisionServiceTests {
         let service = ProvisionService(
             workingDirectory: workingDir,
             appName: Self.testAppName,
+            fileManager: .default,
             dryRun: true,
+            verbose: false,
             interactiveEnabled: false
         )
 

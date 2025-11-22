@@ -52,17 +52,17 @@ public final class ProvisionService { // swiftlint:disable:this type_body_length
     /// - Parameters:
     ///   - workingDirectory: The working directory for resolving relative paths
     ///   - appName: The application name (used for keychain service name)
-    ///   - fileManager: The file manager to use (defaults to .default)
-    ///   - dryRun: Whether to run in dry-run mode (defaults to false)
-    ///   - verbose: Whether to show verbose output (defaults to false)
-    ///   - interactiveEnabled: Whether interactive prompts are enabled (defaults to true)
+    ///   - fileManager: The file manager to use
+    ///   - dryRun: Whether to run in dry-run mode
+    ///   - verbose: Whether to show verbose output
+    ///   - interactiveEnabled: Whether interactive prompts are enabled
     public init(
         workingDirectory: String,
         appName: String,
-        fileManager: FileManager = .default,
-        dryRun: Bool = false,
-        verbose: Bool = false,
-        interactiveEnabled: Bool = true
+        fileManager: FileManager,
+        dryRun: Bool,
+        verbose: Bool,
+        interactiveEnabled: Bool
     ) {
         self.workingDirectory = workingDirectory
         self.fileManager = fileManager
