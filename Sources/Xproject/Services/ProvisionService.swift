@@ -15,12 +15,12 @@ import Security
 
 /// Service for managing encrypted provisioning profile archives
 ///
-/// This service handles encryption/decryption of provisioning profiles using AES-256-GCM
+/// This service handles encryption/decryption of provisioning profiles using AES-256-CBC
 /// via the system's `/usr/bin/openssl` command. Profiles are stored in a ZIP archive that
 /// is encrypted for secure storage in repositories.
 ///
 /// Security features:
-/// - AES-256-GCM (AEAD) encryption with integrity checking
+/// - AES-256-CBC encryption with PBKDF2 key derivation
 /// - PBKDF2 key derivation with 100,000 iterations
 /// - Password passed via environment variable (not command line)
 public final class ProvisionService { // swiftlint:disable:this type_body_length
@@ -412,7 +412,7 @@ public final class ProvisionService { // swiftlint:disable:this type_body_length
         }
     }
 
-    /// Decrypts a file using OpenSSL AES-256-GCM
+    /// Decrypts a file using OpenSSL AES-256-CBC
     private func decryptFile(inputPath: String, outputPath: String, password: String) throws {
         guard fileManager.fileExists(atPath: "/usr/bin/openssl") else {
             throw ProvisionError.opensslNotFound
@@ -523,7 +523,7 @@ public final class ProvisionService { // swiftlint:disable:this type_body_length
         return isatty(STDIN_FILENO) != 0
     }
 
-    /// Prompts user for password interactively
+    /// Prompts user for password interactively (password is not echoed)
     private func promptForPassword() throws -> String {
         print("")
         print("Provision password not found.")
@@ -532,9 +532,10 @@ public final class ProvisionService { // swiftlint:disable:this type_body_length
         print("  1. Environment variable: PROVISION_PASSWORD")
         print("  2. macOS Keychain (service: \(keychainServiceName))")
         print("")
-        print("Enter provision password: ", terminator: "")
 
-        guard let pwd = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines),
+        // Use getpass() to read password without echoing to terminal
+        guard let cPassword = getpass("Enter provision password: "),
+              let pwd = String(cString: cPassword, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !pwd.isEmpty else {
             throw ProvisionError.passwordNotFound
         }
