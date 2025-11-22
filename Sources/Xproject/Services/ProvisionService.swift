@@ -23,7 +23,7 @@ import Security
 /// - AES-256-GCM (AEAD) encryption with integrity checking
 /// - PBKDF2 key derivation with 100,000 iterations
 /// - Password passed via environment variable (not command line)
-public final class ProvisionService: @unchecked Sendable { // swiftlint:disable:this type_body_length
+public final class ProvisionService { // swiftlint:disable:this type_body_length
     private let workingDirectory: String
     private let fileManager: FileManager
     private let executor: CommandExecutor
