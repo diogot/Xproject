@@ -23,7 +23,8 @@ struct XcodeClientTests {
                 danger: nil,
                 environment: nil,
                 version: nil,
-                secrets: nil
+                secrets: nil,
+                provision: nil
             )
         )
 
@@ -61,7 +62,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -97,7 +99,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -141,7 +144,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -240,7 +244,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -297,7 +302,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -356,7 +362,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -424,7 +431,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -480,7 +488,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -552,7 +561,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -618,7 +628,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -682,7 +693,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -768,7 +780,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -855,7 +868,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -939,7 +953,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1016,7 +1031,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1092,7 +1108,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1162,7 +1179,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1231,7 +1249,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1297,7 +1316,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1367,7 +1387,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1445,7 +1466,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -1518,7 +1540,8 @@ struct XcodeClientTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
