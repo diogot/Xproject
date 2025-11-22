@@ -215,7 +215,8 @@ public final class ConfigurationLoader: Sendable {
             danger: override.danger ?? base.danger,
             environment: override.environment ?? base.environment,
             version: override.version ?? base.version,
-            secrets: override.secrets ?? base.secrets
+            secrets: override.secrets ?? base.secrets,
+            provision: override.provision ?? base.provision
         )
     }
 
@@ -234,7 +235,8 @@ public final class ConfigurationLoader: Sendable {
                 danger: config.danger,
                 environment: config.environment,
                 version: config.version,
-                secrets: config.secrets
+                secrets: config.secrets,
+                provision: config.provision
             )
         }
 

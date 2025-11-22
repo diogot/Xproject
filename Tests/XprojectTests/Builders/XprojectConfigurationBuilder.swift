@@ -73,7 +73,8 @@ public class XprojectConfigurationBuilder {
             danger: danger,
             environment: nil,
             version: version,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
     }
 

@@ -42,7 +42,8 @@ struct XprojectCLI: AsyncParsableCommand {
             ConfigCommand.self,
             EnvironmentCommand.self,
             VersionCommand.self,
-            SecretsCommand.self
+            SecretsCommand.self,
+            ProvisionCommand.self
         ]
     )
 

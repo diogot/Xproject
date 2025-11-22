@@ -55,7 +55,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
     }
 
@@ -354,7 +355,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let releaseService = ReleaseService(
@@ -419,7 +421,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -488,7 +491,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -553,7 +557,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)
@@ -622,7 +627,8 @@ struct ReleaseServiceTests {
             danger: nil,
             environment: nil,
             version: nil,
-            secrets: nil
+            secrets: nil,
+            provision: nil
         )
 
         let mockConfigProvider = MockConfigurationProvider(config: config)

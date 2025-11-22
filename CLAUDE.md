@@ -101,6 +101,11 @@ xp secrets encrypt [env]   # Encrypt EJSON files
 xp secrets show <env>      # Display encrypted file info
 xp secrets decrypt <env>   # Decrypt and display (dev only)
 xp secrets validate [env]  # Validate EJSON file structure
+xp provision encrypt       # Encrypt provisioning profiles
+xp provision decrypt       # Decrypt provisioning profile archive
+xp provision list          # List profiles in encrypted archive
+xp provision install       # Install profiles to system
+xp provision cleanup       # Remove decrypted profiles
 xp version show            # Show current version
 xp version bump <level>    # Bump version (patch/minor/major)
 xp version commit          # Commit version changes
@@ -120,6 +125,9 @@ xp env load dev --dry-run
 xp env load production
 xp env show dev
 xp secrets generate dev
+xp provision encrypt
+xp provision decrypt
+xp provision install
 xp version bump patch
 xp version tag --environment production
 xp version push
@@ -463,6 +471,78 @@ This system does NOT protect against:
 - ❌ Determined reverse engineering
 
 **Best Practice:** Never store critical secrets in mobile apps. Use server-side authentication with OAuth or similar protocols. This system is for protecting third-party API keys (analytics, SDKs) that must be embedded in the app.
+
+## Provision Management
+
+Xproject includes provisioning profile management for CI/CD with manual signing workflows. Profiles are encrypted using AES-256-CBC with PBKDF2 key derivation via the system's `/usr/bin/openssl`.
+
+See `docs/provision-management.md` for the complete user guide with setup instructions, CI/CD integration, and troubleshooting.
+
+### Overview
+
+The provision management system provides:
+- **AES-256-CBC encryption**: Strong encryption for profiles at rest in repositories
+- **Password-based security**: PBKDF2 key derivation with 100,000 iterations
+- **CI/CD support**: Environment variable priority (`PROVISION_PASSWORD` > Keychain)
+- **macOS Keychain integration**: Secure password storage for local development
+- **Atomic operations**: Archive management with encrypt/decrypt/install commands
+
+### Configuration
+
+Add to your `Xproject.yml`:
+
+```yaml
+provision:
+  enabled: true
+  source_path: provision/source/          # Source directory for encryption
+  archive_path: provision/profiles.zip.enc  # Encrypted archive path
+  extract_path: provision/profiles/        # Extraction directory
+```
+
+### Directory Structure
+
+```
+YourProject/
+├── provision/
+│   ├── source/                    # Source profiles (gitignored)
+│   │   ├── iOS_Dev.mobileprovision
+│   │   └── iOS_Dist.mobileprovision
+│   ├── profiles/                  # Extracted profiles (gitignored)
+│   └── profiles.zip.enc           # Encrypted archive (committed)
+└── Xproject.yml
+```
+
+### Common Workflow
+
+```bash
+# Encrypt profiles for storage
+xp provision encrypt
+
+# Decrypt and install (CI/CD)
+xp provision decrypt
+xp provision install
+
+# Clean up decrypted files
+xp provision cleanup
+```
+
+### Implementation Details
+
+- **Models**: `ProvisionConfiguration`, `ProvisionProfile`, `ProvisionError` in Sources/Xproject/Models/ProvisionConfiguration.swift
+- **Services**: `ProvisionService` - Handles encrypt/decrypt/install/list/cleanup operations
+- **Commands**: `ProvisionCommand` with 5 subcommands (encrypt, decrypt, list, install, cleanup)
+- **Tests**: ~21 dedicated tests for ProvisionService
+- **Dependencies**: Uses system `/usr/bin/openssl` (no external dependencies)
+
+### Security Note
+
+This system protects against:
+- ✅ Profile exposure in version control
+- ✅ Unauthorized access to provisioning profiles
+
+This system does NOT protect against:
+- ❌ Access if password is compromised
+- ❌ Installed profiles on disk (standard permissions)
 
 ## Current System Overview (Reference Only)
 
