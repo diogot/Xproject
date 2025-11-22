@@ -168,7 +168,7 @@ This checks:
 - `env/config.yml` syntax and structure
 - All environment `env.yml` files are valid
 - All required variables are present
-- XCConfig output directories exist
+- xcconfig output directories exist
 
 ## Swift Code Generation
 
@@ -382,7 +382,7 @@ Make sure you have:
 1. Created `env/config.yml` in your project root
 2. Running `xp` from the correct working directory (use `-C` if needed)
 
-### "XCConfig directory not found"
+### "xcconfig directory not found"
 
 Create the output directory first:
 ```bash

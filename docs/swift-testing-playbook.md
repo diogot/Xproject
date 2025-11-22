@@ -1,7 +1,7 @@
 # The Ultimate Swift Testing Playbook (2024 WWDC Edition, expanded with Apple docs from June 2025)
 Updated with info from https://developer.apple.com/documentation/testing fetched via [Firecrawl](https://www.firecrawl.dev/referral?rid=9CG538BE) on June 7, 2025.
 
-See also my blog: See also my blog post: https://steipete.me/posts/2025/migrating-700-tests-to-swift-testing
+See also my blog post: https://steipete.me/posts/2025/migrating-700-tests-to-swift-testing
 
 A hands-on, comprehensive guide for migrating from XCTest to Swift Testing and mastering the new framework. This playbook integrates the latest patterns and best practices from WWDC 2024 and official Apple documentation to make your tests more powerful, expressive, and maintainable.
 
