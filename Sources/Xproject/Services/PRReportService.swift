@@ -257,14 +257,16 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
     }
 
     private func matchesGlobPattern(path: String, pattern: String) -> Bool {
-        // Convert glob to regex
-        var regexPattern = pattern
+        // Convert glob to regex using placeholders to avoid replacement conflicts
+        // (e.g., replacing ** with .* and then * with [^/]* would corrupt .*)
+        let regexPattern = "^" + pattern
             .replacingOccurrences(of: ".", with: "\\.")
-            .replacingOccurrences(of: "**/", with: "(.*/)?")
-            .replacingOccurrences(of: "**", with: ".*")
+            .replacingOccurrences(of: "**/", with: "\u{0000}DOUBLE_STAR_SLASH\u{0000}")
+            .replacingOccurrences(of: "**", with: "\u{0000}DOUBLE_STAR\u{0000}")
             .replacingOccurrences(of: "*", with: "[^/]*")
-
-        regexPattern = "^\(regexPattern)$"
+            .replacingOccurrences(of: "\u{0000}DOUBLE_STAR_SLASH\u{0000}", with: "(.*/)?")
+            .replacingOccurrences(of: "\u{0000}DOUBLE_STAR\u{0000}", with: ".*")
+            + "$"
 
         return path.range(of: regexPattern, options: .regularExpression) != nil
     }
