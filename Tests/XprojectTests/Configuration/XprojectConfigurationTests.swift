@@ -23,7 +23,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect(throws: Never.self) {
@@ -41,7 +42,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -61,7 +63,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -88,7 +91,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         // Test direct property access
@@ -118,7 +122,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         // Should be enabled by default
@@ -137,7 +142,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         // Should be disabled when explicitly set to false
@@ -156,7 +162,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         // Should be enabled when explicitly set to true
@@ -180,7 +187,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -204,7 +212,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -232,7 +241,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         #expect {
@@ -258,7 +268,8 @@ struct XprojectConfigurationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
 
         #expect {
@@ -292,7 +303,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -332,7 +344,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -371,7 +384,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -417,7 +431,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {
@@ -461,7 +476,8 @@ struct XprojectConfigurationTests {
                 environment: nil,
                 version: nil,
                 secrets: nil,
-                provision: nil
+                provision: nil,
+                prReport: nil
             )
 
             #expect {

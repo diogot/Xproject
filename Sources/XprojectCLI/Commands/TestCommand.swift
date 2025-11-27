@@ -111,7 +111,7 @@ struct TestCommand: AsyncParsableCommand {
         }
     }
 
-    private func printResults(_ results: TestResults) {
+    private func printResults(_ results: TestRunResults) {
         // Print detailed results for each scheme
         for (schemeName, schemeResult) in results.schemeResults.sorted(by: { $0.key < $1.key }) {
             print("\n📦 Scheme: \(schemeName)")
@@ -124,7 +124,7 @@ struct TestCommand: AsyncParsableCommand {
         print("\n\(results.summary)")
     }
 
-    private func printBuildResults(_ schemeResult: TestResults.SchemeResult) {
+    private func printBuildResults(_ schemeResult: TestRunResults.SchemeResult) {
         if let buildSucceeded = schemeResult.buildSucceeded {
             if buildSucceeded {
                 print("  ✅ Build succeeded")
@@ -137,7 +137,7 @@ struct TestCommand: AsyncParsableCommand {
         }
     }
 
-    private func printTestResults(_ schemeResult: TestResults.SchemeResult) {
+    private func printTestResults(_ schemeResult: TestRunResults.SchemeResult) {
         if !schemeResult.testResults.isEmpty {
             print("  🧪 Test results:")
             for testResult in schemeResult.testResults {
