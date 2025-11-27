@@ -133,7 +133,7 @@ public enum EnvironmentError: Error, LocalizedError {
     case configNotFound
     case environmentNotFound(String)
     case noCurrentEnvironment
-    case invalidYAML(String)
+    case invalidYAML(path: String, reason: String)
     case missingVariable(String, path: String)
     case environmentNotEnabled
     case invalidEnvironmentDirectory
@@ -147,8 +147,12 @@ public enum EnvironmentError: Error, LocalizedError {
             return "Environment '\(name)' not found in env/ directory"
         case .noCurrentEnvironment:
             return "No environment loaded. Run 'xp env load <name>' first."
-        case let .invalidYAML(path):
-            return "Invalid YAML in \(path)"
+        case let .invalidYAML(path, reason):
+            return """
+                Invalid YAML in \(path)
+
+                \(reason)
+                """
         case let .missingVariable(varName, path):
             return "Variable '\(varName)' not found at path '\(path)' in environment"
         case .environmentNotEnabled:
