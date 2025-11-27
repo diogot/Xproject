@@ -37,7 +37,9 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - ✅ **Environment management**: Complete environment system with xcconfig generation, variable mapping, and multi-environment support
 - ✅ **Version management**: Automated version bumping (patch/minor/major), build numbers from git commits, and git tagging
 - ✅ **Git operations**: Automated version commit, tag creation with environment support, and push to remote
-- ✅ **Secret management**: Dual-layer security (EJSON encryption + XOR obfuscation) for API keys with binary protection (59 tests passing)
+- ✅ **Secret management**: Dual-layer security (EJSON encryption + XOR obfuscation) for API keys with binary protection
+- ✅ **Provision management**: Encrypted provisioning profile storage and installation for CI/CD
+- ✅ **PR Report integration**: Post build/test results to GitHub PRs via Checks API with xcresult parsing
 
 ### Architecture Overview
 **Targets:**
@@ -56,6 +58,8 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `GitService`: Git operations (commit, tag, push) with safety checks
 - `EJSONService`: EJSON encryption/decryption wrapper around swift-ejson library
 - `KeychainService`: macOS Keychain integration for secure private key storage
+- `ProvisionService`: Provisioning profile encryption/decryption and installation
+- `PRReportService`: Parses xcresult bundles and posts results to GitHub PRs via Checks API
 
 **Key Utilities:**
 - `OutputFormatter`: Consistent formatting for CLI output with info blocks and structured display
@@ -111,6 +115,11 @@ xp version bump <level>    # Bump version (patch/minor/major)
 xp version commit          # Commit version changes
 xp version tag             # Create version tag
 xp version push            # Push to remote with tags
+xp pr-report               # Post build/test results to GitHub PR (auto-discovers xcresult bundles)
+xp pr-report --xcresult <path>  # Report specific xcresult bundle
+xp pr-report --build-only  # Report only build warnings/errors
+xp pr-report --test-only   # Report only test failures
+xp pr-report --dry-run     # Preview without posting to GitHub
 
 # Examples
 xp -C /path/to/project config show
@@ -131,6 +140,8 @@ xp provision install
 xp version bump patch
 xp version tag --environment production
 xp version push
+xp pr-report --dry-run
+xp pr-report --check-name "iOS Tests"
 ```
 
 ## Environment Management
@@ -544,6 +555,82 @@ This system does NOT protect against:
 - ❌ Access if password is compromised
 - ❌ Installed profiles on disk (standard permissions)
 
+## PR Report Integration
+
+Xproject can post build warnings, errors, and test failures directly to GitHub PRs via the Checks API. This provides inline annotations on the PR diff and summary comments.
+
+### Overview
+
+The PR report system provides:
+- **xcresult parsing**: Extracts build issues and test failures from Xcode result bundles
+- **GitHub Checks API**: Posts inline annotations directly on PR diffs
+- **Auto-discovery**: Automatically finds `.xcresult` bundles in the reports directory
+- **Filtering**: Ignore files by glob pattern, filter warnings, collapse parallel test failures
+- **Dry-run mode**: Preview what would be reported without posting
+
+### Configuration
+
+Add to your `Xproject.yml`:
+
+```yaml
+pr_report:
+  enabled: true
+  check_name: "Xcode Build & Test"      # Optional: custom check name
+  post_summary: true                     # Post summary comment
+  inline_annotations: true               # Post inline annotations
+  fail_on_errors: true                   # Mark check as failed on build errors
+  fail_on_test_failures: true            # Mark check as failed on test failures
+  ignored_files:                         # Glob patterns to ignore
+    - "Pods/**"
+    - "**/Generated/**"
+  ignore_warnings: false                 # Filter out warnings
+  collapse_parallel_tests: true          # Deduplicate parallel test failures
+```
+
+### Available Commands
+
+```bash
+xp pr-report                           # Auto-discover and report all xcresult bundles
+xp pr-report --xcresult path/to/test.xcresult  # Report specific bundle
+xp pr-report --check-name "iOS Tests"  # Custom check name
+xp pr-report --build-only              # Report only build warnings/errors
+xp pr-report --test-only               # Report only test failures
+xp pr-report --dry-run                 # Preview without posting
+```
+
+### GitHub Actions Integration
+
+```yaml
+- name: Run tests
+  run: xp test --scheme MyApp
+
+- name: Report results
+  if: always()
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: xp pr-report
+```
+
+**Required environment variables** (automatically set in GitHub Actions):
+- `GITHUB_TOKEN` - Authentication token with `checks:write` permission
+- `GITHUB_REPOSITORY` - Repository in `owner/repo` format
+- `GITHUB_SHA` - Commit SHA to annotate
+
+### Implementation Details
+
+- **Models**: `PRReportConfiguration`, `PRReportResult`, `PRReportError` in Sources/Xproject/Models/PRReportConfiguration.swift
+- **Services**: `PRReportService` - Parses xcresult bundles, converts to annotations, reports to GitHub
+- **Commands**: `PRReportCommand` with options for xcresult paths, check name, build/test modes
+- **Tests**: 30 dedicated tests for PRReportService
+- **Dependencies**: `swift-pr-reporter` (PRReporterKit) and `swift-xcresult-parser` (XCResultParser)
+
+### Features
+
+- **Glob pattern filtering**: Use patterns like `Pods/**` or `**/Generated/**` to ignore files
+- **Parallel test collapsing**: Deduplicate failures from parallel test runs
+- **Fork PR handling**: Gracefully handles fork PRs where Checks API is unavailable
+- **Summary generation**: Markdown summary with error/warning/test counts
+
 ## Current System Overview (Reference Only)
 
 This is the existing Nebula iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.
@@ -691,16 +778,17 @@ Priority order for implementing remaining features:
 7. ✅ ~~Environment management~~ - **COMPLETED**: Full environment system with xcconfig generation, Swift code generation, variable mapping, validation (226 tests passing)
 8. ✅ ~~Version management~~ - **COMPLETED**: Auto-increment build numbers, semantic versioning, git tagging (56 tests passing)
 9. ✅ ~~Git operations~~ - **COMPLETED**: Commit, tag, and push automation with safety checks
-10. ✅ ~~Secret management~~ - **COMPLETED**: Dual-layer security with EJSON encryption and XOR obfuscation (59 tests passing, 345 total)
+10. ✅ ~~Secret management~~ - **COMPLETED**: Dual-layer security with EJSON encryption and XOR obfuscation
+11. ✅ ~~Provision management~~ - **COMPLETED**: Encrypted profile storage and CI/CD installation
+12. ✅ ~~PR Report integration~~ - **COMPLETED**: Post build/test results to GitHub PRs via Checks API (392 total tests passing)
 
 **Remaining Work:**
 - None for core functionality - all planned features complete!
 
 ### Future Enhancements
-- Add Danger integration support for test command (--run-danger flag)
-- Implement pre-test, build, test, and post-test Danger phases
 - Support for additional configuration formats (TOML, Swift configs)
 - Plugin-based architecture for extensibility
+- SwiftGen integration for code generation
 
 ## Documentation
 

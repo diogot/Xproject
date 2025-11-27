@@ -23,7 +23,58 @@ A modern Swift command line tool for Xcode project build automation.
    cd Tools/Xproject
    ```
 
-2. **Run directly with Swift:**
+2. **Create `Xproject.yml` in your project root:**
+
+   This is the only required configuration file. Create it with:
+
+   ```yaml
+   # Minimal configuration (required)
+   app_name: MyApp
+   project_path:
+     ios: MyApp.xcodeproj
+
+   # Test configuration (for xp test)
+   xcode:
+     tests:
+       schemes:
+         - scheme: MyApp
+           build_destination: "generic/platform=iOS Simulator"
+           test_destinations:
+             - platform=iOS Simulator,name=iPhone 16 Pro
+   ```
+
+   **Required fields:**
+   - `app_name` - Your app's name
+   - `project_path` - Map of target names to `.xcodeproj` paths
+
+   **Optional features** (add as needed):
+   ```yaml
+   # Homebrew dependencies
+   setup:
+     brew:
+       formulas:
+         - swiftlint
+
+   # Environment management (xcconfig generation)
+   environment:
+     enabled: true
+
+   # Release builds
+   xcode:
+     release:
+       production-ios:
+         scheme: MyApp
+         configuration: Release
+         destination: iOS
+   ```
+
+   **See also:**
+   - [Configuration Reference](docs/configuration-reference.md) - Complete list of all options
+   - [Environment Setup](docs/environment-setup.md) - xcconfig and Swift code generation
+   - [Secrets Management](docs/secrets-management.md) - EJSON encryption
+   - [Provision Management](docs/provision-management.md) - Provisioning profiles for CI/CD
+
+3. **Run directly with Swift:**
    ```bash
    # Show help
    swift run xp --help
@@ -41,7 +92,7 @@ A modern Swift command line tool for Xcode project build automation.
    swift run xp release production-ios
    ```
 
-3. **Build and install locally (optional):**
+4. **Build and install locally (optional):**
    ```bash
    swift build -c release
    cp .build/release/xp /usr/local/bin/xp
@@ -60,6 +111,8 @@ A modern Swift command line tool for Xcode project build automation.
 - `xp env` - Manage environment configurations (dev, staging, production)
 - `xp secrets` - Manage encrypted secrets with EJSON and XOR obfuscation
 - `xp version` - Manage semantic versioning and build numbers
+- `xp provision` - Manage encrypted provisioning profiles for CI/CD
+- `xp pr-report` - Post build/test results to GitHub PRs via Checks API
 
 ### Global Options
 
@@ -103,6 +156,7 @@ xp env load production
 xp env show dev
 
 # Secret management
+xp secrets generate-keys dev
 xp secrets generate dev
 xp secrets encrypt
 xp secrets show dev
@@ -114,6 +168,11 @@ xp version bump patch
 xp version commit
 xp version tag --environment production
 xp version push
+
+# PR reporting (GitHub Actions)
+xp pr-report                          # Auto-discover xcresult bundles
+xp pr-report --check-name "iOS Tests" # Custom check name
+xp pr-report --dry-run                # Preview without posting
 ```
 
 ### Integration with Existing Projects
@@ -361,6 +420,54 @@ env/*/keys.json
 
 **Security Note:** This protects against casual inspection and automated scanning, but not against determined reverse engineering. Never store critical secrets in mobile apps - use server-side authentication.
 
+## PR Report Integration
+
+Post build warnings, errors, and test failures directly to GitHub PRs via the Checks API.
+
+### Quick Setup
+
+1. **Enable in your Xproject.yml:**
+   ```yaml
+   pr_report:
+     enabled: true
+     check_name: "Xcode Build & Test"
+     ignored_files:
+       - "Pods/**"
+       - "**/Generated/**"
+   ```
+
+2. **Add to your GitHub Actions workflow:**
+   ```yaml
+   - name: Run tests
+     run: xp test --scheme MyApp
+
+   - name: Report results
+     if: always()
+     env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     run: xp pr-report
+   ```
+
+### Features
+
+- **Auto-discovery**: Finds all `.xcresult` bundles in the reports directory
+- **Inline annotations**: Posts warnings/errors directly on PR diff lines
+- **Summary comments**: Generates markdown summary with counts
+- **Filtering**: Ignore files by glob pattern, filter warnings
+- **Parallel test collapsing**: Deduplicates failures from parallel test runs
+- **Dry-run mode**: Preview what would be reported
+
+### Available Commands
+
+```bash
+xp pr-report                           # Auto-discover and report
+xp pr-report --xcresult path/to/test.xcresult
+xp pr-report --check-name "iOS Tests"
+xp pr-report --build-only              # Only build warnings/errors
+xp pr-report --test-only               # Only test failures
+xp pr-report --dry-run                 # Preview without posting
+```
+
 ## Development
 
 ```bash
@@ -382,6 +489,8 @@ Xproject uses Swift Package Manager (SPM) for dependency management. All depende
 - **Yams** - YAML parsing for configuration files
 - **swift-ejson** (EJSONKit) - EJSON encryption/decryption for secret management
   - Includes libsodium (NaCl cryptography) via precompiled xcframework
+- **swift-pr-reporter** (PRReporterKit) - GitHub Checks API integration for PR reporting
+- **swift-xcresult-parser** (XCResultParser) - Xcode xcresult bundle parsing
 - **ArgumentParser** - CLI argument parsing
 
 ### System Requirements
@@ -411,7 +520,8 @@ Xproject uses Swift Package Manager (SPM) for dependency management. All depende
 - **Version management** - Automated version bumping (patch/minor/major), build numbers from git commits, and git tagging
 - **Git operations** - Automated version commit, tag creation with environment support, and push to remote
 - **Secret management** - Dual-layer security (EJSON + XOR obfuscation) for API keys with binary protection against `strings` extraction
+- **Provision management** - Encrypted provisioning profile storage and installation for CI/CD workflows
+- **PR Report integration** - Post build warnings, errors, and test failures to GitHub PRs via Checks API with inline annotations
 
 ### 🚧 Future Enhancements
 - **Code generation** - SwiftGen integration for resources
-- **Danger integration** - Code review automation

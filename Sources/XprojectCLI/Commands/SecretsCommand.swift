@@ -27,6 +27,7 @@ struct SecretsCommand: AsyncParsableCommand {
           3. xp secrets encrypt            # Encrypt all environments
         """,
         subcommands: [
+            SecretsGenerateKeysCommand.self,
             SecretsGenerateCommand.self,
             SecretsEncryptCommand.self,
             SecretsShowCommand.self,
@@ -34,6 +35,118 @@ struct SecretsCommand: AsyncParsableCommand {
             SecretsValidateCommand.self
         ]
     )
+}
+
+// MARK: - Generate Keys Command
+
+struct SecretsGenerateKeysCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "generate-keys",
+        abstract: "Generate new EJSON keypair for an environment",
+        discussion: """
+        Creates a new EJSON keypair and initializes the keys.ejson file for an environment.
+
+        The public key is stored in the generated file (safe to commit to git).
+        The private key is displayed once and must be saved securely.
+
+        For CI/CD, set the private key as an environment variable:
+          export EJSON_PRIVATE_KEY_DEV="<private-key>"
+
+        For local development, use --save-to-keychain to store in macOS Keychain.
+        """
+    )
+
+    @OptionGroup var globalOptions: GlobalOptions
+
+    @Argument(help: "Environment name (e.g., dev, staging, production)")
+    var environment: String
+
+    @Flag(name: .long, help: "Save private key to macOS Keychain")
+    var saveToKeychain: Bool = false
+
+    @Flag(name: .long, help: "Overwrite existing keys.ejson file")
+    var force: Bool = false
+
+    @Flag(name: .long, help: "Show what would be done without making changes")
+    var dryRun: Bool = false
+
+    func run() async throws {
+        let workingDir = globalOptions.resolvedWorkingDirectory
+        let configService = ConfigurationService(
+            workingDirectory: workingDir,
+            customConfigPath: globalOptions.config
+        )
+
+        // Get configuration for app name (needed for keychain service)
+        let config = try configService.configuration
+        let ejsonService = EJSONService(workingDirectory: workingDir)
+
+        // Check if environment already exists
+        let envDir = "env/\(environment)"
+        let ejsonPath = "\(envDir)/keys.ejson"
+        let fullEnvDir = (workingDir as NSString).appendingPathComponent(envDir)
+        let fullEjsonPath = (workingDir as NSString).appendingPathComponent(ejsonPath)
+
+        if FileManager.default.fileExists(atPath: fullEjsonPath) && !force {
+            throw SecretError.invalidSecretConfiguration(
+                reason: """
+                    Environment '\(environment)' already exists at \(ejsonPath).
+                    Use --force to overwrite.
+                    """
+            )
+        }
+
+        // Generate keypair
+        let keyPair = try ejsonService.generateKeyPair()
+
+        if dryRun {
+            print("Would create: \(ejsonPath)")
+            print("Would generate new EJSON keypair")
+            if saveToKeychain {
+                print("Would save private key to macOS Keychain")
+            }
+            return
+        }
+
+        // Create directory if needed
+        try FileManager.default.createDirectory(
+            atPath: fullEnvDir,
+            withIntermediateDirectories: true
+        )
+
+        // Write keys.ejson with public key
+        let ejsonContent = """
+            {
+              "_public_key": "\(keyPair.publicKey)"
+            }
+            """
+        try ejsonContent.write(toFile: fullEjsonPath, atomically: true, encoding: .utf8)
+
+        // Save to keychain if requested
+        if saveToKeychain {
+            let keychainService = KeychainService(appName: config.appName)
+            try keychainService.setEJSONPrivateKey(keyPair.privateKey, environment: environment)
+        }
+
+        // Display results
+        print("✓ Generated EJSON keypair for '\(environment)'")
+        print("")
+        print("Public key (committed to git):")
+        print("  \(keyPair.publicKey)")
+        print("")
+        print("Private key (SAVE THIS SECURELY - shown only once):")
+        print("  \(keyPair.privateKey)")
+        print("")
+        print("Created: \(ejsonPath)")
+        print("")
+        print("To use this environment:")
+        print("  • CI/CD: export EJSON_PRIVATE_KEY_\(environment.uppercased())=\"\(keyPair.privateKey)\"")
+        if saveToKeychain {
+            print("  • Local: Private key saved to macOS Keychain ✓")
+        } else {
+            print("  • Local: Run again with --save-to-keychain to store in Keychain")
+        }
+    }
 }
 
 // MARK: - Generate Command
