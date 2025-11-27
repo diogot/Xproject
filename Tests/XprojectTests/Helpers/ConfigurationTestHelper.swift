@@ -31,7 +31,8 @@ public struct ConfigurationTestHelper {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
     }
 
@@ -110,7 +111,8 @@ public struct ConfigurationTestHelper {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
     }
 }

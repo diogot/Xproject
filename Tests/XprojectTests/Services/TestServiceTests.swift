@@ -231,7 +231,8 @@ struct TestServiceTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
@@ -260,7 +261,7 @@ struct TestServiceTests {
     @Test("TestResults summary messages are correct")
     func testResultsSummaryMessages() throws {
         // Given - all passing
-        var results = TestResults()
+        var results = TestRunResults()
         results.recordBuildSuccess(scheme: "Scheme1")
         results.recordTestSuccess(scheme: "Scheme1", destination: "Dest1")
         results.recordBuildSuccess(scheme: "Scheme2")

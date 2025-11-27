@@ -74,7 +74,8 @@ public class XprojectConfigurationBuilder {
             environment: nil,
             version: version,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
     }
 

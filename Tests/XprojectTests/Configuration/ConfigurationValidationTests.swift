@@ -30,7 +30,8 @@ struct ConfigurationValidationTests {
             environment: nil,
             version: nil,
             secrets: nil,
-            provision: nil
+            provision: nil,
+            prReport: nil
         )
     }
 

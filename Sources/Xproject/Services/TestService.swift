@@ -13,7 +13,7 @@ public protocol TestServiceProtocol: Sendable {
         clean: Bool,
         skipBuild: Bool,
         destination: String?
-    ) async throws -> TestResults
+    ) async throws -> TestRunResults
 }
 
 // MARK: - Test Service
@@ -40,7 +40,7 @@ public final class TestService: TestServiceProtocol, Sendable {
         clean: Bool = false,
         skipBuild: Bool = false,
         destination: String? = nil
-    ) async throws -> TestResults {
+    ) async throws -> TestRunResults {
         let config = try configurationProvider.configuration
         let configFilePath = try configurationProvider.configurationFilePath
 
@@ -57,7 +57,7 @@ public final class TestService: TestServiceProtocol, Sendable {
             testsConfig: testsConfig
         )
 
-        var results = TestResults()
+        var results = TestRunResults()
 
         for schemeConfig in schemesToTest {
             let schemeResults = try await runTestsForScheme(
@@ -105,8 +105,8 @@ public final class TestService: TestServiceProtocol, Sendable {
         clean: Bool,
         skipBuild: Bool,
         overrideDestination: String?
-    ) async throws -> TestResults {
-        var results = TestResults()
+    ) async throws -> TestRunResults {
+        var results = TestRunResults()
 
         // Build for testing (unless skipping)
         if !skipBuild {
@@ -161,7 +161,7 @@ public final class TestService: TestServiceProtocol, Sendable {
 
 // MARK: - Test Results
 
-public struct TestResults: Sendable {
+public struct TestRunResults: Sendable {
     public struct SchemeResult: Sendable {
         public let scheme: String
         public var buildSucceeded: Bool?
@@ -240,7 +240,7 @@ public struct TestResults: Sendable {
         schemeResults[scheme] = result
     }
 
-    mutating func merge(with other: TestResults) {
+    mutating func merge(with other: TestRunResults) {
         for (scheme, result) in other.schemeResults {
             schemeResults[scheme] = result
         }

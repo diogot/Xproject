@@ -49,4 +49,7 @@ extension Tag {
 
     /// Tests that verify streaming output functionality
     @Tag static var streaming: Self
+
+    /// Tests that verify PR report functionality
+    @Tag static var prReport: Self
 }
