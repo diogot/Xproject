@@ -28,7 +28,10 @@ public protocol PRReportServiceProtocol: Sendable {
 public final class PRReportService: PRReportServiceProtocol, Sendable {
     private let workingDirectory: String
     private let config: PRReportConfiguration
-    private let reportsPath: String
+    private let _reportsPath: String
+
+    /// The configured reports path (may be relative or absolute)
+    public var reportsPath: String { _reportsPath }
 
     public init(
         workingDirectory: String,
@@ -37,7 +40,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
     ) {
         self.workingDirectory = workingDirectory
         self.config = config
-        self.reportsPath = reportsPath
+        self._reportsPath = reportsPath
     }
 
     // MARK: - Public Methods
@@ -146,10 +149,10 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
     // MARK: - Private Methods
 
     private func absoluteReportsPath() -> String {
-        if reportsPath.hasPrefix("/") {
-            return reportsPath
+        if _reportsPath.hasPrefix("/") {
+            return _reportsPath
         }
-        return "\(workingDirectory)/\(reportsPath)"
+        return "\(workingDirectory)/\(_reportsPath)"
     }
 
     private func resolvePath(_ path: String) -> String {
@@ -252,11 +255,11 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         return filtered
     }
 
-    private func matchesAnyGlobPattern(path: String, patterns: [String]) -> Bool {
+    func matchesAnyGlobPattern(path: String, patterns: [String]) -> Bool {
         patterns.contains { matchesGlobPattern(path: path, pattern: $0) }
     }
 
-    private func matchesGlobPattern(path: String, pattern: String) -> Bool {
+    func matchesGlobPattern(path: String, pattern: String) -> Bool {
         // Convert glob to regex using placeholders to avoid replacement conflicts
         // (e.g., replacing ** with .* and then * with [^/]* would corrupt .*)
         let regexPattern = "^" + pattern

@@ -116,6 +116,81 @@ struct PRReportServiceTests {
             #expect(bundles.count == 1)
         }
     }
+
+    // MARK: - Glob Pattern Matching Tests
+
+    @Test("Glob pattern matches simple wildcard", .tags(.unit, .prReport))
+    func globPatternSimpleWildcard() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        // *.swift should match files in current directory only
+        #expect(service.matchesGlobPattern(path: "File.swift", pattern: "*.swift"))
+        #expect(service.matchesGlobPattern(path: "AnotherFile.swift", pattern: "*.swift"))
+        #expect(!service.matchesGlobPattern(path: "Dir/File.swift", pattern: "*.swift"))
+        #expect(!service.matchesGlobPattern(path: "File.txt", pattern: "*.swift"))
+    }
+
+    @Test("Glob pattern matches double-star recursive", .tags(.unit, .prReport))
+    func globPatternDoubleStarRecursive() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        // **/*.swift should match files at any depth
+        #expect(service.matchesGlobPattern(path: "File.swift", pattern: "**/*.swift"))
+        #expect(service.matchesGlobPattern(path: "Dir/File.swift", pattern: "**/*.swift"))
+        #expect(service.matchesGlobPattern(path: "Dir/Sub/File.swift", pattern: "**/*.swift"))
+        #expect(!service.matchesGlobPattern(path: "File.txt", pattern: "**/*.swift"))
+    }
+
+    @Test("Glob pattern matches prefix with double-star", .tags(.unit, .prReport))
+    func globPatternPrefixDoubleStart() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        // Pods/** should match all files under Pods/
+        #expect(service.matchesGlobPattern(path: "Pods/Something.swift", pattern: "Pods/**"))
+        #expect(service.matchesGlobPattern(path: "Pods/Sub/File.swift", pattern: "Pods/**"))
+        #expect(service.matchesGlobPattern(path: "Pods/A/B/C/File.swift", pattern: "Pods/**"))
+        #expect(!service.matchesGlobPattern(path: "NotPods/File.swift", pattern: "Pods/**"))
+        #expect(!service.matchesGlobPattern(path: "SomePods/File.swift", pattern: "Pods/**"))
+    }
+
+    @Test("Glob pattern escapes dots correctly", .tags(.unit, .prReport))
+    func globPatternEscapesDots() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        // Dots should be literal, not regex wildcards
+        #expect(service.matchesGlobPattern(path: "File.swift", pattern: "*.swift"))
+        #expect(!service.matchesGlobPattern(path: "Fileswift", pattern: "*.swift"))
+        #expect(service.matchesGlobPattern(path: "test.xcodeproj", pattern: "*.xcodeproj"))
+    }
+
+    @Test("Glob pattern matches intermediate directories", .tags(.unit, .prReport))
+    func globPatternIntermediateDirectories() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        // **/Generated/** should match files in Generated at any level
+        #expect(service.matchesGlobPattern(path: "Generated/File.swift", pattern: "**/Generated/**"))
+        #expect(service.matchesGlobPattern(path: "Dir/Generated/File.swift", pattern: "**/Generated/**"))
+        #expect(service.matchesGlobPattern(path: "A/B/Generated/C/File.swift", pattern: "**/Generated/**"))
+        #expect(!service.matchesGlobPattern(path: "NotGenerated/File.swift", pattern: "**/Generated/**"))
+    }
+
+    @Test("Glob pattern matchesAnyGlobPattern works with multiple patterns", .tags(.unit, .prReport))
+    func globPatternMatchesAny() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(workingDirectory: "/tmp", config: config, reportsPath: "reports")
+
+        let patterns = ["Pods/**", "**/Generated/**", "*.generated.swift"]
+
+        #expect(service.matchesAnyGlobPattern(path: "Pods/File.swift", patterns: patterns))
+        #expect(service.matchesAnyGlobPattern(path: "Dir/Generated/File.swift", patterns: patterns))
+        #expect(service.matchesAnyGlobPattern(path: "Types.generated.swift", patterns: patterns))
+        #expect(!service.matchesAnyGlobPattern(path: "Sources/Main.swift", patterns: patterns))
+    }
 }
 
 // MARK: - PRReportConfiguration Tests

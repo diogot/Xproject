@@ -115,7 +115,7 @@ struct PRReportCommand: AsyncParsableCommand {
         if xcresult.isEmpty {
             let discovered = try service.discoverXcresultBundles()
             if discovered.isEmpty {
-                throw PRReportError.noXcresultBundles(directory: "reports")
+                throw PRReportError.noXcresultBundles(directory: service.reportsPath)
             }
             print("📦 Discovered \(discovered.count) xcresult bundle\(discovered.count == 1 ? "" : "s"):")
             for path in discovered {
