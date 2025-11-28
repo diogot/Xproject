@@ -160,6 +160,13 @@ struct EnvLoadCommand: AsyncParsableCommand {
         let service = EnvironmentService()
         let workingDir = globalOptions.resolvedWorkingDirectory
 
+        // Load configuration
+        let configService = ConfigurationService(
+            workingDirectory: workingDir,
+            customConfigPath: globalOptions.config
+        )
+        let config = try configService.configuration
+
         // Determine environment name
         let name: String
         if let input = nameOrIndex {
@@ -182,12 +189,21 @@ struct EnvLoadCommand: AsyncParsableCommand {
             workingDirectory: workingDir
         )
 
+        // Calculate build number if inject_build_number is enabled
+        var buildNumber: Int?
+        if config.version?.injectBuildNumber == true {
+            let executor = CommandExecutor(workingDirectory: workingDir)
+            let versionService = VersionService(workingDirectory: workingDir, executor: executor)
+            buildNumber = try? versionService.getCurrentBuild(offset: config.version?.buildNumberOffset ?? 0)
+        }
+
         // Generate xcconfigs
         try service.generateXCConfigs(
             environmentName: name,
             variables: variables,
             workingDirectory: workingDir,
-            dryRun: dryRun
+            dryRun: dryRun,
+            buildNumber: buildNumber
         )
 
         // Generate Swift files
@@ -204,6 +220,7 @@ struct EnvLoadCommand: AsyncParsableCommand {
         try generateSecretsIfEnabled(
             environment: name,
             workingDir: workingDir,
+            config: config,
             dryRun: dryRun
         )
 
@@ -276,16 +293,9 @@ struct EnvLoadCommand: AsyncParsableCommand {
     private func generateSecretsIfEnabled(
         environment: String,
         workingDir: String,
+        config: XprojectConfiguration,
         dryRun: Bool
     ) throws {
-        // Load configuration to check if secrets are enabled
-        let configService = ConfigurationService(
-            workingDirectory: workingDir,
-            customConfigPath: globalOptions.config
-        )
-
-        let config = try configService.configuration
-
         // Check if secrets are enabled
         guard let secretsConfig = config.secrets, secretsConfig.enabled else {
             return // Secrets not enabled, skip

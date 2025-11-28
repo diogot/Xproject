@@ -68,15 +68,18 @@ public struct EnvironmentFeature: Codable, Sendable {
 public struct VersionConfiguration: Codable, Sendable {
     public let buildNumberOffset: Int
     public let tagFormat: String?
+    public let injectBuildNumber: Bool?
 
     enum CodingKeys: String, CodingKey {
         case buildNumberOffset = "build_number_offset"
         case tagFormat = "tag_format"
+        case injectBuildNumber = "inject_build_number"
     }
 
-    public init(buildNumberOffset: Int = 0, tagFormat: String? = nil) {
+    public init(buildNumberOffset: Int = 0, tagFormat: String? = nil, injectBuildNumber: Bool? = nil) {
         self.buildNumberOffset = buildNumberOffset
         self.tagFormat = tagFormat
+        self.injectBuildNumber = injectBuildNumber
     }
 }
 

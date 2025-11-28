@@ -171,12 +171,14 @@ public final class EnvironmentService {
     ///   - variables: Environment variables from env.yml
     ///   - workingDirectory: Project working directory
     ///   - dryRun: If true, shows what would be done without executing
+    ///   - buildNumber: Optional build number to inject as CURRENT_PROJECT_VERSION
     /// - Throws: EnvironmentError or file system errors
     public func generateXCConfigs(
         environmentName: String,
         variables: [String: Any],
         workingDirectory: String,
-        dryRun: Bool
+        dryRun: Bool,
+        buildNumber: Int? = nil
     ) throws {
         // Load environment configuration
         let config = try loadEnvironmentConfig(workingDirectory: workingDirectory)
@@ -204,6 +206,11 @@ public final class EnvironmentService {
                         bundleIdSuffix: target.bundleIdSuffix
                     )
                     mergedVars.merge(resolved) { _, new in new } // Override with config-specific
+                }
+
+                // Inject build number if provided
+                if let buildNumber = buildNumber {
+                    mergedVars["CURRENT_PROJECT_VERSION"] = String(buildNumber)
                 }
 
                 // Generate xcconfig file
