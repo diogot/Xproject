@@ -392,6 +392,153 @@ func createVersionTagWithEnvironment() throws {
     }
 }
 
+@Test
+func createVersionTagWithCustomFormat() throws {
+    try withGitService { service, mockExecutor in
+        // Given - custom format: {target}-{env}/{version}-{build}
+        mockExecutor.setResponse(
+            for: "git tag -l 'ios-dev/1.0.0-100'",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
+        )
+        mockExecutor.setResponse(
+            for: "git tag 'ios-dev/1.0.0-100'",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "", error: "")
+        )
+
+        // When
+        let tag = try service.createVersionTag(
+            version: Version(major: 1, minor: 0, patch: 0),
+            build: 100,
+            target: "ios",
+            environment: "dev",
+            tagFormat: "{target}-{env}/{version}-{build}"
+        )
+
+        // Then
+        #expect(tag == "ios-dev/1.0.0-100")
+    }
+}
+
+// MARK: - Format Tag Tests
+
+@Test
+func formatTagWithCustomFormat() throws {
+    try withGitService { service, _ in
+        // Given
+        let version = Version(major: 1, minor: 2, patch: 3)
+
+        // When
+        let tag = service.formatTag(
+            format: "{target}-{env}/{version}-{build}",
+            target: "ios",
+            environment: "dev",
+            version: version,
+            build: 42
+        )
+
+        // Then
+        #expect(tag == "ios-dev/1.2.3-42")
+    }
+}
+
+@Test
+func formatTagWithDefaultFormat() throws {
+    try withGitService { service, _ in
+        // Given
+        let version = Version(major: 2, minor: 0, patch: 0)
+
+        // When - nil format uses default: {target}/{version}-{build}
+        let tag = service.formatTag(
+            format: nil,
+            target: "tvos",
+            environment: nil,
+            version: version,
+            build: 150
+        )
+
+        // Then
+        #expect(tag == "tvos/2.0.0-150")
+    }
+}
+
+@Test
+func formatTagWithoutEnvironment() throws {
+    try withGitService { service, _ in
+        // Given - format with {env} but no environment provided
+        let version = Version(major: 1, minor: 0, patch: 0)
+
+        // When - {env} should be stripped along with adjacent dash
+        let tag = service.formatTag(
+            format: "{target}-{env}/{version}-{build}",
+            target: "ios",
+            environment: nil,
+            version: version,
+            build: 100
+        )
+
+        // Then - "-{env}" is removed, leaving "ios/1.0.0-100"
+        #expect(tag == "ios/1.0.0-100")
+    }
+}
+
+@Test
+func formatTagEnvPlaceholderVariants() throws {
+    try withGitService { service, _ in
+        // Given
+        let version = Version(major: 1, minor: 0, patch: 0)
+
+        // When/Then - test "{env}-" prefix removal
+        let tag1 = service.formatTag(
+            format: "{env}-{target}/{version}",
+            target: "ios",
+            environment: nil,
+            version: version,
+            build: 1
+        )
+        #expect(tag1 == "ios/1.0.0")
+
+        // When/Then - test "-{env}" suffix removal
+        let tag2 = service.formatTag(
+            format: "{target}-{env}/{version}",
+            target: "ios",
+            environment: nil,
+            version: version,
+            build: 1
+        )
+        #expect(tag2 == "ios/1.0.0")
+
+        // When/Then - test standalone "{env}" removal
+        let tag3 = service.formatTag(
+            format: "{env}/{target}/{version}",
+            target: "ios",
+            environment: nil,
+            version: version,
+            build: 1
+        )
+        #expect(tag3 == "/ios/1.0.0")
+    }
+}
+
+@Test
+func formatTagWithEnvironmentProvided() throws {
+    try withGitService { service, _ in
+        // Given - format with env-first pattern
+        let version = Version(major: 3, minor: 1, patch: 4)
+
+        // When
+        let tag = service.formatTag(
+            format: "{env}-{target}/{version}-{build}",
+            target: "ios",
+            environment: "production",
+            version: version,
+            build: 200
+        )
+
+        // Then
+        #expect(tag == "production-ios/3.1.4-200")
+    }
+}
+
 // MARK: - Push Tests
 
 @Test

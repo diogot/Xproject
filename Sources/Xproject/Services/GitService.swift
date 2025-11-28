@@ -170,26 +170,64 @@ public final class GitService: Sendable {
         }
     }
 
-    /// Create a version tag with standard format
+    /// Format a version tag using the provided format or default
+    /// - Parameters:
+    ///   - format: Custom tag format with placeholders: {target}, {env}, {version}, {build}
+    ///   - target: The target name (e.g., "ios")
+    ///   - environment: Optional environment name (e.g., "dev", "production")
+    ///   - version: The version
+    ///   - build: The build number
+    /// - Returns: The formatted tag string
+    public func formatTag(
+        format: String?,
+        target: String,
+        environment: String?,
+        version: Version,
+        build: Int
+    ) -> String {
+        // Default format includes {env} prefix for backward compatibility
+        let defaultFormat = "{env}-{target}/{version}-{build}"
+        var tag = format ?? defaultFormat
+
+        tag = tag.replacingOccurrences(of: "{target}", with: target)
+        tag = tag.replacingOccurrences(of: "{version}", with: version.description)
+        tag = tag.replacingOccurrences(of: "{build}", with: String(build))
+
+        if let env = environment {
+            tag = tag.replacingOccurrences(of: "{env}", with: env)
+        } else {
+            // Remove {env} placeholder and any adjacent dash/hyphen if no env provided
+            tag = tag.replacingOccurrences(of: "-{env}", with: "")
+            tag = tag.replacingOccurrences(of: "{env}-", with: "")
+            tag = tag.replacingOccurrences(of: "{env}", with: "")
+        }
+
+        return tag
+    }
+
+    /// Create a version tag with standard or custom format
     /// - Parameters:
     ///   - version: The version
     ///   - build: The build number
     ///   - target: The target name (e.g., "ios")
     ///   - environment: Optional environment name (e.g., "production")
+    ///   - tagFormat: Optional custom tag format with placeholders
     /// - Returns: The created tag name
     /// - Throws: GitServiceError if tag creation fails
     public func createVersionTag(
         version: Version,
         build: Int,
         target: String,
-        environment: String? = nil
+        environment: String? = nil,
+        tagFormat: String? = nil
     ) throws -> String {
-        var tag = ""
-        if let environment = environment {
-            tag += "\(environment)-"
-        }
-        tag += "\(target)/"
-        tag += version.fullVersion(build: build)
+        let tag = formatTag(
+            format: tagFormat,
+            target: target,
+            environment: environment,
+            version: version,
+            build: build
+        )
 
         try createTag(tag)
         return tag
