@@ -174,7 +174,7 @@ struct SecretsGenerateCommand: AsyncParsableCommand {
         let config = try configService.configuration
         let keychainService = KeychainService(appName: config.appName)
         let ejsonService = EJSONService(workingDirectory: workingDir)
-        guard let secretsConfig = config.secrets, secretsConfig.enabled else {
+        guard let secretsConfig = config.secrets else {
             throw SecretError.secretsNotEnabled
         }
 

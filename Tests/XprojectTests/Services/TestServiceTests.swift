@@ -228,7 +228,6 @@ struct TestServiceTests {
                 release: nil
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,

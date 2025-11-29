@@ -174,18 +174,12 @@ YourProject/
 │   └── Config/                 # Generated xcconfig files (gitignored)
 │       ├── YourApp.debug.xcconfig
 │       └── YourApp.release.xcconfig
-└── Xproject.yml                # Enable with environment.enabled: true
+└── Xproject.yml                # Project configuration
 ```
 
 ### Quick Start
 
-1. **Enable in Xproject.yml:**
-   ```yaml
-   environment:
-     enabled: true
-   ```
-
-2. **Create env/config.yml:**
+1. **Create env/config.yml:**
    ```yaml
    targets:
      - name: MyApp
@@ -201,7 +195,7 @@ YourProject/
              PROVISIONING_PROFILE_SPECIFIER: apps.ios.provision_profile
    ```
 
-3. **Create environment files (e.g., env/dev/env.yml):**
+2. **Create environment files (e.g., env/dev/env.yml):**
    ```yaml
    environment_name: development
    api_url: https://dev-api.example.com
@@ -214,7 +208,7 @@ YourProject/
        provision_profile: Development
    ```
 
-4. **Activate environment:**
+3. **Activate environment:**
    ```bash
    xp env load dev
    ```
@@ -234,7 +228,6 @@ The environment system can automatically generate type-safe Swift files:
 
 ```yaml
 swift_generation:
-  enabled: true
   outputs:
     # Base class - automatically includes ALL root-level variables
     - path: MyApp/Generated/EnvironmentService.swift
@@ -410,7 +403,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       - path: MyApp/Generated/AppKeys.swift
@@ -504,7 +496,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 provision:
-  enabled: true
   source_path: provision/source/          # Source directory for encryption
   archive_path: provision/profiles.zip.enc  # Encrypted archive path
   extract_path: provision/profiles/        # Extraction directory
@@ -574,7 +565,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 pr_report:
-  enabled: true
   check_name: "Xcode Build & Test"      # Optional: custom check name
   post_summary: true                     # Post summary comment
   inline_annotations: true               # Post inline annotations

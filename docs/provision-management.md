@@ -33,7 +33,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 provision:
-  enabled: true
   source_path: provision/source/       # Where to find .mobileprovision files
   archive_path: provision/profiles.zip.enc  # Encrypted archive location
   extract_path: provision/profiles/    # Where to extract decrypted profiles
@@ -85,7 +84,6 @@ xp provision cleanup
 
 ```yaml
 provision:
-  enabled: true                           # Enable provision management
   source_path: provision/source/          # Source directory for encryption
   archive_path: provision/profiles.zip.enc  # Encrypted archive path
   extract_path: provision/profiles/       # Extraction directory

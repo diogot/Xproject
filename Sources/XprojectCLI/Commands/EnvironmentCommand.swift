@@ -296,9 +296,9 @@ struct EnvLoadCommand: AsyncParsableCommand {
         config: XprojectConfiguration,
         dryRun: Bool
     ) throws {
-        // Check if secrets are enabled
-        guard let secretsConfig = config.secrets, secretsConfig.enabled else {
-            return // Secrets not enabled, skip
+        // Check if secrets section is configured
+        guard let secretsConfig = config.secrets else {
+            return // Secrets not configured, skip
         }
 
         guard let swiftGeneration = secretsConfig.swiftGeneration else {

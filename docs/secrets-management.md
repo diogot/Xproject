@@ -26,7 +26,7 @@ YourProject/
 ├── MyApp/
 │   └── Generated/
 │       └── AppKeys.swift        # Generated obfuscated code (gitignored)
-└── Xproject.yml                 # Enable with secrets.enabled: true
+└── Xproject.yml                 # Add secrets section to enable
 ```
 
 ## Quick Start
@@ -37,7 +37,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       - path: MyApp/Generated/AppKeys.swift
@@ -166,7 +165,6 @@ Configure outputs in `Xproject.yml`:
 
 ```yaml
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       - path: MyApp/Generated/AppKeys.swift

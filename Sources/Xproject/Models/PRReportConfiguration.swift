@@ -14,9 +14,6 @@ import Foundation
 /// Loaded from the `pr_report:` section in Xproject.yml, this defines how
 /// build/test results are reported to GitHub PRs via the Checks API.
 public struct PRReportConfiguration: Codable, Sendable {
-    /// Whether PR reporting is enabled
-    public let enabled: Bool
-
     /// Name for the GitHub Check Run (default: "Xcode Build & Test")
     public let checkName: String?
 
@@ -42,7 +39,6 @@ public struct PRReportConfiguration: Codable, Sendable {
     public let collapseParallelTests: Bool
 
     public init(
-        enabled: Bool = true,
         checkName: String? = nil,
         postSummary: Bool = true,
         inlineAnnotations: Bool = true,
@@ -52,7 +48,6 @@ public struct PRReportConfiguration: Codable, Sendable {
         ignoreWarnings: Bool = false,
         collapseParallelTests: Bool = true
     ) {
-        self.enabled = enabled
         self.checkName = checkName
         self.postSummary = postSummary
         self.inlineAnnotations = inlineAnnotations
@@ -64,7 +59,6 @@ public struct PRReportConfiguration: Codable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case enabled
         case checkName = "check_name"
         case postSummary = "post_summary"
         case inlineAnnotations = "inline_annotations"
@@ -77,7 +71,6 @@ public struct PRReportConfiguration: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        enabled = try container.decode(Bool.self, forKey: .enabled)
         checkName = try container.decodeIfPresent(String.self, forKey: .checkName)
         postSummary = try container.decodeIfPresent(Bool.self, forKey: .postSummary) ?? true
         inlineAnnotations = try container.decodeIfPresent(Bool.self, forKey: .inlineAnnotations) ?? true
@@ -165,11 +158,11 @@ public enum PRReportError: Error, LocalizedError, Sendable {
         switch self {
         case .prReportNotEnabled:
             return """
-            PR reporting is not enabled in configuration.
+            PR reporting is not configured.
 
-            Enable PR reporting in Xproject.yml:
+            Add pr_report section to Xproject.yml:
                pr_report:
-                 enabled: true
+                 check_name: "Xcode Build & Test"
             """
 
         case .notInGitHubActions:

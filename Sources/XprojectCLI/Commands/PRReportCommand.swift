@@ -79,10 +79,8 @@ struct PRReportCommand: AsyncParsableCommand {
         do {
             let config = try configService.configuration
 
-            // Get PR report configuration or use defaults
-            let prReportConfig = config.prReport ?? PRReportConfiguration()
-
-            guard prReportConfig.enabled else {
+            // Get PR report configuration (section must exist)
+            guard let prReportConfig = config.prReport else {
                 throw PRReportError.prReportNotEnabled
             }
 

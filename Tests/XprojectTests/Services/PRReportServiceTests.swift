@@ -200,7 +200,6 @@ struct PRReportConfigurationTests {
     @Test("Default configuration has expected values", .tags(.unit, .prReport, .configuration))
     func defaultConfiguration() throws {
         let config = PRReportConfiguration()
-        #expect(config.enabled == true)
         #expect(config.checkName == nil)
         #expect(config.postSummary == true)
         #expect(config.inlineAnnotations == true)
@@ -214,7 +213,6 @@ struct PRReportConfigurationTests {
     @Test("Configuration can be created with custom values", .tags(.unit, .prReport, .configuration))
     func customConfiguration() throws {
         let config = PRReportConfiguration(
-            enabled: false,
             checkName: "Custom Check",
             postSummary: false,
             inlineAnnotations: false,
@@ -225,7 +223,6 @@ struct PRReportConfigurationTests {
             collapseParallelTests: false
         )
 
-        #expect(config.enabled == false)
         #expect(config.checkName == "Custom Check")
         #expect(config.postSummary == false)
         #expect(config.inlineAnnotations == false)
@@ -239,13 +236,13 @@ struct PRReportConfigurationTests {
     @Test("Configuration decodes from YAML with defaults", .tags(.unit, .prReport, .configuration))
     func configurationDecodesWithDefaults() throws {
         let yaml = """
-        enabled: true
+        check_name: Test Check
         """
         let data = yaml.data(using: .utf8)!
         let decoder = YAMLDecoder()
         let config = try decoder.decode(PRReportConfiguration.self, from: data)
 
-        #expect(config.enabled == true)
+        #expect(config.checkName == "Test Check")
         #expect(config.postSummary == true)
         #expect(config.inlineAnnotations == true)
         #expect(config.failOnErrors == true)
@@ -257,7 +254,6 @@ struct PRReportConfigurationTests {
     @Test("Configuration decodes from YAML with custom values", .tags(.unit, .prReport, .configuration))
     func configurationDecodesWithCustomValues() throws {
         let yaml = """
-        enabled: true
         check_name: My Custom Check
         post_summary: false
         inline_annotations: false
@@ -273,7 +269,6 @@ struct PRReportConfigurationTests {
         let decoder = YAMLDecoder()
         let config = try decoder.decode(PRReportConfiguration.self, from: data)
 
-        #expect(config.enabled == true)
         #expect(config.checkName == "My Custom Check")
         #expect(config.postSummary == false)
         #expect(config.inlineAnnotations == false)
@@ -346,9 +341,9 @@ struct PRReportErrorTests {
     func prReportNotEnabledError() throws {
         let error = PRReportError.prReportNotEnabled
         let message = error.localizedDescription
-        #expect(message.contains("PR reporting is not enabled"))
+        #expect(message.contains("PR reporting is not configured"))
         #expect(message.contains("pr_report:"))
-        #expect(message.contains("enabled: true"))
+        #expect(message.contains("check_name:"))
     }
 
     @Test("notInGitHubActions error has expected message", .tags(.unit, .prReport, .errorHandling))
@@ -422,7 +417,6 @@ struct PRReportXprojectConfigurationTests {
     @Test("XprojectConfiguration includes prReport field", .tags(.unit, .prReport, .configuration))
     func configurationIncludesPrReport() throws {
         let prReportConfig = PRReportConfiguration(
-            enabled: true,
             checkName: "Xcode Build & Test"
         )
 
@@ -433,7 +427,6 @@ struct PRReportXprojectConfigurationTests {
             setup: nil,
             xcode: nil,
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -441,7 +434,6 @@ struct PRReportXprojectConfigurationTests {
         )
 
         #expect(config.prReport != nil)
-        #expect(config.prReport?.enabled == true)
         #expect(config.prReport?.checkName == "Xcode Build & Test")
     }
 
@@ -454,7 +446,6 @@ struct PRReportXprojectConfigurationTests {
             setup: nil,
             xcode: nil,
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -474,7 +465,6 @@ struct PRReportXprojectConfigurationTests {
             project_path:
               ios: TestApp.xcodeproj
             pr_report:
-              enabled: true
               check_name: Custom Check Name
               ignore_warnings: true
               ignored_files:
@@ -491,7 +481,6 @@ struct PRReportXprojectConfigurationTests {
             let config = try configService.configuration
 
             #expect(config.prReport != nil)
-            #expect(config.prReport?.enabled == true)
             #expect(config.prReport?.checkName == "Custom Check Name")
             #expect(config.prReport?.ignoreWarnings == true)
             #expect(config.prReport?.ignoredFiles == ["Pods/**"])

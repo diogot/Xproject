@@ -10,7 +10,6 @@ This document provides a complete reference for the `Xproject.yml` configuration
   - [Root Fields](#root-fields)
   - [setup](#setup)
   - [xcode](#xcode)
-  - [environment](#environment)
   - [version](#version)
   - [secrets](#secrets)
   - [provision](#provision)
@@ -123,15 +122,6 @@ xcode:
         teamID: ABCD1234EF
 
 # =============================================================================
-# ENVIRONMENT - xcconfig and Swift code generation (xp env)
-# =============================================================================
-
-# Enable environment management
-# Requires env/config.yml - see docs/environment-setup.md
-environment:
-  enabled: true
-
-# =============================================================================
 # VERSION - Semantic versioning and git tags (xp version)
 # =============================================================================
 
@@ -143,10 +133,9 @@ version:
 # SECRETS - EJSON encryption and Swift code generation (xp secrets)
 # =============================================================================
 
-# Enable secret management
+# Secret management - EJSON encryption and Swift code generation (xp secrets)
 # Requires env/<environment>/keys.ejson - see docs/secrets-management.md
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       # Generate AppKeys.swift with secrets filtered by prefix
@@ -160,10 +149,9 @@ secrets:
 # PROVISION - Encrypted provisioning profiles (xp provision)
 # =============================================================================
 
-# Enable provisioning profile management
+# Provisioning profile management - encrypted profile storage (xp provision)
 # See docs/provision-management.md
 provision:
-  enabled: true
   source_path: provision/source/     # Source profiles for encryption
   archive_path: provision/profiles.zip.enc  # Encrypted archive
   extract_path: provision/profiles/  # Extraction directory
@@ -173,7 +161,6 @@ provision:
 # =============================================================================
 
 pr_report:
-  enabled: true
   check_name: "Xcode Build & Test"   # Optional: GitHub Check Run name
   post_summary: true                 # Post summary comment
   inline_annotations: true           # Post inline annotations on diff
@@ -247,16 +234,6 @@ Build, test, and release configuration.
 | `signingCertificate` | String | Manual only | Certificate name (e.g., `iPhone Distribution`) |
 | `provisioningProfiles` | Map | Manual only | Bundle ID to profile name mapping |
 
-### environment
-
-Enables environment management with xcconfig generation.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `enabled` | Bool | Yes | Enable environment management |
-
-When enabled, requires `env/config.yml`. See [Environment Setup Guide](environment-setup.md).
-
 ### version
 
 Version management configuration.
@@ -268,11 +245,10 @@ Version management configuration.
 
 ### secrets
 
-Secret management with EJSON encryption.
+Secret management with EJSON encryption. Section presence enables the feature.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `enabled` | Bool | Yes | Enable secret management |
 | `swift_generation.outputs` | [Object] | No | Swift code generation outputs |
 
 #### secrets.swift_generation.outputs[]
@@ -286,11 +262,10 @@ When enabled, requires `env/<environment>/keys.ejson`. See [Secrets Management G
 
 ### provision
 
-Provisioning profile management.
+Provisioning profile management. Section presence enables the feature.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | Bool | Required | Enable provision management |
 | `source_path` | String | `provision/source/` | Directory with source profiles |
 | `archive_path` | String | `provision/profiles.zip.enc` | Encrypted archive path |
 | `extract_path` | String | `provision/profiles/` | Extraction directory |
@@ -299,11 +274,10 @@ See [Provision Management Guide](provision-management.md).
 
 ### pr_report
 
-GitHub PR reporting via Checks API.
+GitHub PR reporting via Checks API. Section presence enables the feature.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | Bool | Required | Enable PR reporting |
 | `check_name` | String | `Xcode Build & Test` | GitHub Check Run name |
 | `post_summary` | Bool | `true` | Post summary comment |
 | `inline_annotations` | Bool | `true` | Post inline annotations |

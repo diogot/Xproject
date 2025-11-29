@@ -135,7 +135,6 @@ public enum EnvironmentError: Error, LocalizedError {
     case noCurrentEnvironment
     case invalidYAML(path: String, reason: String)
     case missingVariable(String, path: String)
-    case environmentNotEnabled
     case invalidEnvironmentDirectory
     case xcconfigDirectoryNotFound(String)
 
@@ -155,8 +154,6 @@ public enum EnvironmentError: Error, LocalizedError {
                 """
         case let .missingVariable(varName, path):
             return "Variable '\(varName)' not found at path '\(path)' in environment"
-        case .environmentNotEnabled:
-            return "Environment management is not enabled. Add 'environment: { enabled: true }' to Xproject.yml"
         case .invalidEnvironmentDirectory:
             return "Invalid environment directory structure. env/ directory must exist in project root."
         case let .xcconfigDirectoryNotFound(path):

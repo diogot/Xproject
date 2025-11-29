@@ -53,7 +53,6 @@ struct ReleaseServiceTests {
                 release: releaseConfig
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -354,7 +353,6 @@ struct ReleaseServiceTests {
             setup: nil,
             xcode: nil,
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -421,7 +419,6 @@ struct ReleaseServiceTests {
                 release: ["dev-ios": releaseConfig]
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -492,7 +489,6 @@ struct ReleaseServiceTests {
                 release: ["production-ios": releaseConfig]
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -559,7 +555,6 @@ struct ReleaseServiceTests {
                 release: ["production-tvos": releaseConfig]
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -630,7 +625,6 @@ struct ReleaseServiceTests {
                 ]
             ),
             danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
