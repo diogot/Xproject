@@ -268,6 +268,17 @@ public final class EnvironmentService {
         let configName: String
     }
 
+    /// Strip URL scheme from value for xcconfig compatibility
+    /// Returns stripped value if scheme was present, nil otherwise
+    private func strippedURLScheme(_ value: String) -> String? {
+        if value.hasPrefix("https://") {
+            return String(value.dropFirst(8))
+        } else if value.hasPrefix("http://") {
+            return String(value.dropFirst(7))
+        }
+        return nil
+    }
+
     /// Generate a single xcconfig file
     private func generateXCConfigFile(
         url: URL,
@@ -284,7 +295,13 @@ public final class EnvironmentService {
 
         // Sort for consistent output
         for key in variables.keys.sorted() {
-            content += "\(key) = \(variables[key] ?? "<nil>")\n"
+            let value = variables[key] ?? "<nil>"
+            if let strippedValue = strippedURLScheme(value) {
+                print("Warning: Stripped URL scheme from \(key) for xcconfig compatibility")
+                content += "\(key) = \(strippedValue)\n"
+            } else {
+                content += "\(key) = \(value)\n"
+            }
         }
 
         if dryRun {
