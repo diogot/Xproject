@@ -43,7 +43,7 @@ public class TestSchemeConfigurationBuilder {
     }
 
     /// Creates an iOS test scheme configuration
-    public static func ios(scheme: String = "Nebula") -> TestSchemeConfigurationBuilder {
+    public static func ios(scheme: String = "App") -> TestSchemeConfigurationBuilder {
         return TestSchemeConfigurationBuilder()
             .withScheme(scheme)
             .withBuildDestination("generic/platform=iOS Simulator")
@@ -54,7 +54,7 @@ public class TestSchemeConfigurationBuilder {
     }
 
     /// Creates a tvOS test scheme configuration
-    public static func tvos(scheme: String = "NebulaTV") -> TestSchemeConfigurationBuilder {
+    public static func tvos(scheme: String = "AppTV") -> TestSchemeConfigurationBuilder {
         return TestSchemeConfigurationBuilder()
             .withScheme(scheme)
             .withBuildDestination("generic/platform=tvOS Simulator")

@@ -105,9 +105,8 @@ public final class KeychainService: Sendable {
         print("  2. Environment variable: EJSON_PRIVATE_KEY")
         print("  3. macOS Keychain (service: \(serviceName), account: \(environment))")
         print("")
-        print("Enter EJSON private key (64-character hex string): ", terminator: "")
-
-        guard let key = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let cKey = getpass("Enter EJSON private key (64-character hex string): "),
+              let key = String(cString: cKey, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !key.isEmpty else {
             throw SecretError.privateKeyNotFound(environment: environment)
         }

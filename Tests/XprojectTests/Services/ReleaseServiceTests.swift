@@ -14,9 +14,9 @@ struct ReleaseServiceTests {
     private func createReleaseConfiguration() -> XprojectConfiguration {
         let releaseConfig = [
             "production-ios": ReleaseConfiguration(
-                scheme: "Nebula",
+                scheme: "App",
                 configuration: "Release",
-                output: "Nebula",
+                output: "App",
                 destination: "iOS",
                 type: "ios",
                 appStoreAccount: "test@example.com",
@@ -30,9 +30,9 @@ struct ReleaseServiceTests {
                 )
             ),
             "dev-ios": ReleaseConfiguration(
-                scheme: "Nebula",
+                scheme: "App",
                 configuration: "Debug",
-                output: "Nebula-Dev",
+                output: "App-Dev",
                 destination: "iOS",
                 type: "ios",
                 appStoreAccount: "test@example.com",
@@ -97,7 +97,7 @@ struct ReleaseServiceTests {
 
         // Then
         #expect(results.environment == "production-ios")
-        #expect(results.scheme == "Nebula")
+        #expect(results.scheme == "App")
         #expect(results.archiveSucceeded == true)
         #expect(results.ipaSucceeded == true)
         #expect(results.uploadSucceeded == true)
@@ -395,9 +395,9 @@ struct ReleaseServiceTests {
         )
 
         let releaseConfig = ReleaseConfiguration(
-            scheme: "Nebula",
+            scheme: "App",
             configuration: "Debug",
-            output: "Nebula-Dev",
+            output: "App-Dev",
             destination: "iOS",
             type: "ios",
             appStoreAccount: nil,
@@ -464,9 +464,9 @@ struct ReleaseServiceTests {
         )
 
         let releaseConfig = ReleaseConfiguration(
-            scheme: "Nebula",
+            scheme: "App",
             configuration: "Release",
-            output: "Nebula",
+            output: "App",
             destination: "iOS",
             type: "ios",
             appStoreAccount: "team@example.com",

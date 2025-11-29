@@ -623,7 +623,7 @@ xp pr-report --dry-run                 # Preview without posting
 
 ## Current System Overview (Reference Only)
 
-This is the existing Nebula iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.
+This is a existing iOS/tvOS application build system using Ruby Rake. The project consists of a comprehensive Xcode build automation toolkit with multiple targets (iOS app, tvOS app, notification extensions, widgets) and environment-specific configuration management.
 
 ## Key Architecture Components
 
@@ -633,7 +633,7 @@ This is the existing Nebula iOS/tvOS application build system using Ruby Rake. T
 - **Generated configs**: System automatically generates `.xcconfig` files and Swift environment files from YAML configs
 
 ### Build Pipeline
-- **Multi-target support**: iOS (Nebula), tvOS (NebulaTV), notification extensions, widgets, TopShelf extension
+- **Multi-target support**: iOS app, tvOS app, notification extensions, widgets, TopShelf extension
 - **Environment-driven builds**: Each environment (dev, staging, production, snapshot) has specific bundle IDs, signing certificates, and provisioning profiles
 - **Automated versioning**: Build numbers derived from git commit count with offset, semantic versioning for marketing versions
 
@@ -707,8 +707,8 @@ rake swiftgen:strings       # Generate localized strings
 ## Build Targets and Environments
 
 ### Targets
-- **ios**: Main iOS target in `Nebula.xcodeproj`
-- **tvos**: tvOS target in `TV/TV.xcodeproj`
+- **ios**: Main iOS target
+- **tvos**: tvOS target
 
 ### Release Environments
 - **production-ios/tvos**: App Store releases
