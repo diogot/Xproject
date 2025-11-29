@@ -15,7 +15,6 @@ public struct XprojectConfiguration: Codable, Sendable {
     public let projectPaths: [String: String]
     public let setup: SetupConfiguration?
     public let xcode: XcodeConfiguration?
-    public let danger: DangerConfiguration?
     public let version: VersionConfiguration?
     public let secrets: SecretConfiguration?
     public let provision: ProvisionConfiguration?
@@ -27,7 +26,6 @@ public struct XprojectConfiguration: Codable, Sendable {
         case projectPaths = "project_path"
         case setup
         case xcode
-        case danger
         case version
         case secrets
         case provision
@@ -488,26 +486,3 @@ public struct SigningConfiguration: Codable, Sendable {
     }
 }
 
-// MARK: - Danger Configuration
-
-public struct DangerConfiguration: Codable, Sendable {
-    public let dangerfilePaths: DangerfilePaths?
-
-    enum CodingKeys: String, CodingKey {
-        case dangerfilePaths = "dangerfile_paths"
-    }
-}
-
-public struct DangerfilePaths: Codable, Sendable {
-    public let preTest: String?
-    public let build: String?
-    public let test: String?
-    public let postTest: String?
-
-    enum CodingKeys: String, CodingKey {
-        case preTest = "pre_test"
-        case build
-        case test
-        case postTest = "post_test"
-    }
-}

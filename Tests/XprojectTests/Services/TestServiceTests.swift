@@ -227,7 +227,6 @@ struct TestServiceTests {
                 tests: nil,  // No test configuration
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,

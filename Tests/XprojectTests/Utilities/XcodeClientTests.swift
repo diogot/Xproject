@@ -20,8 +20,7 @@ struct XcodeClientTests {
                 projectPaths: ["test": "Test.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -59,7 +58,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -96,7 +94,6 @@ struct XcodeClientTests {
             projectPaths: ["test": "Test.xcodeproj"],
             setup: nil,
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -141,7 +138,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -241,7 +237,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -299,7 +294,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -359,7 +353,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: nil
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -428,7 +421,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -485,7 +477,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production-ios": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -558,7 +549,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["staging": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -625,7 +615,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -690,7 +679,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -777,7 +765,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -865,7 +852,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -950,7 +936,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1028,7 +1013,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["dev": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1105,7 +1089,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["staging": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1176,7 +1159,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1246,7 +1228,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1313,7 +1294,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1384,7 +1364,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1463,7 +1442,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -1537,7 +1515,6 @@ struct XcodeClientTests {
                 tests: nil,
                 release: ["production": releaseConfig]
             ),
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,

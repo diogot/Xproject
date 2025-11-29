@@ -19,8 +19,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -37,8 +36,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -57,8 +55,7 @@ struct XprojectConfigurationTests {
                 projectPaths: [:],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -84,7 +81,6 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: false)
             ),
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -114,7 +110,6 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -133,7 +128,6 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: false, formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -152,7 +146,6 @@ struct XprojectConfigurationTests {
                 brew: BrewConfiguration(enabled: true, formulas: ["swiftgen"])
             ),
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -176,8 +169,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["test": projectPath],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -200,8 +192,7 @@ struct XprojectConfigurationTests {
                 projectPaths: [:],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -228,7 +219,6 @@ struct XprojectConfigurationTests {
             projectPaths: ["ios": "TestApp.xcodeproj"],
             setup: nil,
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -254,7 +244,6 @@ struct XprojectConfigurationTests {
             projectPaths: [:],
             setup: nil,
             xcode: nil,
-            danger: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -288,8 +277,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": "NonExistentApp.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -328,8 +316,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": "TestApp.xcodeproj"],
                 setup: nil,
                 xcode: nil,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -367,8 +354,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -413,8 +399,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil
@@ -457,8 +442,7 @@ struct XprojectConfigurationTests {
                 projectPaths: ["ios": projectPath],
                 setup: nil,
                 xcode: xcodeConfig,
-                danger: nil,
-                    version: nil,
+                version: nil,
                 secrets: nil,
                 provision: nil,
                 prReport: nil

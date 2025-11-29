@@ -14,8 +14,6 @@ struct TestCommand: AsyncParsableCommand {
             Runs unit tests for configured schemes. By default, runs all test schemes
             defined in the configuration. Supports building for testing and running
             tests on multiple destinations.
-
-            TODO: Future enhancement - Add Danger integration support (--run-danger flag)
             """
     )
 
