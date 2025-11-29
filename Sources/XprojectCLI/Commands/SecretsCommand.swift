@@ -70,6 +70,7 @@ struct SecretsGenerateKeysCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Show what would be done without making changes")
     var dryRun: Bool = false
 
+    // swiftlint:disable:next function_body_length
     func run() async throws {
         let workingDir = globalOptions.resolvedWorkingDirectory
         let configService = ConfigurationService(

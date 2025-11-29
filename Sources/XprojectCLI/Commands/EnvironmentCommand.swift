@@ -156,6 +156,7 @@ struct EnvLoadCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Skip Swift code generation")
     var skipSwift: Bool = false
 
+    // swiftlint:disable:next function_body_length
     func run() async throws {
         let service = EnvironmentService()
         let workingDir = globalOptions.resolvedWorkingDirectory

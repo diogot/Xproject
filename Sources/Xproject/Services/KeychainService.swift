@@ -134,7 +134,9 @@ public final class KeychainService: Sendable {
     /// - Throws: `SecretError.keychainAccessFailed` if saving to keychain fails
     public func promptToSavePrivateKey(_ key: String, environment: String) throws {
         // Only prompt if interactive
-        guard Self.isInteractive() else { return }
+        guard Self.isInteractive() else {
+            return
+        }
 
         // Check if already in keychain with same value (skip if already saved)
         if let existingKey = try? getPassword(service: serviceName, account: environment),

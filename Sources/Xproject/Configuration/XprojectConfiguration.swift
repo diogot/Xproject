@@ -3,8 +3,6 @@
 // Xproject
 //
 
-// swiftlint:disable file_length
-
 import Foundation
 
 // MARK: - Main Configuration
@@ -485,4 +483,3 @@ public struct SigningConfiguration: Codable, Sendable {
         case provisioningProfiles
     }
 }
-
