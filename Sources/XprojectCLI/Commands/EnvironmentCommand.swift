@@ -322,6 +322,9 @@ struct EnvLoadCommand: AsyncParsableCommand {
             // Decrypt secrets
             let secrets = try ejsonService.decryptFile(path: "env/\(environment)/keys.ejson", privateKey: privateKey)
 
+            // Offer to save key to keychain after successful decryption
+            try keychainService.promptToSavePrivateKey(privateKey, environment: environment)
+
             // Filter to string values only
             let stringSecrets = secrets.compactMapValues { $0 as? String }
 
