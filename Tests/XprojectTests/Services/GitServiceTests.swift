@@ -515,7 +515,7 @@ func formatTagEnvPlaceholderVariants() throws {
             version: version,
             build: 1
         )
-        #expect(tag3 == "/ios/1.0.0")
+        #expect(tag3 == "ios/1.0.0")
     }
 }
 

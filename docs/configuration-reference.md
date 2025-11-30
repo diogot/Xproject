@@ -128,6 +128,7 @@ xcode:
 version:
   build_number_offset: 0             # Offset added to git commit count
   tag_format: "{env}-{target}/{version}-{build}"  # Optional custom format
+  inject_build_number: true          # Inject CURRENT_PROJECT_VERSION into xcconfigs
 
 # =============================================================================
 # SECRETS - EJSON encryption and Swift code generation (xp secrets)
@@ -242,6 +243,7 @@ Version management configuration.
 |-------|------|---------|-------------|
 | `build_number_offset` | Int | `0` | Offset added to git commit count for build number |
 | `tag_format` | String | `{env}-{target}/{version}-{build}` | Custom tag format |
+| `inject_build_number` | Bool | `false` | Inject CURRENT_PROJECT_VERSION into generated xcconfigs |
 
 ### secrets
 

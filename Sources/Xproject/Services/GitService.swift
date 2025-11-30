@@ -185,8 +185,8 @@ public final class GitService: Sendable {
         version: Version,
         build: Int
     ) -> String {
-        // Default format includes {env} prefix for backward compatibility
-        let defaultFormat = "{env}-{target}/{version}-{build}"
+        // Default format includes {env} prefix only if environment is provided
+        let defaultFormat = environment != nil ? "{env}-{target}/{version}-{build}" : "{target}/{version}-{build}"
         var tag = format ?? defaultFormat
 
         tag = tag.replacingOccurrences(of: "{target}", with: target)
@@ -200,6 +200,11 @@ public final class GitService: Sendable {
             tag = tag.replacingOccurrences(of: "-{env}", with: "")
             tag = tag.replacingOccurrences(of: "{env}-", with: "")
             tag = tag.replacingOccurrences(of: "{env}", with: "")
+
+            // Remove leading slash if present
+            if tag.hasPrefix("/") {
+                tag = String(tag.dropFirst())
+            }
         }
 
         return tag
