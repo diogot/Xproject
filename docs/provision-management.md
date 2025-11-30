@@ -443,3 +443,68 @@ If you're currently managing profiles manually:
 4. Run `xp provision encrypt`
 5. Commit the encrypted archive
 6. Update CI/CD pipeline to use `xp provision decrypt/install`
+
+## Certificate Management
+
+While Xproject manages provisioning profiles, signing certificates must be installed separately on CI/CD runners. This section covers preparing certificates for GitHub Actions.
+
+### Export Certificate from Keychain
+
+1. Open **Keychain Access** on your Mac
+2. Select **login** keychain, then **My Certificates** category
+3. Find your distribution certificate (e.g., "Apple Distribution: Your Name")
+4. Right-click → **Export** → save as `.p12` file
+5. Set a strong password when prompted
+
+### Base64 Encode for GitHub
+
+```bash
+# Encode certificate and copy to clipboard
+base64 -i your_certificate.p12 | pbcopy
+```
+
+### Create GitHub Secrets
+
+Add these secrets to your repository (Settings → Secrets → Actions):
+
+| Secret Name | Value |
+|-------------|-------|
+| `APPLE_DISTRIBUTION_CERTIFICATE` | Base64-encoded `.p12` content (from clipboard) |
+| `DISTRIBUTION_CERTIFICATE_PASSWORD` | Password used when exporting `.p12` |
+| `TEMP_KEYCHAIN_PASSWORD` | Any random string (for temporary CI keychain) |
+| `PROVISION_PASSWORD` | Password for encrypted provisioning profiles |
+
+### GitHub Actions Usage
+
+The `install-certificate-provisions` action handles certificate installation:
+
+```yaml
+- name: 'Install Certificate and Provision Profiles'
+  uses: ./.github/actions/install-certificate-provisions
+  with:
+    certificate: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE }}
+    certificate-password: ${{ secrets.DISTRIBUTION_CERTIFICATE_PASSWORD }}
+    keychain-password: ${{ secrets.TEMP_KEYCHAIN_PASSWORD }}
+    provisions-password: ${{ secrets.PROVISION_PASSWORD }}
+    post-run: 'false'
+```
+
+The action creates a temporary keychain, imports the certificate, then decrypts and installs provisioning profiles using `xp provision decrypt` and `xp provision install`.
+
+### Cleanup
+
+Always clean up certificates after the build:
+
+```yaml
+- name: 'Cleanup'
+  if: always()
+  uses: ./.github/actions/install-certificate-provisions
+  with:
+    certificate: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE }}
+    certificate-password: ${{ secrets.DISTRIBUTION_CERTIFICATE_PASSWORD }}
+    keychain-password: ${{ secrets.TEMP_KEYCHAIN_PASSWORD }}
+    provisions-password: ${{ secrets.PROVISION_PASSWORD }}
+    post-run: 'true'
+```
+
+This deletes the temporary keychain and runs `xp provision cleanup`.
