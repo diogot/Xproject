@@ -27,8 +27,6 @@ public struct ConfigurationTestHelper {
             projectPaths: ["test": projectPath],
             setup: nil,
             xcode: nil,
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -79,7 +77,7 @@ public struct ConfigurationTestHelper {
     public static func createTestConfigurationWithXcode() -> XprojectConfiguration {
         let testsConfig = TestsConfiguration(schemes: [
             TestSchemeConfiguration(
-                scheme: "Nebula",
+                scheme: "App",
                 buildDestination: "generic/platform=iOS Simulator",
                 testDestinations: [
                     "platform=iOS Simulator,OS=18.5,name=iPhone 16 Pro",
@@ -87,7 +85,7 @@ public struct ConfigurationTestHelper {
                 ]
             ),
             TestSchemeConfiguration(
-                scheme: "NebulaTV",
+                scheme: "AppTV",
                 buildDestination: "generic/platform=tvOS Simulator",
                 testDestinations: [
                     "platform=tvOS Simulator,OS=18.5,name=Apple TV 4K (3rd generation) (at 1080p)"
@@ -107,8 +105,6 @@ public struct ConfigurationTestHelper {
                 tests: testsConfig,
                 release: nil
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,

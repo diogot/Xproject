@@ -3,8 +3,6 @@
 // Xproject
 //
 
-// swiftlint:disable file_length
-
 import Foundation
 
 // MARK: - Main Configuration
@@ -15,8 +13,6 @@ public struct XprojectConfiguration: Codable, Sendable {
     public let projectPaths: [String: String]
     public let setup: SetupConfiguration?
     public let xcode: XcodeConfiguration?
-    public let danger: DangerConfiguration?
-    public let environment: EnvironmentFeature?
     public let version: VersionConfiguration?
     public let secrets: SecretConfiguration?
     public let provision: ProvisionConfiguration?
@@ -28,8 +24,6 @@ public struct XprojectConfiguration: Codable, Sendable {
         case projectPaths = "project_path"
         case setup
         case xcode
-        case danger
-        case environment
         case version
         case secrets
         case provision
@@ -53,30 +47,23 @@ public struct BrewConfiguration: Codable, Sendable {
     }
 }
 
-// MARK: - Environment Configuration
-
-public struct EnvironmentFeature: Codable, Sendable {
-    public let enabled: Bool
-
-    public init(enabled: Bool) {
-        self.enabled = enabled
-    }
-}
-
 // MARK: - Version Configuration
 
 public struct VersionConfiguration: Codable, Sendable {
     public let buildNumberOffset: Int
     public let tagFormat: String?
+    public let injectBuildNumber: Bool?
 
     enum CodingKeys: String, CodingKey {
         case buildNumberOffset = "build_number_offset"
         case tagFormat = "tag_format"
+        case injectBuildNumber = "inject_build_number"
     }
 
-    public init(buildNumberOffset: Int = 0, tagFormat: String? = nil) {
+    public init(buildNumberOffset: Int = 0, tagFormat: String? = nil, injectBuildNumber: Bool? = nil) {
         self.buildNumberOffset = buildNumberOffset
         self.tagFormat = tagFormat
+        self.injectBuildNumber = injectBuildNumber
     }
 }
 
@@ -90,18 +77,8 @@ public extension XprojectConfiguration {
 
     /// Check if a component is enabled
     func isEnabled(_ keyPath: String) -> Bool {
-        // Parse keypath like "setup.brew" or "environment" and check if enabled
+        // Parse keypath like "setup.brew" and check if enabled
         let components = keyPath.split(separator: ".")
-
-        // Handle single component paths like "environment"
-        if components.count == 1 {
-            switch components[0] {
-            case "environment":
-                return environment?.enabled ?? false
-            default:
-                return false
-            }
-        }
 
         // Handle multi-component paths like "setup.brew"
         guard components.count >= 2 else {
@@ -504,29 +481,5 @@ public struct SigningConfiguration: Codable, Sendable {
         case teamID
         case signingStyle
         case provisioningProfiles
-    }
-}
-
-// MARK: - Danger Configuration
-
-public struct DangerConfiguration: Codable, Sendable {
-    public let dangerfilePaths: DangerfilePaths?
-
-    enum CodingKeys: String, CodingKey {
-        case dangerfilePaths = "dangerfile_paths"
-    }
-}
-
-public struct DangerfilePaths: Codable, Sendable {
-    public let preTest: String?
-    public let build: String?
-    public let test: String?
-    public let postTest: String?
-
-    enum CodingKeys: String, CodingKey {
-        case preTest = "pre_test"
-        case build
-        case test
-        case postTest = "post_test"
     }
 }

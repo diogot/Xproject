@@ -14,9 +14,9 @@ struct ReleaseServiceTests {
     private func createReleaseConfiguration() -> XprojectConfiguration {
         let releaseConfig = [
             "production-ios": ReleaseConfiguration(
-                scheme: "Nebula",
+                scheme: "App",
                 configuration: "Release",
-                output: "Nebula",
+                output: "App",
                 destination: "iOS",
                 type: "ios",
                 appStoreAccount: "test@example.com",
@@ -30,9 +30,9 @@ struct ReleaseServiceTests {
                 )
             ),
             "dev-ios": ReleaseConfiguration(
-                scheme: "Nebula",
+                scheme: "App",
                 configuration: "Debug",
-                output: "Nebula-Dev",
+                output: "App-Dev",
                 destination: "iOS",
                 type: "ios",
                 appStoreAccount: "test@example.com",
@@ -52,8 +52,6 @@ struct ReleaseServiceTests {
                 tests: nil,
                 release: releaseConfig
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -99,7 +97,7 @@ struct ReleaseServiceTests {
 
         // Then
         #expect(results.environment == "production-ios")
-        #expect(results.scheme == "Nebula")
+        #expect(results.scheme == "App")
         #expect(results.archiveSucceeded == true)
         #expect(results.ipaSucceeded == true)
         #expect(results.uploadSucceeded == true)
@@ -353,8 +351,6 @@ struct ReleaseServiceTests {
             projectPaths: ["test": "Test.xcodeproj"],
             setup: nil,
             xcode: nil,
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -399,9 +395,9 @@ struct ReleaseServiceTests {
         )
 
         let releaseConfig = ReleaseConfiguration(
-            scheme: "Nebula",
+            scheme: "App",
             configuration: "Debug",
-            output: "Nebula-Dev",
+            output: "App-Dev",
             destination: "iOS",
             type: "ios",
             appStoreAccount: nil,
@@ -420,8 +416,6 @@ struct ReleaseServiceTests {
                 tests: nil,
                 release: ["dev-ios": releaseConfig]
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -470,9 +464,9 @@ struct ReleaseServiceTests {
         )
 
         let releaseConfig = ReleaseConfiguration(
-            scheme: "Nebula",
+            scheme: "App",
             configuration: "Release",
-            output: "Nebula",
+            output: "App",
             destination: "iOS",
             type: "ios",
             appStoreAccount: "team@example.com",
@@ -491,8 +485,6 @@ struct ReleaseServiceTests {
                 tests: nil,
                 release: ["production-ios": releaseConfig]
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -558,8 +550,6 @@ struct ReleaseServiceTests {
                 tests: nil,
                 release: ["production-tvos": releaseConfig]
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,
@@ -629,8 +619,6 @@ struct ReleaseServiceTests {
                     "production-ios": prodConfig
                 ]
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,

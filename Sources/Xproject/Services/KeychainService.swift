@@ -90,10 +90,12 @@ public final class KeychainService: Sendable {
 
     /// Prompts the user interactively for a private key
     ///
+    /// Note: This method only prompts and validates the key format. It does NOT offer to save
+    /// to the keychain. Use `promptToSavePrivateKey()` after successful decryption to offer saving.
+    ///
     /// - Parameter environment: The environment name
     /// - Returns: The private key entered by the user
-    /// - Throws: `SecretError.privateKeyNotFound` if no key is entered
-    /// - Throws: `SecretError.keychainAccessFailed` if saving to keychain fails
+    /// - Throws: `SecretError.privateKeyNotFound` if no key is entered or key format is invalid
     public func promptForPrivateKey(environment: String) throws -> String {
         print("")
         print("EJSON private key not found for environment: \(environment)")
@@ -103,9 +105,8 @@ public final class KeychainService: Sendable {
         print("  2. Environment variable: EJSON_PRIVATE_KEY")
         print("  3. macOS Keychain (service: \(serviceName), account: \(environment))")
         print("")
-        print("Enter EJSON private key (64-character hex string): ", terminator: "")
-
-        guard let key = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let cKey = getpass("Enter EJSON private key (64-character hex string): "),
+              let key = String(cString: cKey, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !key.isEmpty else {
             throw SecretError.privateKeyNotFound(environment: environment)
         }
@@ -117,7 +118,32 @@ public final class KeychainService: Sendable {
             throw SecretError.privateKeyNotFound(environment: environment)
         }
 
-        // Ask if user wants to save to keychain
+        return key
+    }
+
+    /// Prompts the user to save a private key to the keychain after successful decryption
+    ///
+    /// This method should be called after verifying the key works (e.g., after successful decryption).
+    /// It will only prompt if:
+    /// - The session is interactive (TTY available)
+    /// - The key is not already stored in the keychain
+    ///
+    /// - Parameters:
+    ///   - key: The private key to potentially save
+    ///   - environment: The environment name (used as account name)
+    /// - Throws: `SecretError.keychainAccessFailed` if saving to keychain fails
+    public func promptToSavePrivateKey(_ key: String, environment: String) throws {
+        // Only prompt if interactive
+        guard Self.isInteractive() else {
+            return
+        }
+
+        // Check if already in keychain with same value (skip if already saved)
+        if let existingKey = try? getPassword(service: serviceName, account: environment),
+           existingKey == key {
+            return
+        }
+
         print("Save to keychain for future use? [Y/n]: ", terminator: "")
         let saveResponse = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "y"
 
@@ -125,8 +151,6 @@ public final class KeychainService: Sendable {
             try setEJSONPrivateKey(key, environment: environment)
             print("✓ Private key saved to keychain")
         }
-
-        return key
     }
 
     /// Stores an EJSON private key in the macOS Keychain

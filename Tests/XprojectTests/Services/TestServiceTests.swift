@@ -46,7 +46,7 @@ struct TestServiceTests {
         // Then
         #expect(results.totalSchemes == 2)
         #expect(await mockXcodeClient.buildForTestingCalls.count == 2)
-        #expect(await mockXcodeClient.runTestsCalls.count == 3) // 2 destinations for Nebula, 1 for NebulaTV
+        #expect(await mockXcodeClient.runTestsCalls.count == 3) // 2 destinations for App, 1 for AppTV
     }
 
     @Test("TestService runs specific scheme when requested")
@@ -62,14 +62,14 @@ struct TestServiceTests {
         )
 
         // When
-        let results = try await testService.runTests(schemes: ["Nebula"])
+        let results = try await testService.runTests(schemes: ["App"])
 
         // Then
         #expect(results.totalSchemes == 1)
         let buildCalls = await mockXcodeClient.buildForTestingCalls
         #expect(buildCalls.count == 1)
-        #expect(buildCalls[0].scheme == "Nebula")
-        #expect(await mockXcodeClient.runTestsCalls.count == 2) // 2 destinations for Nebula
+        #expect(buildCalls[0].scheme == "App")
+        #expect(await mockXcodeClient.runTestsCalls.count == 2) // 2 destinations for App
     }
 
     @Test("TestService throws error for unknown scheme")
@@ -166,7 +166,7 @@ struct TestServiceTests {
     func testBuildFailureAggregation() async throws {
         // Given
         let mockXcodeClient = MockXcodeClient()
-        await mockXcodeClient.setShouldFailBuildForScheme("Nebula", shouldFail: true)
+        await mockXcodeClient.setShouldFailBuildForScheme("App", shouldFail: true)
         let config = createTestConfiguration()
         let mockConfigProvider = MockConfigurationProvider(config: config)
         let testService = TestService(
@@ -181,9 +181,9 @@ struct TestServiceTests {
         // Then
         #expect(results.hasFailures)
         #expect(results.failedSchemes == 1)
-        let nebulaResult = results.schemeResults["Nebula"]
-        #expect(nebulaResult?.buildSucceeded == false)
-        #expect(nebulaResult?.testResults.isEmpty == true) // No tests run if build failed
+        let appResult = results.schemeResults["App"]
+        #expect(appResult?.buildSucceeded == false)
+        #expect(appResult?.testResults.isEmpty == true) // No tests run if build failed
     }
 
     @Test("TestService aggregates test failures")
@@ -205,9 +205,9 @@ struct TestServiceTests {
 
         // Then
         #expect(results.hasFailures)
-        let nebulaResult = results.schemeResults["Nebula"]
-        #expect(nebulaResult?.testResults.count == 2)
-        let failedTest = nebulaResult?.testResults.first { $0.destination == failingDestination }
+        let appResult = results.schemeResults["App"]
+        #expect(appResult?.testResults.count == 2)
+        let failedTest = appResult?.testResults.first { $0.destination == failingDestination }
         #expect(failedTest?.succeeded == false)
     }
 
@@ -227,8 +227,6 @@ struct TestServiceTests {
                 tests: nil,  // No test configuration
                 release: nil
             ),
-            danger: nil,
-            environment: nil,
             version: nil,
             secrets: nil,
             provision: nil,

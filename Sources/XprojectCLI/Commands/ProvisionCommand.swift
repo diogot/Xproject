@@ -59,7 +59,7 @@ struct ProvisionEncryptCommand: AsyncParsableCommand {
         )
 
         let config = try configService.configuration
-        guard let provisionConfig = config.provision, provisionConfig.enabled else {
+        guard let provisionConfig = config.provision else {
             throw ProvisionError.provisionNotEnabled
         }
 
@@ -137,7 +137,7 @@ struct ProvisionDecryptCommand: AsyncParsableCommand {
         )
 
         let config = try configService.configuration
-        guard let provisionConfig = config.provision, provisionConfig.enabled else {
+        guard let provisionConfig = config.provision else {
             throw ProvisionError.provisionNotEnabled
         }
 
@@ -196,7 +196,7 @@ struct ProvisionListCommand: AsyncParsableCommand {
         )
 
         let config = try configService.configuration
-        guard let provisionConfig = config.provision, provisionConfig.enabled else {
+        guard let provisionConfig = config.provision else {
             throw ProvisionError.provisionNotEnabled
         }
 
@@ -246,7 +246,7 @@ struct ProvisionInstallCommand: AsyncParsableCommand {
         )
 
         let config = try configService.configuration
-        guard let provisionConfig = config.provision, provisionConfig.enabled else {
+        guard let provisionConfig = config.provision else {
             throw ProvisionError.provisionNotEnabled
         }
 
@@ -326,7 +326,7 @@ struct ProvisionCleanupCommand: AsyncParsableCommand {
         )
 
         let config = try configService.configuration
-        guard let provisionConfig = config.provision, provisionConfig.enabled else {
+        guard let provisionConfig = config.provision else {
             throw ProvisionError.provisionNotEnabled
         }
 

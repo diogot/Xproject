@@ -3,7 +3,7 @@
 // Xproject
 //
 
-// swiftlint:disable type_body_length
+// swiftlint:disable file_length type_body_length
 
 import Foundation
 import Yams
@@ -35,18 +35,22 @@ public final class EnvironmentService {
         do {
             data = try Data(contentsOf: configURL)
         } catch {
-            throw EnvironmentError.invalidYAML(configURL.path)
+            throw EnvironmentError.invalidYAML(path: configURL.path, reason: error.localizedDescription)
         }
 
         guard let yamlString = String(data: data, encoding: .utf8) else {
-            throw EnvironmentError.invalidYAML(configURL.path)
+            throw EnvironmentError.invalidYAML(path: configURL.path, reason: "File is not valid UTF-8")
         }
 
         do {
             let decoder = YAMLDecoder()
             return try decoder.decode(EnvironmentConfig.self, from: yamlString)
+        } catch let yamlError as YamlError {
+            throw EnvironmentError.invalidYAML(path: configURL.path, reason: formatYamlError(yamlError))
+        } catch let decodingError as DecodingError {
+            throw EnvironmentError.invalidYAML(path: configURL.path, reason: formatDecodingError(decodingError))
         } catch {
-            throw EnvironmentError.invalidYAML(configURL.path)
+            throw EnvironmentError.invalidYAML(path: configURL.path, reason: error.localizedDescription)
         }
     }
 
@@ -70,20 +74,22 @@ public final class EnvironmentService {
         do {
             data = try Data(contentsOf: envURL)
         } catch {
-            throw EnvironmentError.invalidYAML(envURL.path)
+            throw EnvironmentError.invalidYAML(path: envURL.path, reason: error.localizedDescription)
         }
 
         guard let yamlString = String(data: data, encoding: .utf8) else {
-            throw EnvironmentError.invalidYAML(envURL.path)
+            throw EnvironmentError.invalidYAML(path: envURL.path, reason: "File is not valid UTF-8")
         }
 
         do {
             guard let variables = try Yams.load(yaml: yamlString) as? [String: Any] else {
-                throw EnvironmentError.invalidYAML(envURL.path)
+                throw EnvironmentError.invalidYAML(path: envURL.path, reason: "YAML must be a dictionary at root level")
             }
             return variables
+        } catch let error as EnvironmentError {
+            throw error
         } catch {
-            throw EnvironmentError.invalidYAML(envURL.path)
+            throw EnvironmentError.invalidYAML(path: envURL.path, reason: error.localizedDescription)
         }
     }
 
@@ -165,12 +171,14 @@ public final class EnvironmentService {
     ///   - variables: Environment variables from env.yml
     ///   - workingDirectory: Project working directory
     ///   - dryRun: If true, shows what would be done without executing
+    ///   - buildNumber: Optional build number to inject as CURRENT_PROJECT_VERSION
     /// - Throws: EnvironmentError or file system errors
     public func generateXCConfigs(
         environmentName: String,
         variables: [String: Any],
         workingDirectory: String,
-        dryRun: Bool
+        dryRun: Bool,
+        buildNumber: Int? = nil
     ) throws {
         // Load environment configuration
         let config = try loadEnvironmentConfig(workingDirectory: workingDirectory)
@@ -198,6 +206,11 @@ public final class EnvironmentService {
                         bundleIdSuffix: target.bundleIdSuffix
                     )
                     mergedVars.merge(resolved) { _, new in new } // Override with config-specific
+                }
+
+                // Inject build number if provided
+                if let buildNumber = buildNumber {
+                    mergedVars["CURRENT_PROJECT_VERSION"] = String(buildNumber)
                 }
 
                 // Generate xcconfig file
@@ -255,6 +268,17 @@ public final class EnvironmentService {
         let configName: String
     }
 
+    /// Strip URL scheme from value for xcconfig compatibility
+    /// Returns stripped value if scheme was present, nil otherwise
+    private func strippedURLScheme(_ value: String) -> String? {
+        if value.hasPrefix("https://") {
+            return String(value.dropFirst(8))
+        } else if value.hasPrefix("http://") {
+            return String(value.dropFirst(7))
+        }
+        return nil
+    }
+
     /// Generate a single xcconfig file
     private func generateXCConfigFile(
         url: URL,
@@ -271,7 +295,13 @@ public final class EnvironmentService {
 
         // Sort for consistent output
         for key in variables.keys.sorted() {
-            content += "\(key) = \(variables[key] ?? "<nil>")\n"
+            let value = variables[key] ?? "<nil>"
+            if let strippedValue = strippedURLScheme(value) {
+                print("Warning: Stripped URL scheme from \(key) for xcconfig compatibility")
+                content += "\(key) = \(strippedValue)\n"
+            } else {
+                content += "\(key) = \(value)\n"
+            }
         }
 
         if dryRun {
@@ -576,6 +606,44 @@ public final class EnvironmentService {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Error Formatting
+
+    private func formatYamlError(_ yamlError: YamlError) -> String {
+        switch yamlError {
+        case let .scanner(_, problem, mark, _):
+            return "Syntax error at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        case let .parser(_, problem, mark, _):
+            return "Parse error at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        case let .composer(_, problem, mark, _):
+            return "Composition error at line \(mark.line + 1), column \(mark.column + 1): \(problem)"
+        default:
+            return yamlError.localizedDescription
+        }
+    }
+
+    private func formatDecodingError(_ decodingError: DecodingError) -> String {
+        switch decodingError {
+        case let .typeMismatch(type, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Type mismatch at \(pathDescription): expected \(type). \(context.debugDescription)"
+        case let .valueNotFound(type, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Missing value at \(pathDescription): expected \(type)"
+        case let .keyNotFound(key, context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Missing required key '\(key.stringValue)' at \(pathDescription)"
+        case let .dataCorrupted(context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            let pathDescription = path.isEmpty ? "root" : "'\(path)'"
+            return "Invalid data at \(pathDescription): \(context.debugDescription)"
+        @unknown default:
+            return decodingError.localizedDescription
         }
     }
 }

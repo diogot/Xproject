@@ -26,7 +26,7 @@ YourProject/
 ├── MyApp/
 │   └── Generated/
 │       └── AppKeys.swift        # Generated obfuscated code (gitignored)
-└── Xproject.yml                 # Enable with secrets.enabled: true
+└── Xproject.yml                 # Add secrets section to enable
 ```
 
 ## Quick Start
@@ -37,7 +37,6 @@ Add to your `Xproject.yml`:
 
 ```yaml
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       - path: MyApp/Generated/AppKeys.swift
@@ -119,6 +118,7 @@ xp env load dev
 
 | Command | Description |
 |---------|-------------|
+| `xp secrets generate-keys <env>` | Generate new EJSON keypair for environment |
 | `xp secrets generate <env>` | Generate obfuscated AppKeys.swift |
 | `xp secrets encrypt [env]` | Encrypt EJSON files |
 | `xp secrets decrypt <env>` | Decrypt and display secrets (dev only) |
@@ -128,6 +128,15 @@ xp env load dev
 ### Command Examples
 
 ```bash
+# Generate new keypair for an environment
+xp secrets generate-keys dev
+
+# Generate keypair and save to Keychain
+xp secrets generate-keys dev --save-to-keychain
+
+# Overwrite existing keys
+xp secrets generate-keys dev --force
+
 # View encrypted file information
 xp secrets show dev
 
@@ -156,7 +165,6 @@ Configure outputs in `Xproject.yml`:
 
 ```yaml
 secrets:
-  enabled: true
   swift_generation:
     outputs:
       - path: MyApp/Generated/AppKeys.swift

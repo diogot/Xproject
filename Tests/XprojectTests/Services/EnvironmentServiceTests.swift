@@ -567,4 +567,138 @@ struct EnvironmentServiceTests {
             try service.validateEnvironmentVariables(name: "nonexistent", workingDirectory: workingDir)
         }
     }
+
+    // MARK: - Build Number Injection Tests
+
+    @Test("Generate xcconfigs without build number when nil")
+    func generateWithoutBuildNumber() throws {
+        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-no-build"
+
+        try createTestEnvironment(
+            at: workingDir,
+            config: """
+            targets:
+              - name: MyApp
+                xcconfig_path: Config
+                shared_variables:
+                  PRODUCT_BUNDLE_IDENTIFIER: apps.bundle_id
+            """,
+            environments: [
+                "dev": """
+                apps:
+                  bundle_id: com.example.dev
+                """
+            ],
+            xcconfigPaths: ["Config"]
+        )
+
+        defer { try? FileManager.default.removeItem(atPath: workingDir) }
+
+        let service = EnvironmentService()
+        let variables = try service.loadEnvironmentVariables(name: "dev", workingDirectory: workingDir)
+
+        try service.generateXCConfigs(
+            environmentName: "dev",
+            variables: variables,
+            workingDirectory: workingDir,
+            dryRun: false,
+            buildNumber: nil
+        )
+
+        let content = try String(contentsOf: URL(fileURLWithPath: "\(workingDir)/Config/MyApp.debug.xcconfig"), encoding: .utf8)
+        #expect(!content.contains("CURRENT_PROJECT_VERSION"))
+    }
+
+    @Test("Generate xcconfigs with build number injection")
+    func generateWithBuildNumber() throws {
+        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-build"
+
+        try createTestEnvironment(
+            at: workingDir,
+            config: """
+            targets:
+              - name: MyApp
+                xcconfig_path: Config
+                shared_variables:
+                  PRODUCT_BUNDLE_IDENTIFIER: apps.bundle_id
+            """,
+            environments: [
+                "dev": """
+                apps:
+                  bundle_id: com.example.dev
+                """
+            ],
+            xcconfigPaths: ["Config"]
+        )
+
+        defer { try? FileManager.default.removeItem(atPath: workingDir) }
+
+        let service = EnvironmentService()
+        let variables = try service.loadEnvironmentVariables(name: "dev", workingDirectory: workingDir)
+
+        try service.generateXCConfigs(
+            environmentName: "dev",
+            variables: variables,
+            workingDirectory: workingDir,
+            dryRun: false,
+            buildNumber: 42
+        )
+
+        let debugContent = try String(contentsOf: URL(fileURLWithPath: "\(workingDir)/Config/MyApp.debug.xcconfig"), encoding: .utf8)
+        #expect(debugContent.contains("CURRENT_PROJECT_VERSION = 42"))
+
+        let releaseContent = try String(contentsOf: URL(fileURLWithPath: "\(workingDir)/Config/MyApp.release.xcconfig"), encoding: .utf8)
+        #expect(releaseContent.contains("CURRENT_PROJECT_VERSION = 42"))
+    }
+
+    @Test("Generate xcconfigs strips URL schemes")
+    func generateStripsURLSchemes() throws {
+        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-url-strip"
+
+        try createTestEnvironment(
+            at: workingDir,
+            config: """
+            targets:
+              - name: MyApp
+                xcconfig_path: Config
+                shared_variables:
+                  API_URL: api_url
+                  WEBSITE_URL: website_url
+                  PLAIN_VALUE: plain_value
+            """,
+            environments: [
+                "dev": """
+                api_url: https://api.example.com
+                website_url: http://www.example.com
+                plain_value: some-value
+                """
+            ],
+            xcconfigPaths: ["Config"]
+        )
+
+        defer { try? FileManager.default.removeItem(atPath: workingDir) }
+
+        let service = EnvironmentService()
+        let variables = try service.loadEnvironmentVariables(name: "dev", workingDirectory: workingDir)
+
+        try service.generateXCConfigs(
+            environmentName: "dev",
+            variables: variables,
+            workingDirectory: workingDir,
+            dryRun: false
+        )
+
+        let content = try String(contentsOf: URL(fileURLWithPath: "\(workingDir)/Config/MyApp.debug.xcconfig"), encoding: .utf8)
+
+        // URL schemes should be stripped
+        #expect(content.contains("API_URL = api.example.com"))
+        #expect(content.contains("WEBSITE_URL = www.example.com"))
+
+        // Non-URL values should be unchanged
+        #expect(content.contains("PLAIN_VALUE = some-value"))
+
+        // Original schemes should not be present
+        #expect(!content.contains("https://"))
+        #expect(!content.contains("http://"))
+    }
 }

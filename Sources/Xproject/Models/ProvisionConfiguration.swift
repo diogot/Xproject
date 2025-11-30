@@ -14,9 +14,6 @@ import Foundation
 /// Loaded from the `provision:` section in Xproject.yml, this defines how provisioning
 /// profiles are encrypted and stored for CI/CD with manual signing workflows.
 public struct ProvisionConfiguration: Codable, Sendable {
-    /// Whether provision management is enabled
-    public let enabled: Bool
-
     /// Path to the encrypted archive (relative to working directory)
     /// Default: "provision/profiles.zip.enc"
     public let archivePath: String?
@@ -33,13 +30,11 @@ public struct ProvisionConfiguration: Codable, Sendable {
     public let profiles: [String: [ProvisionProfile]]?
 
     public init(
-        enabled: Bool,
         archivePath: String? = nil,
         extractPath: String? = nil,
         sourcePath: String? = nil,
         profiles: [String: [ProvisionProfile]]? = nil
     ) {
-        self.enabled = enabled
         self.archivePath = archivePath
         self.extractPath = extractPath
         self.sourcePath = sourcePath
@@ -47,7 +42,6 @@ public struct ProvisionConfiguration: Codable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case enabled
         case archivePath = "archive_path"
         case extractPath = "extract_path"
         case sourcePath = "source_path"
@@ -113,11 +107,13 @@ public enum ProvisionError: Error, LocalizedError, Sendable {
         switch self {
         case .provisionNotEnabled:
             return """
-            Provisioning profile management is not enabled in configuration.
+            Provisioning profile management is not configured.
 
-            ✅ Enable provision in Xproject.yml:
+            ✅ Add provision section to Xproject.yml:
                provision:
-                 enabled: true
+                 source_path: provision/source/
+                 archive_path: provision/profiles.zip.enc
+                 extract_path: provision/profiles/
             """
 
         case .archiveNotFound(let path):

@@ -261,25 +261,36 @@ struct VersionTagCommand: AsyncParsableCommand {
         let buildOffset = config.version?.buildNumberOffset ?? 0
         let build = try versionService.getCurrentBuild(offset: buildOffset)
 
+        // Get environment - use flag override or current environment
+        let environmentService = EnvironmentService()
+        let currentEnv = try? environmentService.getCurrentEnvironment(workingDirectory: globalOptions.resolvedWorkingDirectory)
+        let effectiveEnvironment = environment ?? currentEnv
+
+        // Get tag format from config
+        let tagFormat = config.version?.tagFormat
+
         // Create tag
         let gitService = GitService(workingDirectory: globalOptions.resolvedWorkingDirectory, executor: executor)
 
+        let tag = gitService.formatTag(
+            format: tagFormat,
+            target: targetName,
+            environment: effectiveEnvironment,
+            version: version,
+            build: build
+        )
+
         if dryRun {
-            var tag = ""
-            if let environment = environment {
-                tag += "\(environment)-"
-            }
-            tag += "\(targetName)/"
-            tag += version.fullVersion(build: build)
             print("[DRY RUN] Would create tag: \(tag)")
             return
         }
 
-        let tag = try gitService.createVersionTag(
+        _ = try gitService.createVersionTag(
             version: version,
             build: build,
             target: targetName,
-            environment: environment
+            environment: effectiveEnvironment,
+            tagFormat: tagFormat
         )
         print("✓ Created tag: \(tag)")
     }

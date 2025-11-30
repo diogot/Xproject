@@ -27,21 +27,12 @@ YourProject/
 │   └── Config/                 # Generated xcconfig files (gitignored)
 │       ├── YourApp.debug.xcconfig
 │       └── YourApp.release.xcconfig
-└── Xproject.yml                # Enable with environment.enabled: true
+└── Xproject.yml                # Project configuration
 ```
 
 ## Setup Steps
 
-### 1. Enable Environment Management
-
-Add to your `Xproject.yml`:
-
-```yaml
-environment:
-  enabled: true
-```
-
-### 2. Create env/config.yml
+### 1. Create env/config.yml
 
 Define your targets and variable mappings:
 

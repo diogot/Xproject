@@ -14,19 +14,14 @@ import Foundation
 /// Loaded from the `secrets:` section in Xproject.yml, this defines how secrets
 /// are encrypted with EJSON and how Swift code is generated with obfuscation.
 public struct SecretConfiguration: Codable, Sendable {
-    /// Whether secret management is enabled
-    public let enabled: Bool
-
     /// Swift code generation configuration for secrets (optional)
     public let swiftGeneration: SecretSwiftGenerationConfig?
 
-    public init(enabled: Bool, swiftGeneration: SecretSwiftGenerationConfig? = nil) {
-        self.enabled = enabled
+    public init(swiftGeneration: SecretSwiftGenerationConfig? = nil) {
         self.swiftGeneration = swiftGeneration
     }
 
     enum CodingKeys: String, CodingKey {
-        case enabled
         case swiftGeneration = "swift_generation"
     }
 }
@@ -145,11 +140,14 @@ public enum SecretError: Error, LocalizedError, Sendable {
         switch self {
         case .secretsNotEnabled:
             return """
-            Secret management is not enabled in configuration.
+            Secret management is not configured.
 
-            ✅ Enable secrets in Xproject.yml:
+            ✅ Add secrets section to Xproject.yml:
                secrets:
-                 enabled: true
+                 swift_generation:
+                   outputs:
+                     - path: MyApp/Generated/AppKeys.swift
+                       prefixes: [all, ios]
             """
 
         case .ejsonFileNotFound(let path):
