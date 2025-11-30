@@ -55,10 +55,6 @@ A modern Swift command line tool for Xcode project build automation.
        formulas:
          - swiftlint
 
-   # Environment management (xcconfig generation)
-   environment:
-     enabled: true
-
    # Release builds
    xcode:
      release:
@@ -206,13 +202,7 @@ Xproject includes a powerful environment management system for handling multiple
 
 ### Quick Setup
 
-1. **Enable in your Xproject.yml:**
-   ```yaml
-   environment:
-     enabled: true
-   ```
-
-2. **Create environment configuration (`env/config.yml`):**
+1. **Create environment configuration (`env/config.yml`):**
    ```yaml
    targets:
      - name: MyApp
@@ -352,10 +342,9 @@ Xproject includes a **dual-layer security system** for managing API keys and sec
 
 ### Quick Start
 
-1. **Enable in your Xproject.yml:**
+1. **Configure in your Xproject.yml:**
    ```yaml
    secrets:
-     enabled: true
      swift_generation:
        outputs:
          - path: MyApp/Generated/AppKeys.swift
@@ -426,10 +415,9 @@ Post build warnings, errors, and test failures directly to GitHub PRs via the Ch
 
 ### Quick Setup
 
-1. **Enable in your Xproject.yml:**
+1. **Configure in your Xproject.yml:**
    ```yaml
    pr_report:
-     enabled: true
      check_name: "Xcode Build & Test"
      ignored_files:
        - "Pods/**"
