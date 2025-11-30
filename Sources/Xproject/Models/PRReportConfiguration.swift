@@ -17,7 +17,7 @@ public struct PRReportConfiguration: Codable, Sendable {
     /// Name for the GitHub Check Run (default: "Xcode Build & Test")
     public let checkName: String?
 
-    /// Whether to post a summary comment
+    /// Whether to post a summary comment (when false, still posts if there are issues)
     public let postSummary: Bool
 
     /// Whether to post inline annotations

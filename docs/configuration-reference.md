@@ -281,7 +281,7 @@ GitHub PR reporting via Checks API. Section presence enables the feature.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `check_name` | String | `Xcode Build & Test` | GitHub Check Run name |
-| `post_summary` | Bool | `true` | Post summary comment |
+| `post_summary` | Bool | `true` | Post summary comment (when `false`, still posts if there are issues) |
 | `inline_annotations` | Bool | `true` | Post inline annotations |
 | `fail_on_errors` | Bool | `true` | Fail if build errors exist |
 | `fail_on_test_failures` | Bool | `true` | Fail if tests fail |

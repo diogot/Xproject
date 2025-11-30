@@ -116,7 +116,12 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             totalStats.testsPassed += stats.testsPassed
             totalStats.testsSkipped += stats.testsSkipped
             allAnnotations.append(contentsOf: annotations)
-            allSummaries.append(summary)
+
+            // Only include summary if it would actually be posted
+            // When postSummary is false, we still post if there are annotations
+            if config.postSummary || !annotations.isEmpty {
+                allSummaries.append(summary)
+            }
 
             // Update overall conclusion (failure takes precedence)
             if conclusion == .failure {
@@ -446,6 +451,15 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         // Fall back to parsing destination from filename
         let filename = (path as NSString).lastPathComponent.replacingOccurrences(of: ".xcresult", with: "")
 
+        // Check for "archive-" prefix (e.g., "archive-dev-ios")
+        if filename.hasPrefix("archive-") {
+            let stripped = String(filename.dropFirst(8)) // remove "archive-"
+            if !stripped.isEmpty {
+                return "Archive \(stripped)"
+            }
+            return "Archive"
+        }
+
         // Check for "-build" suffix (e.g., "tests-MyScheme-26.0_iPhone16Pro-build")
         if filename.hasSuffix("-build") {
             let stripped = String(filename.dropLast(6)) // remove "-build"
@@ -691,8 +705,9 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 commentMode: .update
             )
 
-            // Post summary comment if enabled, otherwise cleanup old comments
-            if config.postSummary {
+            // Post summary comment if enabled, or if there are issues to report
+            // When postSummary is false, we still post if there are annotations
+            if config.postSummary || !annotations.isEmpty {
                 try await commentReporter.postSummary(summary)
             } else {
                 try await commentReporter.cleanup()

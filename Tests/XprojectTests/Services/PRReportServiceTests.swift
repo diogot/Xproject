@@ -483,6 +483,24 @@ struct PRReportDescriptionExtractionTests {
         #expect(description == "Build 18.0_iPhone16Pro")
     }
 
+    @Test("Extract description from archive xcresult filename", .tags(.unit, .prReport))
+    func extractDescriptionFromArchiveFilename() throws {
+        let config = PRReportConfiguration()
+        let service = PRReportService(
+            workingDirectory: "/tmp",
+            config: config,
+            reportsPath: "reports"
+        )
+
+        let description = service.extractDescription(
+            path: "/path/to/archive-dev-ios.xcresult",
+            buildResults: BuildResults(),
+            testResults: nil
+        )
+
+        #expect(description == "Archive dev-ios")
+    }
+
     @Test("Extract description from test xcresult filename without device info", .tags(.unit, .prReport))
     func extractDescriptionFromTestFilenameWithoutDevice() throws {
         let config = PRReportConfiguration()
