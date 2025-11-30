@@ -60,10 +60,13 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             throw PRReportError.noXcresultBundles(directory: absoluteReportsPath())
         }
 
-        // Parse all xcresult bundles
-        var allBuildResults: [BuildResults] = []
-        var allTestResults: [TestResults] = []
+        // Aggregate stats across all xcresults
+        var totalStats = Statistics()
+        var allAnnotations: [Annotation] = []
+        var allSummaries: [String] = []
+        var overallConclusion: PRReportConclusion = .neutral
 
+        // Process each xcresult separately
         for path in pathsToProcess {
             let absolutePath = resolvePath(path)
             guard FileManager.default.fileExists(atPath: absolutePath) else {
@@ -73,34 +76,76 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             let parser = XCResultParser(path: absolutePath)
             let result = try await parser.parse()
 
-            if let buildResults = result.buildResults, !testOnly {
-                allBuildResults.append(buildResults)
+            // Collect results based on mode
+            let buildResults: [BuildResults] = if let br = result.buildResults, !testOnly { [br] } else { [] }
+            let testResults: [TestResults] = if let tr = result.testResults, !buildOnly { [tr] } else { [] }
+
+            // Skip if no results
+            guard !buildResults.isEmpty || !testResults.isEmpty else { continue }
+
+            // Convert to annotations for this xcresult
+            var annotations = convertToAnnotations(buildResults: buildResults, testResults: testResults)
+            annotations = filterAnnotations(annotations)
+
+            // Compute statistics for this xcresult
+            let stats = computeStatistics(buildResults: buildResults, testResults: testResults)
+
+            // Determine conclusion for this xcresult
+            let conclusion = determineConclusion(stats: stats, annotations: annotations)
+
+            // Extract description from xcresult data
+            let description = extractDescription(
+                path: absolutePath,
+                buildResults: buildResults.first,
+                testResults: testResults.first
+            )
+
+            // Generate summary for this xcresult
+            let summary = generateSummary(
+                stats: stats,
+                buildResults: buildResults,
+                testResults: testResults,
+                description: description
+            )
+
+            // Accumulate totals
+            totalStats.warnings += stats.warnings
+            totalStats.errors += stats.errors
+            totalStats.analyzerWarnings += stats.analyzerWarnings
+            totalStats.testFailures += stats.testFailures
+            totalStats.testsPassed += stats.testsPassed
+            totalStats.testsSkipped += stats.testsSkipped
+            allAnnotations.append(contentsOf: annotations)
+            allSummaries.append(summary)
+
+            // Update overall conclusion (failure takes precedence)
+            if conclusion == .failure {
+                overallConclusion = .failure
+            } else if conclusion == .success && overallConclusion != .failure {
+                overallConclusion = .success
             }
-            if let testResults = result.testResults, !buildOnly {
-                allTestResults.append(testResults)
+
+            // Report to GitHub (each xcresult gets its own comment)
+            if !dryRun {
+                let filename = (absolutePath as NSString).lastPathComponent
+                    .replacingOccurrences(of: ".xcresult", with: "")
+                let identifier = "xproject-pr-report-\(filename)"
+
+                try await reportToGitHubWithIdentifier(
+                    annotations: annotations,
+                    summary: summary,
+                    checkName: checkName ?? config.checkName ?? "Xcode Build & Test",
+                    conclusion: conclusion,
+                    identifier: identifier
+                )
             }
         }
 
-        // Convert to annotations
-        var annotations = convertToAnnotations(
-            buildResults: allBuildResults,
-            testResults: allTestResults
-        )
-
-        // Apply filtering
-        annotations = filterAnnotations(annotations)
-
-        // Compute statistics
-        let stats = computeStatistics(buildResults: allBuildResults, testResults: allTestResults)
-
-        // Determine conclusion
-        let conclusion = determineConclusion(stats: stats, annotations: annotations)
-
-        // Generate summary
-        let summary = generateSummary(stats: stats, buildResults: allBuildResults, testResults: allTestResults)
+        // Combine all summaries for dry-run output
+        let combinedSummary = allSummaries.joined(separator: "\n\n---\n\n")
 
         if dryRun {
-            let annotationInfos = annotations.map { annotation in
+            let annotationInfos = allAnnotations.map { annotation in
                 AnnotationInfo(
                     path: annotation.path,
                     line: annotation.line,
@@ -112,35 +157,27 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             }
             return PRReportResult(
                 checkRunURL: nil,
-                annotationsPosted: annotations.count,
-                warningsCount: stats.warnings,
-                errorsCount: stats.errors,
-                testFailuresCount: stats.testFailures,
-                testsPassedCount: stats.testsPassed,
-                testsSkippedCount: stats.testsSkipped,
-                conclusion: conclusion,
-                summary: summary,
+                annotationsPosted: allAnnotations.count,
+                warningsCount: totalStats.warnings,
+                errorsCount: totalStats.errors,
+                testFailuresCount: totalStats.testFailures,
+                testsPassedCount: totalStats.testsPassed,
+                testsSkippedCount: totalStats.testsSkipped,
+                conclusion: overallConclusion,
+                summary: combinedSummary,
                 annotations: annotationInfos
             )
         }
 
-        // Report to GitHub
-        let reportResult = try await reportToGitHub(
-            annotations: annotations,
-            summary: summary,
-            checkName: checkName ?? config.checkName ?? "Xcode Build & Test",
-            conclusion: conclusion
-        )
-
         return PRReportResult(
-            checkRunURL: reportResult.checkRunURL?.absoluteString,
-            annotationsPosted: reportResult.annotationsPosted,
-            warningsCount: stats.warnings,
-            errorsCount: stats.errors,
-            testFailuresCount: stats.testFailures,
-            testsPassedCount: stats.testsPassed,
-            testsSkippedCount: stats.testsSkipped,
-            conclusion: conclusion
+            checkRunURL: nil,
+            annotationsPosted: allAnnotations.count,
+            warningsCount: totalStats.warnings,
+            errorsCount: totalStats.errors,
+            testFailuresCount: totalStats.testFailures,
+            testsPassedCount: totalStats.testsPassed,
+            testsSkippedCount: totalStats.testsSkipped,
+            conclusion: overallConclusion
         )
     }
 
@@ -368,6 +405,71 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         }
     }
 
+    /// Extract description from xcresult data (for footer display)
+    /// Returns "Test {devices}" or "Build {destination}" based on the xcresult content
+    func extractDescription(
+        path: String,
+        buildResults: BuildResults?,
+        testResults: TestResults?
+    ) -> String {
+        // Determine action type based on which results are present
+        let isTest = testResults != nil
+        let actionPrefix = isTest ? "Test" : "Build"
+
+        // Try to extract device info from test results
+        if let testResults = testResults, !testResults.devices.isEmpty {
+            let deviceDescriptions = testResults.devices.compactMap { device -> String? in
+                let osVersion = device.osVersion ?? ""
+                let deviceName = (device.deviceName ?? "").replacingOccurrences(of: " ", with: "")
+
+                // Skip generic/placeholder device names (Any iOS Device, Any iOS Simulator Device, etc.)
+                let lowerName = deviceName.lowercased()
+                if lowerName.contains("any") && (lowerName.contains("simulator") || lowerName.contains("device")) {
+                    return nil
+                }
+
+                // Build description based on what's available
+                if !osVersion.isEmpty && !deviceName.isEmpty {
+                    return "\(osVersion)_\(deviceName)"
+                } else if !deviceName.isEmpty {
+                    return deviceName
+                } else if !osVersion.isEmpty {
+                    return osVersion
+                }
+                return nil
+            }
+            if !deviceDescriptions.isEmpty {
+                return "\(actionPrefix) \(deviceDescriptions.joined(separator: ", "))"
+            }
+        }
+
+        // Fall back to parsing destination from filename
+        let filename = (path as NSString).lastPathComponent.replacingOccurrences(of: ".xcresult", with: "")
+
+        // Check for "-build" suffix (e.g., "tests-MyScheme-26.0_iPhone16Pro-build")
+        if filename.hasSuffix("-build") {
+            let stripped = String(filename.dropLast(6)) // remove "-build"
+            let parts = stripped.split(separator: "-")
+            if parts.count >= 2, let destination = parts.last {
+                return "Build \(destination)"
+            }
+            return "Build"
+        }
+
+        // Parse destination from filename (e.g., "tests-MyScheme-26.0_iPhone16Pro")
+        let parts = filename.split(separator: "-")
+        if parts.count >= 3, let destination = parts.last {
+            return "\(actionPrefix) \(destination)"
+        }
+
+        // Last resort: just the action type
+        if testResults != nil || buildResults != nil {
+            return actionPrefix
+        }
+
+        return ""
+    }
+
     private func convertLevel(_ level: Annotation.Level) -> AnnotationInfo.Level {
         switch level {
         case .failure:
@@ -429,131 +531,134 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
     private func generateSummary(
         stats: Statistics,
         buildResults: [BuildResults],
-        testResults: [TestResults]
+        testResults: [TestResults],
+        description: String
     ) -> String {
         var lines: [String] = []
 
-        // Collect all build issues
+        // Collect all build issues with source locations (for inline display)
         let allBuildIssues = buildResults.flatMap { $0.allIssues }
-        let issuesWithoutLocation = allBuildIssues.filter { $0.sourceLocation == nil }
-        let errorsWithoutLocation = issuesWithoutLocation.filter { $0.severity == .failure }
-        let warningsWithoutLocation = issuesWithoutLocation.filter { $0.severity == .warning }
-        let noticesWithoutLocation = issuesWithoutLocation.filter { $0.severity == .notice }
+        let issuesWithLocation = allBuildIssues.filter { $0.sourceLocation != nil }
+        let errorsWithLocation = issuesWithLocation.filter { $0.severity == .failure }
+        let warningsWithLocation = issuesWithLocation.filter { $0.severity == .warning }
+        let noticesWithLocation = issuesWithLocation.filter { $0.severity == .notice }
 
-        // Build results section
-        if stats.errors > 0 || stats.warnings > 0 || stats.analyzerWarnings > 0 {
-            lines.append("## Build Results")
+        // Build warnings section (using table format)
+        let totalWarnings = stats.warnings + stats.analyzerWarnings
+        if totalWarnings > 0 {
+            lines.append("| | **\(totalWarnings) Warning\(totalWarnings == 1 ? "" : "s")** |")
+            lines.append("|---|---|")
+
+            // Add warnings with source locations
+            for warning in warningsWithLocation.prefix(10) {
+                let location = warning.sourceLocation!
+                let relativePath = location.relativePath(from: workingDirectory)
+                let linkText = "\(relativePath)#L\(location.line)"
+                lines.append("| :warning: | [\(linkText)](\(relativePath)#L\(location.line)): \(warning.message) |")
+            }
+
+            // Add notices/analyzer warnings
+            for notice in noticesWithLocation.prefix(max(0, 10 - warningsWithLocation.count)) {
+                let location = notice.sourceLocation!
+                let relativePath = location.relativePath(from: workingDirectory)
+                let linkText = "\(relativePath)#L\(location.line)"
+                lines.append("| :warning: | [\(linkText)](\(relativePath)#L\(location.line)): \(notice.message) |")
+            }
+
+            let totalShown = min(10, warningsWithLocation.count + noticesWithLocation.count)
+            let totalAvailable = warningsWithLocation.count + noticesWithLocation.count
+            if totalAvailable > totalShown {
+                let remaining = totalAvailable - totalShown
+                lines.append("| | _...and \(remaining) more_ |")
+            }
             lines.append("")
-            if stats.errors > 0 {
-                lines.append("- :x: **\(stats.errors) error\(stats.errors == 1 ? "" : "s")**")
-            }
-            if stats.warnings > 0 {
-                lines.append("- :warning: **\(stats.warnings) warning\(stats.warnings == 1 ? "" : "s")**")
-            }
-            if stats.analyzerWarnings > 0 {
-                let plural = stats.analyzerWarnings == 1 ? "" : "s"
-                lines.append("- :information_source: **\(stats.analyzerWarnings) analyzer warning\(plural)**")
-            }
-            lines.append("")
-
-            // List errors without source location (these can't be posted as annotations)
-            if !errorsWithoutLocation.isEmpty {
-                lines.append("### Errors")
-                lines.append("")
-                for error in errorsWithoutLocation.prefix(10) {
-                    let target = error.targetName.map { " (\($0))" } ?? ""
-                    lines.append("- \(error.message)\(target)")
-                }
-                if errorsWithoutLocation.count > 10 {
-                    lines.append("")
-                    let remaining = errorsWithoutLocation.count - 10
-                    lines.append("_...and \(remaining) more error\(remaining == 1 ? "" : "s")_")
-                }
-                lines.append("")
-            }
-
-            // List warnings without source location
-            if !warningsWithoutLocation.isEmpty {
-                lines.append("### Warnings")
-                lines.append("")
-                for warning in warningsWithoutLocation.prefix(10) {
-                    let target = warning.targetName.map { " (\($0))" } ?? ""
-                    lines.append("- \(warning.message)\(target)")
-                }
-                if warningsWithoutLocation.count > 10 {
-                    lines.append("")
-                    let remaining = warningsWithoutLocation.count - 10
-                    lines.append("_...and \(remaining) more warning\(remaining == 1 ? "" : "s")_")
-                }
-                lines.append("")
-            }
-
-            // List notices without source location
-            if !noticesWithoutLocation.isEmpty {
-                lines.append("### Notices")
-                lines.append("")
-                for notice in noticesWithoutLocation.prefix(10) {
-                    let target = notice.targetName.map { " (\($0))" } ?? ""
-                    lines.append("- \(notice.message)\(target)")
-                }
-                if noticesWithoutLocation.count > 10 {
-                    lines.append("")
-                    let remaining = noticesWithoutLocation.count - 10
-                    lines.append("_...and \(remaining) more notice\(remaining == 1 ? "" : "s")_")
-                }
-                lines.append("")
-            }
         }
 
-        // Test results section
+        // Build errors section (using table format)
+        if stats.errors > 0 {
+            lines.append("| | **\(stats.errors) Error\(stats.errors == 1 ? "" : "s")** |")
+            lines.append("|---|---|")
+
+            for error in errorsWithLocation.prefix(10) {
+                let location = error.sourceLocation!
+                let relativePath = location.relativePath(from: workingDirectory)
+                let linkText = "\(relativePath)#L\(location.line)"
+                lines.append("| :x: | [\(linkText)](\(relativePath)#L\(location.line)): \(error.message) |")
+            }
+
+            if errorsWithLocation.count > 10 {
+                let remaining = errorsWithLocation.count - 10
+                lines.append("| | _...and \(remaining) more_ |")
+            }
+            lines.append("")
+        }
+
+        // Test results section (messages table)
         let totalTests = stats.testsPassed + stats.testFailures + stats.testsSkipped
         if totalTests > 0 {
-            lines.append("## Test Results")
-            lines.append("")
-            if stats.testFailures > 0 {
-                lines.append("- :x: **\(stats.testFailures) test\(stats.testFailures == 1 ? "" : "s") failed**")
-            }
-            lines.append("- :white_check_mark: \(stats.testsPassed) test\(stats.testsPassed == 1 ? "" : "s") passed")
-            if stats.testsSkipped > 0 {
-                lines.append("- :fast_forward: \(stats.testsSkipped) test\(stats.testsSkipped == 1 ? "" : "s") skipped")
-            }
-            lines.append("")
+            // Count messages (one per test target/summary)
+            let messageCount = testResults.count
+            if messageCount > 0 {
+                lines.append("| | **\(messageCount) Message\(messageCount == 1 ? "" : "s")** |")
+                lines.append("|---|---|")
 
-            // List failures
+                for result in testResults {
+                    let summary = result.summary
+                    let targetName = result.testNodes.first?.name ?? "Tests"
+                    let expectedSuffix = summary.expectedFailureCount > 0
+                        ? " (\(summary.expectedFailureCount) expected)"
+                        : ""
+                    // swiftlint:disable:next line_length
+                    let message = "\(targetName): Executed \(summary.totalCount) test\(summary.totalCount == 1 ? "" : "s"), with \(summary.failedCount) failure\(summary.failedCount == 1 ? "" : "s")\(expectedSuffix)"
+                    lines.append("| :book: | \(message) |")
+                }
+                lines.append("")
+            }
+
+            // List test failures
             let allFailures = testResults.flatMap { $0.failures }
             let collapsedFailures = config.collapseParallelTests
                 ? collapseParallelTests(allFailures)
                 : allFailures
 
             if !collapsedFailures.isEmpty {
-                lines.append("### Failed Tests")
-                lines.append("")
+                lines.append("| | **\(collapsedFailures.count) Test Failure\(collapsedFailures.count == 1 ? "" : "s")** |")
+                lines.append("|---|---|")
+
                 for failure in collapsedFailures.prefix(10) {
-                    lines.append("- `\(failure.testClass).\(failure.testName)`")
+                    lines.append("| :x: | `\(failure.testClass).\(failure.testName)` |")
                 }
                 if collapsedFailures.count > 10 {
-                    lines.append("")
-                    lines.append("_...and \(collapsedFailures.count - 10) more failure\(collapsedFailures.count - 10 == 1 ? "" : "s")_")
+                    let remaining = collapsedFailures.count - 10
+                    lines.append("| | _...and \(remaining) more_ |")
                 }
+                lines.append("")
             }
         }
 
         // No issues found
         if lines.isEmpty {
-            lines.append("## Build & Test Results")
+            lines.append("| | **Build & Test Results** |")
+            lines.append("|---|---|")
+            lines.append("| :white_check_mark: | All checks passed! |")
             lines.append("")
-            lines.append(":white_check_mark: All checks passed!")
+        }
+
+        // Add description footer (right-aligned)
+        if !description.isEmpty {
+            lines.append("<p align=\"right\">\(description)</p>")
         }
 
         return lines.joined(separator: "\n")
     }
 
-    private func reportToGitHub(
+    private func reportToGitHubWithIdentifier(
         annotations: [Annotation],
         summary: String,
         checkName: String,
-        conclusion: PRReportConclusion
-    ) async throws -> ReportResult {
+        conclusion: PRReportConclusion,
+        identifier: String
+    ) async throws {
         let context: GitHubContext
         do {
             context = try GitHubContext.fromEnvironment()
@@ -579,18 +684,10 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             throw PRReportError.forkPRDetected
         }
 
-        var result = ReportResult(
-            annotationsPosted: 0,
-            annotationsUpdated: 0,
-            annotationsDeleted: 0,
-            checkRunURL: nil,
-            commentURL: nil
-        )
-
         do {
             let commentReporter = PRCommentReporter(
                 context: context,
-                identifier: "xproject-pr-report",
+                identifier: identifier,
                 commentMode: .update
             )
 
@@ -605,11 +702,11 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             if config.inlineAnnotations {
                 let reviewReporter = PRReviewReporter(
                     context: context,
-                    identifier: "xproject-pr-report",
+                    identifier: identifier,
                     outOfRangeStrategy: .fallbackToComment
                 )
                 if !annotations.isEmpty {
-                    result = try await reviewReporter.report(annotations)
+                    _ = try await reviewReporter.report(annotations)
                 } else {
                     // Clean up stale overflow comments when no annotations
                     try await reviewReporter.cleanup()
@@ -618,7 +715,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 // Clean up overflow comment when inline annotations disabled
                 let overflowReporter = PRCommentReporter(
                     context: context,
-                    identifier: "xproject-pr-report-overflow",
+                    identifier: "\(identifier)-overflow",
                     commentMode: .update
                 )
                 try await overflowReporter.cleanup()
@@ -626,7 +723,5 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         } catch {
             throw PRReportError.reportingFailed(reason: error.localizedDescription)
         }
-
-        return result
     }
 }

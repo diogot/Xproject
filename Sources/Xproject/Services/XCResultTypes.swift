@@ -7,6 +7,7 @@
 
 @_exported import struct XCResultParser.BuildIssue
 @_exported import struct XCResultParser.BuildResults
+@_exported import struct XCResultParser.Device
 @_exported import struct XCResultParser.SourceLocation
 @_exported import struct XCResultParser.TestFailure
 @_exported import struct XCResultParser.TestResults
