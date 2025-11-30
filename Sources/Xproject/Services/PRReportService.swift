@@ -727,13 +727,13 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                     try await reviewReporter.cleanup()
                 }
             } else {
-                // Clean up overflow comment when inline annotations disabled
-                let overflowReporter = PRCommentReporter(
+                // Clean up review comments when inline annotations disabled
+                let reviewReporter = PRReviewReporter(
                     context: context,
-                    identifier: "\(identifier)-overflow",
-                    commentMode: .update
+                    identifier: identifier,
+                    outOfRangeStrategy: .fallbackToComment
                 )
-                try await overflowReporter.cleanup()
+                try await reviewReporter.cleanup()
             }
         } catch {
             throw PRReportError.reportingFailed(reason: error.localizedDescription)
