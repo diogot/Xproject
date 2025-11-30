@@ -136,7 +136,6 @@ public enum EnvironmentError: Error, LocalizedError {
     case invalidYAML(path: String, reason: String)
     case missingVariable(String, path: String)
     case invalidEnvironmentDirectory
-    case xcconfigDirectoryNotFound(String)
 
     public var errorDescription: String? {
         switch self {
@@ -156,8 +155,6 @@ public enum EnvironmentError: Error, LocalizedError {
             return "Variable '\(varName)' not found at path '\(path)' in environment"
         case .invalidEnvironmentDirectory:
             return "Invalid environment directory structure. env/ directory must exist in project root."
-        case let .xcconfigDirectoryNotFound(path):
-            return "XCConfig directory not found: \(path). Create the directory first."
         }
     }
 }

@@ -142,6 +142,11 @@ struct PRReportCommand: AsyncParsableCommand {
         )
 
         printResults(result)
+
+        // Exit with failure if there are errors
+        if result.conclusion == .failure {
+            throw ExitCode.failure
+        }
     }
 
     // swiftlint:disable:next cyclomatic_complexity
@@ -199,9 +204,41 @@ struct PRReportCommand: AsyncParsableCommand {
         // Final status
         print("")
         if dryRun {
+            // Print what would be posted
+            printDryRunDetails(result)
             print("✅ Dry-run complete (no changes made)")
         } else {
             print("✅ PR report complete")
+        }
+    }
+
+    private func printDryRunDetails(_ result: PRReportResult) {
+        // Print summary that would be posted
+        if let summary = result.summary {
+            print("📋 Summary that would be posted:")
+            print("─────────────────────────────────")
+            print(summary)
+            print("─────────────────────────────────")
+            print("")
+        }
+
+        // Print annotations that would be posted
+        if let annotations = result.annotations, !annotations.isEmpty {
+            print("📌 Annotations that would be posted:")
+            print("")
+            for annotation in annotations {
+                let levelEmoji = switch annotation.level {
+                case .failure: "❌"
+                case .warning: "⚠️"
+                case .notice: "ℹ️"
+                }
+                let location = annotation.column.map { "\(annotation.path):\(annotation.line):\($0)" }
+                    ?? "\(annotation.path):\(annotation.line)"
+                let title = annotation.title.map { "[\($0)] " } ?? ""
+                print("   \(levelEmoji) \(location)")
+                print("      \(title)\(annotation.message)")
+                print("")
+            }
         }
     }
 }

@@ -110,6 +110,12 @@ public struct PRReportResult: Sendable {
     /// Conclusion of the check run
     public let conclusion: PRReportConclusion
 
+    /// Summary markdown (populated in dry-run mode)
+    public let summary: String?
+
+    /// Annotations that would be posted (populated in dry-run mode)
+    public let annotations: [AnnotationInfo]?
+
     public init(
         checkRunURL: String? = nil,
         annotationsPosted: Int = 0,
@@ -118,7 +124,9 @@ public struct PRReportResult: Sendable {
         testFailuresCount: Int = 0,
         testsPassedCount: Int = 0,
         testsSkippedCount: Int = 0,
-        conclusion: PRReportConclusion = .neutral
+        conclusion: PRReportConclusion = .neutral,
+        summary: String? = nil,
+        annotations: [AnnotationInfo]? = nil
     ) {
         self.checkRunURL = checkRunURL
         self.annotationsPosted = annotationsPosted
@@ -128,6 +136,53 @@ public struct PRReportResult: Sendable {
         self.testsPassedCount = testsPassedCount
         self.testsSkippedCount = testsSkippedCount
         self.conclusion = conclusion
+        self.summary = summary
+        self.annotations = annotations
+    }
+}
+
+// MARK: - Annotation Info
+
+/// Simplified annotation info for display purposes
+public struct AnnotationInfo: Sendable {
+    /// File path relative to working directory
+    public let path: String
+
+    /// Line number
+    public let line: Int
+
+    /// Column number (optional)
+    public let column: Int?
+
+    /// Severity level
+    public let level: Level
+
+    /// Annotation message
+    public let message: String
+
+    /// Annotation title (e.g., test name or issue type)
+    public let title: String?
+
+    public enum Level: String, Sendable {
+        case failure
+        case warning
+        case notice
+    }
+
+    public init(
+        path: String,
+        line: Int,
+        column: Int? = nil,
+        level: Level,
+        message: String,
+        title: String? = nil
+    ) {
+        self.path = path
+        self.line = line
+        self.column = column
+        self.level = level
+        self.message = message
+        self.title = title
     }
 }
 

@@ -97,9 +97,19 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         let conclusion = determineConclusion(stats: stats, annotations: annotations)
 
         // Generate summary
-        let summary = generateSummary(stats: stats, testResults: allTestResults)
+        let summary = generateSummary(stats: stats, buildResults: allBuildResults, testResults: allTestResults)
 
         if dryRun {
+            let annotationInfos = annotations.map { annotation in
+                AnnotationInfo(
+                    path: annotation.path,
+                    line: annotation.line,
+                    column: annotation.column,
+                    level: convertLevel(annotation.level),
+                    message: annotation.message,
+                    title: annotation.title
+                )
+            }
             return PRReportResult(
                 checkRunURL: nil,
                 annotationsPosted: annotations.count,
@@ -108,7 +118,9 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 testFailuresCount: stats.testFailures,
                 testsPassedCount: stats.testsPassed,
                 testsSkippedCount: stats.testsSkipped,
-                conclusion: conclusion
+                conclusion: conclusion,
+                summary: summary,
+                annotations: annotationInfos
             )
         }
 
@@ -177,6 +189,10 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             }
         }
 
+        // Build file index for resolving test failure paths
+        // Test failures only contain the filename, so we need to find the full relative path
+        let swiftFiles = discoverSwiftFiles()
+
         // Test failures
         for results in testResults {
             let failures = config.collapseParallelTests
@@ -184,13 +200,67 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 : results.failures
 
             for failure in failures {
-                if let annotation = convertTestFailureToAnnotation(failure) {
+                if let annotation = convertTestFailureToAnnotation(failure, swiftFiles: swiftFiles) {
                     annotations.append(annotation)
                 }
             }
         }
 
         return annotations
+    }
+
+    /// Discover all Swift files in the working directory using git ls-files
+    private func discoverSwiftFiles() -> [String: String] {
+        // Build a map of filename -> relative path
+        var fileMap: [String: String] = [:]
+
+        // Try git ls-files first (faster and only tracked files)
+        let gitProcess = Process()
+        gitProcess.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        gitProcess.arguments = ["ls-files", "*.swift", "**/*.swift"]
+        gitProcess.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
+
+        let pipe = Pipe()
+        gitProcess.standardOutput = pipe
+        gitProcess.standardError = FileHandle.nullDevice
+
+        do {
+            try gitProcess.run()
+            gitProcess.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                for line in output.split(separator: "\n") {
+                    let relativePath = String(line)
+                    let filename = (relativePath as NSString).lastPathComponent
+                    // Only store first match (in case of duplicate filenames)
+                    if fileMap[filename] == nil {
+                        fileMap[filename] = relativePath
+                    }
+                }
+            }
+        } catch {
+            // Git not available, fall back to FileManager
+            if let enumerator = FileManager.default.enumerator(
+                at: URL(fileURLWithPath: workingDirectory),
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            ) {
+                for case let fileURL as URL in enumerator {
+                    guard fileURL.pathExtension == "swift" else { continue }
+                    let relativePath = fileURL.path.replacingOccurrences(
+                        of: workingDirectory + "/",
+                        with: ""
+                    )
+                    let filename = fileURL.lastPathComponent
+                    if fileMap[filename] == nil {
+                        fileMap[filename] = relativePath
+                    }
+                }
+            }
+        }
+
+        return fileMap
     }
 
     private func convertBuildIssueToAnnotation(_ issue: BuildIssue) -> Annotation? {
@@ -219,15 +289,27 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         )
     }
 
-    private func convertTestFailureToAnnotation(_ failure: TestFailure) -> Annotation? {
+    private func convertTestFailureToAnnotation(
+        _ failure: TestFailure,
+        swiftFiles: [String: String]
+    ) -> Annotation? {
         guard let location = failure.sourceLocation else {
             return nil
         }
 
-        let relativePath = location.relativePath(from: workingDirectory)
+        // Test failures only contain the filename, not the full path
+        // Try to resolve using the swift files map
+        let filename = (location.file as NSString).lastPathComponent
+        let resolvedPath: String
+        if let fullPath = swiftFiles[filename] {
+            resolvedPath = fullPath
+        } else {
+            // Fall back to relative path calculation (works for absolute paths)
+            resolvedPath = location.relativePath(from: workingDirectory)
+        }
 
         return Annotation(
-            path: relativePath,
+            path: resolvedPath,
             line: location.line,
             endLine: nil,
             column: location.column,
@@ -286,6 +368,17 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         }
     }
 
+    private func convertLevel(_ level: Annotation.Level) -> AnnotationInfo.Level {
+        switch level {
+        case .failure:
+            return .failure
+        case .warning:
+            return .warning
+        case .notice:
+            return .notice
+        }
+    }
+
     private struct Statistics {
         var warnings: Int = 0
         var errors: Int = 0
@@ -332,9 +425,20 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         return .success
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
-    private func generateSummary(stats: Statistics, testResults: [TestResults]) -> String {
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    private func generateSummary(
+        stats: Statistics,
+        buildResults: [BuildResults],
+        testResults: [TestResults]
+    ) -> String {
         var lines: [String] = []
+
+        // Collect all build issues
+        let allBuildIssues = buildResults.flatMap { $0.allIssues }
+        let issuesWithoutLocation = allBuildIssues.filter { $0.sourceLocation == nil }
+        let errorsWithoutLocation = issuesWithoutLocation.filter { $0.severity == .failure }
+        let warningsWithoutLocation = issuesWithoutLocation.filter { $0.severity == .warning }
+        let noticesWithoutLocation = issuesWithoutLocation.filter { $0.severity == .notice }
 
         // Build results section
         if stats.errors > 0 || stats.warnings > 0 || stats.analyzerWarnings > 0 {
@@ -351,6 +455,54 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 lines.append("- :information_source: **\(stats.analyzerWarnings) analyzer warning\(plural)**")
             }
             lines.append("")
+
+            // List errors without source location (these can't be posted as annotations)
+            if !errorsWithoutLocation.isEmpty {
+                lines.append("### Errors")
+                lines.append("")
+                for error in errorsWithoutLocation.prefix(10) {
+                    let target = error.targetName.map { " (\($0))" } ?? ""
+                    lines.append("- \(error.message)\(target)")
+                }
+                if errorsWithoutLocation.count > 10 {
+                    lines.append("")
+                    let remaining = errorsWithoutLocation.count - 10
+                    lines.append("_...and \(remaining) more error\(remaining == 1 ? "" : "s")_")
+                }
+                lines.append("")
+            }
+
+            // List warnings without source location
+            if !warningsWithoutLocation.isEmpty {
+                lines.append("### Warnings")
+                lines.append("")
+                for warning in warningsWithoutLocation.prefix(10) {
+                    let target = warning.targetName.map { " (\($0))" } ?? ""
+                    lines.append("- \(warning.message)\(target)")
+                }
+                if warningsWithoutLocation.count > 10 {
+                    lines.append("")
+                    let remaining = warningsWithoutLocation.count - 10
+                    lines.append("_...and \(remaining) more warning\(remaining == 1 ? "" : "s")_")
+                }
+                lines.append("")
+            }
+
+            // List notices without source location
+            if !noticesWithoutLocation.isEmpty {
+                lines.append("### Notices")
+                lines.append("")
+                for notice in noticesWithoutLocation.prefix(10) {
+                    let target = notice.targetName.map { " (\($0))" } ?? ""
+                    lines.append("- \(notice.message)\(target)")
+                }
+                if noticesWithoutLocation.count > 10 {
+                    lines.append("")
+                    let remaining = noticesWithoutLocation.count - 10
+                    lines.append("_...and \(remaining) more notice\(remaining == 1 ? "" : "s")_")
+                }
+                lines.append("")
+            }
         }
 
         // Test results section
@@ -427,22 +579,49 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             throw PRReportError.forkPRDetected
         }
 
-        let reporter = CheckRunReporter(
-            context: context,
-            name: checkName,
-            identifier: "xproject-pr-report"
+        var result = ReportResult(
+            annotationsPosted: 0,
+            annotationsUpdated: 0,
+            annotationsDeleted: 0,
+            checkRunURL: nil,
+            commentURL: nil
         )
 
-        let result: ReportResult
         do {
-            if config.inlineAnnotations && !annotations.isEmpty {
-                result = try await reporter.report(annotations)
+            let commentReporter = PRCommentReporter(
+                context: context,
+                identifier: "xproject-pr-report",
+                commentMode: .update
+            )
+
+            // Post summary comment if enabled, otherwise cleanup old comments
+            if config.postSummary {
+                try await commentReporter.postSummary(summary)
             } else {
-                result = ReportResult(annotationsPosted: 0, annotationsUpdated: 0, annotationsDeleted: 0, checkRunURL: nil, commentURL: nil)
+                try await commentReporter.cleanup()
             }
 
-            if config.postSummary {
-                try await reporter.postSummary(summary)
+            // Post inline annotations if enabled
+            if config.inlineAnnotations {
+                let reviewReporter = PRReviewReporter(
+                    context: context,
+                    identifier: "xproject-pr-report",
+                    outOfRangeStrategy: .fallbackToComment
+                )
+                if !annotations.isEmpty {
+                    result = try await reviewReporter.report(annotations)
+                } else {
+                    // Clean up stale overflow comments when no annotations
+                    try await reviewReporter.cleanup()
+                }
+            } else {
+                // Clean up overflow comment when inline annotations disabled
+                let overflowReporter = PRCommentReporter(
+                    context: context,
+                    identifier: "xproject-pr-report-overflow",
+                    commentMode: .update
+                )
+                try await overflowReporter.cleanup()
             }
         } catch {
             throw PRReportError.reportingFailed(reason: error.localizedDescription)

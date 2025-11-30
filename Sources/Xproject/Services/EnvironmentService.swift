@@ -541,12 +541,12 @@ public final class EnvironmentService {
         // 2. Check env/config.yml exists and is valid YAML
         let config = try loadEnvironmentConfig(workingDirectory: workingDirectory)
 
-        // 3. Check xcconfig_path directories exist (FAIL if missing, don't create)
+        // 3. Ensure xcconfig_path directories exist (create if missing)
         for target in config.targets {
             let targetURL = URL(fileURLWithPath: workingDirectory)
                 .appendingPathComponent(target.xcconfigPath)
             if !fileManager.fileExists(atPath: targetURL.path) {
-                throw EnvironmentError.xcconfigDirectoryNotFound(target.xcconfigPath)
+                try fileManager.createDirectory(at: targetURL, withIntermediateDirectories: true)
             }
         }
 
