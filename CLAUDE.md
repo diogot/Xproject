@@ -566,7 +566,7 @@ Add to your `Xproject.yml`:
 ```yaml
 pr_report:
   check_name: "Xcode Build & Test"      # Optional: custom check name
-  post_summary: true                     # Post summary comment
+  post_summary: true                     # Post summary (when false, still posts if issues)
   inline_annotations: true               # Post inline annotations
   fail_on_errors: true                   # Mark check as failed on build errors
   fail_on_test_failures: true            # Mark check as failed on test failures

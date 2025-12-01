@@ -5,6 +5,8 @@
 
 import Foundation
 
+private typealias InstalledXcode = (path: String, version: String)
+
 // MARK: - Xcode Client Protocol
 
 public protocol XcodeClientProtocol: Sendable {
@@ -18,6 +20,7 @@ public protocol XcodeClientProtocol: Sendable {
 
 // MARK: - Xcode Client
 
+// swiftlint:disable:next type_body_length
 public final class XcodeClient: XcodeClientProtocol, Sendable {
     private let workingDirectory: String
     private let configurationProvider: any ConfigurationProviding
@@ -236,19 +239,67 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         let installedXcodes = try await findInstalledXcodes()
 
-        // Find Xcode matching target version (using ~> semantic matching)
-        let matchingXcode = installedXcodes.first { xcodePath in
-            guard let version = try? fetchXcodeVersion(path: xcodePath) else {
-                return false
+        // Build version prefix for pessimistic matching (RubyGems ~> style)
+        // e.g., "26.1.1" → matches "26.1.*", "26.1" → matches "26.*"
+        let versionPrefix = buildVersionPrefix(from: targetVersion)
+
+        // Find all Xcodes matching the version prefix
+        let matchingXcodes = installedXcodes.compactMap { xcodePath -> (path: String, version: String)? in
+            guard let version = try? fetchXcodeVersion(path: xcodePath),
+                  version.hasPrefix(versionPrefix) else {
+                return nil
             }
-            return version.hasPrefix(String(targetVersion.prefix(3))) // Match major.minor
+            return (path: xcodePath, version: version)
         }
 
-        guard let xcodeApp = matchingXcode else {
+        guard !matchingXcodes.isEmpty else {
             throw XcodeClientError.xcodeVersionNotFound(targetVersion)
         }
 
-        return "DEVELOPER_DIR=\"\(xcodeApp)/Contents/Developer\""
+        // Prefer exact match, otherwise take the highest matching version
+        let bestMatch: InstalledXcode
+        if let exactMatch = matchingXcodes.first(where: { $0.version == targetVersion }) {
+            bestMatch = exactMatch
+        } else if let highestVersion = matchingXcodes.max(by: { compareVersions($0.version, $1.version) }) {
+            bestMatch = highestVersion
+        } else {
+            throw XcodeClientError.xcodeVersionNotFound(targetVersion)
+        }
+
+        return "DEVELOPER_DIR=\"\(bestMatch.path)/Contents/Developer\""
+    }
+
+    /// Build version prefix for pessimistic matching.
+    /// "26.1.1" → "26.1." (matches 26.1.x)
+    /// "26.1" → "26." (matches 26.x)
+    /// "26" → "26." (matches 26.x)
+    private func buildVersionPrefix(from version: String) -> String {
+        let components = version.split(separator: ".").map(String.init)
+
+        if components.count <= 1 {
+            // "26" → "26."
+            return "\(components.first ?? "")."
+        }
+
+        // Drop last component and join with dots, add trailing dot
+        // "26.1.1" → "26.1.", "26.1" → "26."
+        return components.dropLast().joined(separator: ".") + "."
+    }
+
+    /// Compare two version strings numerically.
+    /// Returns true if v1 < v2.
+    private func compareVersions(_ v1: String, _ v2: String) -> Bool {
+        let c1 = v1.split(separator: ".").compactMap { Int($0) }
+        let c2 = v2.split(separator: ".").compactMap { Int($0) }
+
+        for index in 0..<max(c1.count, c2.count) {
+            let n1 = index < c1.count ? c1[index] : 0
+            let n2 = index < c2.count ? c2[index] : 0
+            if n1 != n2 {
+                return n1 < n2
+            }
+        }
+        return false
     }
 
     private func findInstalledXcodes() async throws -> [String] {

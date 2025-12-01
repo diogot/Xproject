@@ -452,8 +452,8 @@ struct EnvironmentServiceTests {
         // No error means validation passed
     }
 
-    @Test("Validate throws when xcconfig directory missing")
-    func validateMissingXCConfigDir() throws {
+    @Test("Validate creates xcconfig directory when missing")
+    func validateCreatesMissingXCConfigDir() throws {
         let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-no-xcconfig"
 
         try createTestEnvironment(
@@ -471,16 +471,22 @@ struct EnvironmentServiceTests {
                   bundle_id: com.example.dev
                 """
             ]
-            // Note: no xcconfigPaths, so Config directory won't exist
+            // Note: no xcconfigPaths, so Config directory won't exist initially
         )
 
         defer { try? FileManager.default.removeItem(atPath: workingDir) }
 
         let service = EnvironmentService()
+        let configDir = workingDir + "/Config"
 
-        #expect(throws: EnvironmentError.self) {
-            try service.validateEnvironmentConfig(workingDirectory: workingDir)
-        }
+        // Directory should not exist before validation
+        #expect(!FileManager.default.fileExists(atPath: configDir))
+
+        // Validation should create the directory
+        try service.validateEnvironmentConfig(workingDirectory: workingDir)
+
+        // Directory should now exist
+        #expect(FileManager.default.fileExists(atPath: configDir))
     }
 
     @Test("Validate throws when required variable missing")

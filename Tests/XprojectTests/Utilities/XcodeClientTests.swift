@@ -1553,4 +1553,286 @@ struct XcodeClientTests {
         let cleanCommand = commands.first { $0.command.contains("rm -rf") && $0.command.contains("build/MyApp-ipa") }
         #expect(cleanCommand != nil)
     }
+
+    // MARK: - Version Matching Tests (RubyGems ~> style)
+
+    @Test("Version matching prefers exact match over newer versions")
+    func testVersionMatchingPrefersExactMatch() async throws {
+        // Given: Multiple Xcode versions installed, including exact match
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "26.1.1",  // Exact version requested
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": ReleaseConfiguration(
+                    scheme: "MyApp",
+                    configuration: "Release",
+                    output: "MyApp",
+                    destination: "iOS",
+                    type: "ios",
+                    appStoreAccount: "test@example.com",
+                    signing: nil
+                )]
+            ),
+            version: nil,
+            secrets: nil,
+            provision: nil,
+            prReport: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock finding multiple Xcodes (26.2 comes first but 26.1.1 is exact match)
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(
+                exitCode: 0,
+                output: "/Applications/Xcode-26.2.app\n/Applications/Xcode-26.1.1.app\n/Applications/Xcode-26.1.5.app"
+            )
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.2.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.2")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.1.1.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.1.1")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.1.5.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.1.5")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then - Should use exact match Xcode-26.1.1, not 26.2 or 26.1.5
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("DEVELOPER_DIR=\"/Applications/Xcode-26.1.1.app/Contents/Developer\"") == true)
+    }
+
+    @Test("Version matching selects highest version when no exact match")
+    func testVersionMatchingSelectsHighestWhenNoExactMatch() async throws {
+        // Given: Multiple Xcode versions installed, no exact match
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "26.1.0",  // Request 26.1.0, but only 26.1.1 and 26.1.5 available
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": ReleaseConfiguration(
+                    scheme: "MyApp",
+                    configuration: "Release",
+                    output: "MyApp",
+                    destination: "iOS",
+                    type: "ios",
+                    appStoreAccount: "test@example.com",
+                    signing: nil
+                )]
+            ),
+            version: nil,
+            secrets: nil,
+            provision: nil,
+            prReport: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock finding multiple 26.1.x Xcodes (no exact 26.1.0)
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(
+                exitCode: 0,
+                output: "/Applications/Xcode-26.1.1.app\n/Applications/Xcode-26.1.5.app"
+            )
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.1.1.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.1.1")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.1.5.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.1.5")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then - Should use highest matching version (26.1.5)
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("DEVELOPER_DIR=\"/Applications/Xcode-26.1.5.app/Contents/Developer\"") == true)
+    }
+
+    @Test("Version matching with two components matches major only")
+    func testVersionMatchingTwoComponentsMatchesMajor() async throws {
+        // Given: Config specifies "26.1" which should match any 26.x
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "26.1",  // Should match 26.x (any 26.*)
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": ReleaseConfiguration(
+                    scheme: "MyApp",
+                    configuration: "Release",
+                    output: "MyApp",
+                    destination: "iOS",
+                    type: "ios",
+                    appStoreAccount: "test@example.com",
+                    signing: nil
+                )]
+            ),
+            version: nil,
+            secrets: nil,
+            provision: nil,
+            prReport: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock finding Xcodes 26.2.1 and 26.1.1 (both match "26.")
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(
+                exitCode: 0,
+                output: "/Applications/Xcode-26.1.1.app\n/Applications/Xcode-26.2.1.app"
+            )
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.1.1.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.1.1")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.2.1.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.2.1")
+        )
+
+        // When
+        do {
+            try await xcodeClient.upload(environment: "production")
+        } catch {
+            // Expected to fail on altool execution
+        }
+
+        // Then - Should use highest matching version (26.2.1)
+        let commands = mockExecutor.executedCommands
+        let uploadCommand = commands.first { $0.command.contains("altool --upload-app") }
+
+        #expect(uploadCommand?.command.contains("DEVELOPER_DIR=\"/Applications/Xcode-26.2.1.app/Contents/Developer\"") == true)
+    }
+
+    @Test("Version matching excludes non-matching major.minor versions")
+    func testVersionMatchingExcludesNonMatchingVersions() async throws {
+        // Given: Config specifies "26.1.1" which should NOT match 26.2.x
+        let mockExecutor = MockCommandExecutor()
+        let mockFileManager = MockFileManager()
+
+        let config = XprojectConfiguration(
+            appName: "TestApp",
+            workspacePath: nil,
+            projectPaths: ["test": "Test.xcodeproj"],
+            setup: nil,
+            xcode: XcodeConfiguration(
+                version: "26.1.1",  // Should match 26.1.x only, NOT 26.2.x
+                buildPath: "build",
+                reportsPath: "reports",
+                tests: nil,
+                release: ["production": ReleaseConfiguration(
+                    scheme: "MyApp",
+                    configuration: "Release",
+                    output: "MyApp",
+                    destination: "iOS",
+                    type: "ios",
+                    appStoreAccount: "test@example.com",
+                    signing: nil
+                )]
+            ),
+            version: nil,
+            secrets: nil,
+            provision: nil,
+            prReport: nil
+        )
+
+        let mockConfigProvider = MockConfigurationProvider(config: config)
+        let xcodeClient = XcodeClient(
+            workingDirectory: "/test/project",
+            configurationProvider: mockConfigProvider,
+            commandExecutor: mockExecutor,
+            verbose: false
+        ) { mockFileManager }
+
+        // Mock finding only 26.2.x Xcodes (no 26.1.x)
+        mockExecutor.setResponse(
+            for: "mdfind \"kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'\" 2>/dev/null",
+            response: MockCommandExecutor.MockResponse(
+                exitCode: 0,
+                output: "/Applications/Xcode-26.2.app\n/Applications/Xcode-26.2.1.app"
+            )
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.2.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.2")
+        )
+        mockExecutor.setResponse(
+            for: "/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" \"/Applications/Xcode-26.2.1.app/Contents/Info.plist\"",
+            response: MockCommandExecutor.MockResponse(exitCode: 0, output: "26.2.1")
+        )
+
+        // When/Then - Should throw xcodeVersionNotFound
+        await #expect(throws: XcodeClientError.self) {
+            try await xcodeClient.upload(environment: "production")
+        }
+    }
 }
