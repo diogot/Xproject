@@ -5,6 +5,8 @@
 
 import Foundation
 
+private typealias InstalledXcode = (path: String, version: String)
+
 // MARK: - Xcode Client Protocol
 
 public protocol XcodeClientProtocol: Sendable {
@@ -18,6 +20,7 @@ public protocol XcodeClientProtocol: Sendable {
 
 // MARK: - Xcode Client
 
+// swiftlint:disable:next type_body_length
 public final class XcodeClient: XcodeClientProtocol, Sendable {
     private let workingDirectory: String
     private let configurationProvider: any ConfigurationProviding
@@ -254,9 +257,14 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         }
 
         // Prefer exact match, otherwise take the highest matching version
-        let bestMatch = matchingXcodes
-            .first { $0.version == targetVersion }
-            ?? matchingXcodes.sorted { compareVersions($0.version, $1.version) }.last!
+        let bestMatch: InstalledXcode
+        if let exactMatch = matchingXcodes.first(where: { $0.version == targetVersion }) {
+            bestMatch = exactMatch
+        } else if let highestVersion = matchingXcodes.max(by: { compareVersions($0.version, $1.version) }) {
+            bestMatch = highestVersion
+        } else {
+            throw XcodeClientError.xcodeVersionNotFound(targetVersion)
+        }
 
         return "DEVELOPER_DIR=\"\(bestMatch.path)/Contents/Developer\""
     }
@@ -284,9 +292,9 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let c1 = v1.split(separator: ".").compactMap { Int($0) }
         let c2 = v2.split(separator: ".").compactMap { Int($0) }
 
-        for i in 0..<max(c1.count, c2.count) {
-            let n1 = i < c1.count ? c1[i] : 0
-            let n2 = i < c2.count ? c2[i] : 0
+        for index in 0..<max(c1.count, c2.count) {
+            let n1 = index < c1.count ? c1[index] : 0
+            let n2 = index < c2.count ? c2[index] : 0
             if n1 != n2 {
                 return n1 < n2
             }

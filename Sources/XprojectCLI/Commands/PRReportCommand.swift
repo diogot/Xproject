@@ -227,10 +227,14 @@ struct PRReportCommand: AsyncParsableCommand {
             print("📌 Annotations that would be posted:")
             print("")
             for annotation in annotations {
-                let levelEmoji = switch annotation.level {
-                case .failure: "❌"
-                case .warning: "⚠️"
-                case .notice: "ℹ️"
+                let levelEmoji: String
+                switch annotation.level {
+                case .failure:
+                    levelEmoji = "❌"
+                case .warning:
+                    levelEmoji = "⚠️"
+                case .notice:
+                    levelEmoji = "ℹ️"
                 }
                 let location = annotation.column.map { "\(annotation.path):\(annotation.line):\($0)" }
                     ?? "\(annotation.path):\(annotation.line)"

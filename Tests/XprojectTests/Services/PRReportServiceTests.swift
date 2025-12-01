@@ -537,7 +537,7 @@ struct PRReportDescriptionExtractionTests {
             testResults: nil
         )
 
-        #expect(description == "")
+        #expect(description.isEmpty)
     }
 
     @Test("Extract description skips generic simulator device names", .tags(.unit, .prReport))

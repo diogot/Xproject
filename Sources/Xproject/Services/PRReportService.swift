@@ -4,6 +4,7 @@
 //
 // Service for posting build/test results to GitHub PRs
 //
+// swiftlint:disable file_length
 
 import Foundation
 import PRReporterKit
@@ -45,7 +46,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
 
     // MARK: - Public Methods
 
-    // swiftlint:disable:next function_body_length
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     public func report(
         xcresultPaths: [String],
         checkName: String?,
@@ -410,6 +411,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         }
     }
 
+    // swiftlint:disable cyclomatic_complexity
     /// Extract description from xcresult data (for footer display)
     /// Returns "Test {devices}" or "Build {destination}" based on the xcresult content
     func extractDescription(
@@ -483,6 +485,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
 
         return ""
     }
+    // swiftlint:enable cyclomatic_complexity
 
     private func convertLevel(_ level: Annotation.Level) -> AnnotationInfo.Level {
         switch level {
@@ -564,16 +567,18 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             lines.append("|---|---|")
 
             // Add warnings with source locations
+            // Note: warningsWithLocation is pre-filtered, so location should always exist
             for warning in warningsWithLocation.prefix(10) {
-                let location = warning.sourceLocation!
+                guard let location = warning.sourceLocation else { continue }
                 let relativePath = location.relativePath(from: workingDirectory)
                 let linkText = "\(relativePath)#L\(location.line)"
                 lines.append("| :warning: | [\(linkText)](\(relativePath)#L\(location.line)): \(warning.message) |")
             }
 
             // Add notices/analyzer warnings
+            // Note: noticesWithLocation is pre-filtered, so location should always exist
             for notice in noticesWithLocation.prefix(max(0, 10 - warningsWithLocation.count)) {
-                let location = notice.sourceLocation!
+                guard let location = notice.sourceLocation else { continue }
                 let relativePath = location.relativePath(from: workingDirectory)
                 let linkText = "\(relativePath)#L\(location.line)"
                 lines.append("| :warning: | [\(linkText)](\(relativePath)#L\(location.line)): \(notice.message) |")
@@ -593,8 +598,9 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             lines.append("| | **\(stats.errors) Error\(stats.errors == 1 ? "" : "s")** |")
             lines.append("|---|---|")
 
+            // Note: errorsWithLocation is pre-filtered, so location should always exist
             for error in errorsWithLocation.prefix(10) {
-                let location = error.sourceLocation!
+                guard let location = error.sourceLocation else { continue }
                 let relativePath = location.relativePath(from: workingDirectory)
                 let linkText = "\(relativePath)#L\(location.line)"
                 lines.append("| :x: | [\(linkText)](\(relativePath)#L\(location.line)): \(error.message) |")
@@ -666,6 +672,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         return lines.joined(separator: "\n")
     }
 
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     private func reportToGitHubWithIdentifier(
         annotations: [Annotation],
         summary: String,
