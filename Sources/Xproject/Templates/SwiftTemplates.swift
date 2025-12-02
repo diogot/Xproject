@@ -7,6 +7,37 @@ import Foundation
 
 /// Embedded Swift code templates for environment code generation
 public enum SwiftTemplates {
+    /// Valid Swift module name pattern: starts with letter or underscore, followed by letters, digits, or underscores
+    // swiftlint:disable:next force_try
+    private static let validModuleNamePattern = try! NSRegularExpression(pattern: "^[A-Za-z_][A-Za-z0-9_]*$")
+
+    /// Validates and sanitizes import module names
+    /// - Parameter imports: Raw import strings from configuration
+    /// - Returns: Validated module names (invalid names are filtered out with warnings)
+    private static func sanitizeImports(_ imports: [String]) -> [String] {
+        var validImports: [String] = []
+        var seen = Set<String>()
+
+        for moduleName in imports {
+            // Skip empty strings
+            guard !moduleName.isEmpty else { continue }
+
+            // Skip duplicates
+            guard !seen.contains(moduleName) else { continue }
+            seen.insert(moduleName)
+
+            // Validate module name matches Swift identifier pattern
+            let range = NSRange(moduleName.startIndex..., in: moduleName)
+            if validModuleNamePattern.firstMatch(in: moduleName, range: range) != nil {
+                validImports.append(moduleName)
+            } else {
+                print("warning: Invalid module name '\(moduleName)' in imports - must match pattern [A-Za-z_][A-Za-z0-9_]*, skipping")
+            }
+        }
+
+        return validImports.sorted()
+    }
+
     /// Generate a base EnvironmentService class
     /// - Parameters:
     ///   - properties: Array of property definitions
@@ -18,9 +49,8 @@ public enum SwiftTemplates {
         environmentName: String,
         imports: [String] = []
     ) -> String {
-        let additionalImports = Set(imports)
-            .filter { !$0.isEmpty }
-            .sorted()
+        let validatedImports = sanitizeImports(imports)
+        let additionalImports = validatedImports
             .map { "import \($0)" }
             .joined(separator: "\n")
         let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"
@@ -75,9 +105,8 @@ public enum SwiftTemplates {
         environmentName: String,
         imports: [String] = []
     ) -> String {
-        let additionalImports = Set(imports)
-            .filter { !$0.isEmpty }
-            .sorted()
+        let validatedImports = sanitizeImports(imports)
+        let additionalImports = validatedImports
             .map { "import \($0)" }
             .joined(separator: "\n")
         let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"

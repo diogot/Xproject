@@ -153,6 +153,49 @@ struct SwiftGenerationTests {
         #expect(importCount == 3)
     }
 
+    @Test("Templates reject malicious module names with code injection")
+    func testTemplatesRejectCodeInjection() throws {
+        let properties = [
+            SwiftProperty(name: "name", type: .string, value: "test")
+        ]
+
+        // Attempt various code injection attacks
+        let maliciousImports = [
+            "Foundation\nimport UIKit",           // Newline injection
+            "UIKit\n\nclass Malicious {}",        // Code injection via newline
+            "Module-Name",                         // Invalid character (hyphen)
+            "Module.Submodule",                    // Invalid character (dot)
+            "123Module",                           // Starts with digit
+            "Module Name",                         // Space in name
+            "Module;print(\"hacked\")",           // Semicolon injection
+            "_ValidModule",                        // Valid: starts with underscore
+            "Valid_Module_123"                     // Valid: underscores and digits
+        ]
+
+        let output = SwiftTemplates.generateBaseClass(
+            properties: properties,
+            environmentName: "dev",
+            imports: maliciousImports
+        )
+
+        // Should only contain valid modules
+        #expect(output.contains("import Foundation"))
+        #expect(output.contains("import Valid_Module_123"))
+        #expect(output.contains("import _ValidModule"))
+
+        // Should NOT contain any malicious content
+        #expect(!output.contains("UIKit"))
+        #expect(!output.contains("Malicious"))
+        #expect(!output.contains("hacked"))
+        #expect(!output.contains("Module-Name"))
+        #expect(!output.contains("Module.Submodule"))
+        #expect(!output.contains("123Module"))
+
+        // Count imports - should be exactly 3 (Foundation + 2 valid modules)
+        let importCount = output.components(separatedBy: "import ").count - 1
+        #expect(importCount == 3)
+    }
+
     // MARK: - CamelCase Conversion Tests
 
     @Test("CamelCase conversion works correctly")
