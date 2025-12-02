@@ -127,6 +127,32 @@ struct SwiftGenerationTests {
         #expect(extensionImportCount == 1)
     }
 
+    @Test("Templates filter empty strings and duplicates from imports")
+    func testTemplatesFilterInvalidImports() throws {
+        let properties = [
+            SwiftProperty(name: "name", type: .string, value: "test")
+        ]
+
+        let output = SwiftTemplates.generateBaseClass(
+            properties: properties,
+            environmentName: "dev",
+            imports: ["ModuleA", "", "ModuleA", "ModuleB", ""]
+        )
+
+        // Should contain Foundation and both modules (deduplicated)
+        #expect(output.contains("import Foundation"))
+        #expect(output.contains("import ModuleA"))
+        #expect(output.contains("import ModuleB"))
+
+        // Should NOT contain empty import
+        #expect(!output.contains("import \n"))
+        #expect(!output.contains("import\n"))
+
+        // Count imports - should be exactly 3 (Foundation, ModuleA, ModuleB)
+        let importCount = output.components(separatedBy: "import ").count - 1
+        #expect(importCount == 3)
+    }
+
     // MARK: - CamelCase Conversion Tests
 
     @Test("CamelCase conversion works correctly")

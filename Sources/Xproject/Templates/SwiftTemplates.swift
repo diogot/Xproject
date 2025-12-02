@@ -18,7 +18,11 @@ public enum SwiftTemplates {
         environmentName: String,
         imports: [String] = []
     ) -> String {
-        let additionalImports = imports.sorted().map { "import \($0)" }.joined(separator: "\n")
+        let additionalImports = Set(imports)
+            .filter { !$0.isEmpty }
+            .sorted()
+            .map { "import \($0)" }
+            .joined(separator: "\n")
         let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"
 
         var output = """
@@ -71,7 +75,11 @@ public enum SwiftTemplates {
         environmentName: String,
         imports: [String] = []
     ) -> String {
-        let additionalImports = imports.sorted().map { "import \($0)" }.joined(separator: "\n")
+        let additionalImports = Set(imports)
+            .filter { !$0.isEmpty }
+            .sorted()
+            .map { "import \($0)" }
+            .joined(separator: "\n")
         let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"
 
         var output = """
