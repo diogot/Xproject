@@ -623,3 +623,23 @@ func pushWithTagsFailure() {
         }
     }
 }
+
+// MARK: - Error Message Tests
+
+@Test
+func repositoryDirtyErrorMessage() {
+    // Given
+    let files = ["file1.swift", "file2.swift", "newfile.txt"]
+    let error = GitServiceError.repositoryDirty(files: files)
+
+    // When
+    let description = error.errorDescription
+
+    // Then
+    #expect(description != nil)
+    #expect(description!.contains("Found unexpected uncommitted changes in the working directory"))
+    #expect(description!.contains("file1.swift"))
+    #expect(description!.contains("file2.swift"))
+    #expect(description!.contains("newfile.txt"))
+    #expect(description!.contains("Commit or stash your changes before creating a version tag"))
+}

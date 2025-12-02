@@ -230,6 +230,7 @@ struct VersionTagCommand: AsyncParsableCommand {
     @Flag(name: .long, help: "Show what would be done without executing")
     var dryRun = false
 
+    // swiftlint:disable:next function_body_length
     func run() async throws {
         let configService = ConfigurationService(
             workingDirectory: globalOptions.resolvedWorkingDirectory,
@@ -271,6 +272,13 @@ struct VersionTagCommand: AsyncParsableCommand {
 
         // Create tag
         let gitService = GitService(workingDirectory: globalOptions.resolvedWorkingDirectory, executor: executor)
+
+        // Check repository is clean (replicates rake git:check_dirty_repository)
+        let isClean = try gitService.isRepositoryClean()
+        if !isClean {
+            let modifiedFiles = try gitService.getModifiedFiles()
+            throw GitServiceError.repositoryDirty(files: modifiedFiles)
+        }
 
         let tag = gitService.formatTag(
             format: tagFormat,
