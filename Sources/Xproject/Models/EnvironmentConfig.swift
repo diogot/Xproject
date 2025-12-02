@@ -113,10 +113,29 @@ public struct SwiftOutputConfig: Codable, Sendable {
     /// Output type: "base" for standalone class, "extension" for class extension
     public let type: SwiftOutputType?
 
-    public init(path: String, prefixes: [String], type: SwiftOutputType? = nil) {
+    /// Additional module imports (e.g., ["ModuleA"] when extension needs to import base class module)
+    public let imports: [String]
+
+    public init(path: String, prefixes: [String], type: SwiftOutputType? = nil, imports: [String] = []) {
         self.path = path
         self.prefixes = prefixes
         self.type = type
+        self.imports = imports
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        path = try container.decode(String.self, forKey: .path)
+        prefixes = try container.decode([String].self, forKey: .prefixes)
+        type = try container.decodeIfPresent(SwiftOutputType.self, forKey: .type)
+        imports = try container.decodeIfPresent([String].self, forKey: .imports) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case path
+        case prefixes
+        case type
+        case imports
     }
 }
 

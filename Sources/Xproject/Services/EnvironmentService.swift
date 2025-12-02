@@ -364,12 +364,14 @@ public final class EnvironmentService {
             case .base:
                 swiftCode = SwiftTemplates.generateBaseClass(
                     properties: properties,
-                    environmentName: environmentName
+                    environmentName: environmentName,
+                    imports: output.imports
                 )
             case .extension:
                 swiftCode = SwiftTemplates.generateExtension(
                     properties: properties,
-                    environmentName: environmentName
+                    environmentName: environmentName,
+                    imports: output.imports
                 )
             }
 
