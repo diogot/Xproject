@@ -11,8 +11,16 @@ public enum SwiftTemplates {
     /// - Parameters:
     ///   - properties: Array of property definitions
     ///   - environmentName: Name of the environment
+    ///   - imports: Additional module imports
     /// - Returns: Swift source code
-    public static func generateBaseClass(properties: [SwiftProperty], environmentName: String) -> String {
+    public static func generateBaseClass(
+        properties: [SwiftProperty],
+        environmentName: String,
+        imports: [String] = []
+    ) -> String {
+        let additionalImports = imports.sorted().map { "import \($0)" }.joined(separator: "\n")
+        let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"
+
         var output = """
         //
         // EnvironmentService.swift
@@ -20,7 +28,7 @@ public enum SwiftTemplates {
         // DO NOT EDIT - This file is auto-generated
         //
 
-        import Foundation
+        import Foundation\(importsSection)
 
         public final class EnvironmentService {
             public init() {}
@@ -56,8 +64,16 @@ public enum SwiftTemplates {
     /// - Parameters:
     ///   - properties: Array of property definitions
     ///   - environmentName: Name of the environment
+    ///   - imports: Additional module imports
     /// - Returns: Swift source code
-    public static func generateExtension(properties: [SwiftProperty], environmentName: String) -> String {
+    public static func generateExtension(
+        properties: [SwiftProperty],
+        environmentName: String,
+        imports: [String] = []
+    ) -> String {
+        let additionalImports = imports.sorted().map { "import \($0)" }.joined(separator: "\n")
+        let importsSection = additionalImports.isEmpty ? "" : "\n\(additionalImports)"
+
         var output = """
         //
         // EnvironmentService+Extension.swift
@@ -65,7 +81,7 @@ public enum SwiftTemplates {
         // DO NOT EDIT - This file is auto-generated
         //
 
-        import Foundation
+        import Foundation\(importsSection)
 
         extension EnvironmentService {
 

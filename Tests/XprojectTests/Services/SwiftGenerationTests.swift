@@ -61,6 +61,72 @@ struct SwiftGenerationTests {
         #expect(!outputWithoutURL.contains("private func url"))
     }
 
+    @Test("Base class template generates additional imports")
+    func testBaseClassWithImports() throws {
+        let properties = [
+            SwiftProperty(name: "name", type: .string, value: "test")
+        ]
+
+        let output = SwiftTemplates.generateBaseClass(
+            properties: properties,
+            environmentName: "dev",
+            imports: ["ModuleA", "ModuleB"]
+        )
+
+        #expect(output.contains("import Foundation"))
+        #expect(output.contains("import ModuleA"))
+        #expect(output.contains("import ModuleB"))
+        // Verify imports are sorted alphabetically
+        let foundationIndex = output.range(of: "import Foundation")!.lowerBound
+        let moduleAIndex = output.range(of: "import ModuleA")!.lowerBound
+        let moduleBIndex = output.range(of: "import ModuleB")!.lowerBound
+        #expect(foundationIndex < moduleAIndex)
+        #expect(moduleAIndex < moduleBIndex)
+    }
+
+    @Test("Extension template generates additional imports")
+    func testExtensionWithImports() throws {
+        let properties = [
+            SwiftProperty(name: "bundleIdentifier", type: .string, value: "com.example.app")
+        ]
+
+        let output = SwiftTemplates.generateExtension(
+            properties: properties,
+            environmentName: "dev",
+            imports: ["CoreModule"]
+        )
+
+        #expect(output.contains("import Foundation"))
+        #expect(output.contains("import CoreModule"))
+        #expect(output.contains("extension EnvironmentService"))
+    }
+
+    @Test("Templates without imports only include Foundation")
+    func testTemplatesWithoutImports() throws {
+        let properties = [
+            SwiftProperty(name: "name", type: .string, value: "test")
+        ]
+
+        let baseOutput = SwiftTemplates.generateBaseClass(
+            properties: properties,
+            environmentName: "dev"
+        )
+        let extensionOutput = SwiftTemplates.generateExtension(
+            properties: properties,
+            environmentName: "dev"
+        )
+
+        // Both should contain Foundation but no other imports
+        #expect(baseOutput.contains("import Foundation"))
+        #expect(extensionOutput.contains("import Foundation"))
+
+        // Count "import " occurrences - should be exactly 1
+        let baseImportCount = baseOutput.components(separatedBy: "import ").count - 1
+        let extensionImportCount = extensionOutput.components(separatedBy: "import ").count - 1
+        #expect(baseImportCount == 1)
+        #expect(extensionImportCount == 1)
+    }
+
     // MARK: - CamelCase Conversion Tests
 
     @Test("CamelCase conversion works correctly")
@@ -354,6 +420,74 @@ struct SwiftGenerationTests {
         // Root-level variables converted to camelCase: "environment_name" -> "environmentName", "api_url" -> "apiURL"
         #expect(content.contains("public let apiURL"))
         #expect(content.contains("public let environmentName"))
+    }
+
+    @Test("Generate extension with additional imports from configuration")
+    func testGenerateExtensionWithImports() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-imports-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        // Create directory structure
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated"),
+            withIntermediateDirectories: true
+        )
+
+        // Create config.yml with imports
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables:
+              BUNDLE_ID: apps.bundle_identifier
+
+        swift_generation:
+          outputs:
+            - path: Generated/EnvironmentService+App.swift
+              prefixes: [apps]
+              type: extension
+              imports: [CoreModule, SharedTypes]
+        """
+        let configURL = tempDir.appendingPathComponent("env/config.yml")
+        try config.write(to: configURL, atomically: true, encoding: .utf8)
+
+        // Create environment variables
+        let variables: [String: Any] = [
+            "apps": [
+                "bundle_identifier": "com.test.app"
+            ]
+        ]
+
+        // Generate Swift files
+        let service = EnvironmentService()
+        try service.generateSwiftFiles(
+            environmentName: "test",
+            variables: variables,
+            workingDirectory: tempPath,
+            dryRun: false
+        )
+
+        // Verify file was created
+        let outputURL = tempDir.appendingPathComponent("Generated/EnvironmentService+App.swift")
+        #expect(FileManager.default.fileExists(atPath: outputURL.path))
+
+        // Read and verify content includes imports
+        let content = try String(contentsOf: outputURL, encoding: .utf8)
+        #expect(content.contains("extension EnvironmentService"))
+        #expect(content.contains("import Foundation"))
+        #expect(content.contains("import CoreModule"))
+        #expect(content.contains("import SharedTypes"))
+        #expect(content.contains("public var bundleIdentifier"))
     }
 }
 
