@@ -7,7 +7,7 @@ import Foundation
 
 /// Embedded Swift code templates for environment code generation
 public enum SwiftTemplates {
-    /// Valid Swift module name pattern: starts with letter or underscore, followed by letters, digits, or underscores
+    // Valid Swift module name pattern: starts with letter or underscore, followed by letters, digits, or underscores
     // swiftlint:disable:next force_try
     private static let validModuleNamePattern = try! NSRegularExpression(pattern: "^[A-Za-z_][A-Za-z0-9_]*$")
 
