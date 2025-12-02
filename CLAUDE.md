@@ -237,6 +237,11 @@ swift_generation:
     - path: MyApp/Generated/EnvironmentService+App.swift
       prefixes: [apps, features]
       type: extension
+    # Extension in different module - imports base class module
+    - path: MyAppKit/Generated/EnvironmentService+Kit.swift
+      prefixes: [services]
+      type: extension
+      imports: [MyApp]
 ```
 
 Features:
@@ -246,6 +251,7 @@ Features:
 - **Type inference**: Automatic URL, String, Int, Bool detection
 - **Base class or extension**: Generate standalone class or extend existing
 - **URL handling**: Auto-detect URL properties by name suffix (`*URL`, `*Url`)
+- **Cross-module imports**: Extensions can import modules containing the base class via `imports` option
 
 Example generated code:
 ```swift

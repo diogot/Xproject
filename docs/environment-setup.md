@@ -180,6 +180,11 @@ swift_generation:
     - path: MyApp/Generated/EnvironmentService+App.swift
       prefixes: [apps, features]
       type: extension
+    # Extension in a different module that needs to import the base class module
+    - path: MyAppKit/Generated/EnvironmentService+Kit.swift
+      prefixes: [services]
+      type: extension
+      imports: [MyApp]  # Import module containing the base EnvironmentService class
 ```
 
 ### Output Types
@@ -189,6 +194,34 @@ swift_generation:
   - Can optionally add namespaces to include in the base class
 - **extension**: Creates an extension with computed `var` properties
   - **Requires explicit prefixes** to specify which namespaces to include
+
+### Cross-Module Imports
+
+When base and extension are in **different modules**, the extension file needs to import the module containing the base class. Use the `imports` option:
+
+```yaml
+swift_generation:
+  outputs:
+    - path: ModuleA/Generated/EnvironmentService.swift
+      type: base
+    - path: ModuleB/Generated/EnvironmentService+Feature.swift
+      type: extension
+      prefixes: [features]
+      imports: [ModuleA]  # Extension imports base class module
+```
+
+Generated output for the extension:
+
+```swift
+import Foundation
+import ModuleA
+
+extension EnvironmentService {
+    public var featureEnabled: Bool { true }
+}
+```
+
+**Note**: Module names are validated to prevent code injection. Only valid Swift identifiers matching `^[A-Za-z_][A-Za-z0-9_]*$` are accepted. Invalid names are skipped with a warning.
 
 ### Namespace Filtering
 
