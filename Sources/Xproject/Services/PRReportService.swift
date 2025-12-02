@@ -269,9 +269,13 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
 
         do {
             try gitProcess.run()
+
+            // Read output BEFORE waiting to avoid pipe buffer deadlock
+            // (if output exceeds ~64KB, the process blocks waiting to write)
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+
             gitProcess.waitUntilExit()
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8) {
                 for line in output.split(separator: "\n") {
                     let relativePath = String(line)
