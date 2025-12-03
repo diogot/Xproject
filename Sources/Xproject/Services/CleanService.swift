@@ -79,10 +79,9 @@ public final class CleanService: Sendable {
         let buildPath = config.buildPath()
         let reportsPath = config.reportsPath()
 
-        // Resolve to absolute paths
-        let baseURL = URL(fileURLWithPath: workingDirectory)
-        let absoluteBuildPath = baseURL.appendingPathComponent(buildPath).path
-        let absoluteReportsPath = baseURL.appendingPathComponent(reportsPath).path
+        // Resolve to absolute paths (honor already-absolute paths)
+        let absoluteBuildPath = absolutePath(from: buildPath)
+        let absoluteReportsPath = absolutePath(from: reportsPath)
 
         // Check what exists
         let buildExists = fileSystem.fileExists(atPath: absoluteBuildPath)
@@ -121,5 +120,15 @@ public final class CleanService: Sendable {
             buildRemoved: buildRemoved,
             reportsRemoved: reportsRemoved
         )
+    }
+
+    /// Convert a path to absolute, honoring already-absolute paths
+    private func absolutePath(from path: String) -> String {
+        if path.hasPrefix("/") {
+            return path
+        }
+        return URL(fileURLWithPath: workingDirectory)
+            .appendingPathComponent(path)
+            .path
     }
 }

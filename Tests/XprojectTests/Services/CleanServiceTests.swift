@@ -368,4 +368,58 @@ struct CleanServiceTests {
         #expect(mockFileSystem.wasRemoved(customBuildPath))
         #expect(mockFileSystem.wasRemoved(customReportsPath))
     }
+
+    @Test("Clean honors absolute paths without appending to working directory", .tags(.integration))
+    func cleanHonorsAbsolutePaths() throws {
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        try TestFileHelper.createDummyProject(in: tempDir, name: "TestProject")
+
+        // Use absolute paths in config
+        let absoluteBuildPath = "/tmp/ci-build-artifacts"
+        let absoluteReportsPath = "/tmp/ci-test-reports"
+
+        let yamlContent = """
+        app_name: TestApp
+        project_path:
+          cli: TestProject.xcodeproj
+        xcode:
+          version: "16.0"
+          build_path: \(absoluteBuildPath)
+          reports_path: \(absoluteReportsPath)
+        """
+        let configURL = tempDir.appendingPathComponent("Xproject.yml")
+        try yamlContent.write(to: configURL, atomically: true, encoding: .utf8)
+
+        let mockFileSystem = MockFileSystemOperator()
+        // Set the absolute paths as existing (NOT working dir + path)
+        mockFileSystem.setExists(absoluteBuildPath)
+        mockFileSystem.setExists(absoluteReportsPath)
+
+        let configService = ConfigurationService(
+            workingDirectory: tempDir.path,
+            customConfigPath: configURL.path
+        )
+
+        let service = CleanService(
+            workingDirectory: tempDir.path,
+            configurationProvider: configService,
+            fileSystem: mockFileSystem
+        )
+
+        let result = try service.clean(dryRun: false)
+
+        // Should use absolute paths directly, not append to working directory
+        #expect(result.buildRemoved == true)
+        #expect(result.reportsRemoved == true)
+        #expect(mockFileSystem.wasRemoved(absoluteBuildPath))
+        #expect(mockFileSystem.wasRemoved(absoluteReportsPath))
+
+        // Verify it didn't try to remove the wrong nested path
+        let wrongBuildPath = tempDir.appendingPathComponent(absoluteBuildPath).path
+        #expect(!mockFileSystem.wasRemoved(wrongBuildPath))
+    }
 }
