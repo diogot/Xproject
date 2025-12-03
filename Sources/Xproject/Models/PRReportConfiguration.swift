@@ -116,7 +116,7 @@ public struct PRReportResult: Sendable {
     /// Annotations that would be posted (populated in dry-run mode)
     public let annotations: [AnnotationInfo]?
 
-    /// Reason why GitHub posting was skipped (nil if posted successfully or dry-run)
+    /// Reason why GitHub posting was skipped due to context issues (nil if posted successfully or in explicit dry-run mode)
     public let skipReason: SkipReason?
 
     /// Reasons why GitHub posting may be skipped

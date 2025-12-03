@@ -61,8 +61,9 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             throw PRReportError.noXcresultBundles(directory: absoluteReportsPath())
         }
 
-        // Check GitHub context availability (unless explicitly dry-run)
-        let (effectiveDryRun, skipReason) = dryRun ? (true, nil) : checkGitHubContextAvailability()
+        // Check GitHub context availability and preserve skipReason even in dry-run
+        let (contextIssue, skipReason) = checkGitHubContextAvailability()
+        let effectiveDryRun = dryRun || contextIssue
 
         // Aggregate stats across all xcresults
         var totalStats = Statistics()
