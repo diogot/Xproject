@@ -273,6 +273,7 @@ public enum GitServiceError: Error, LocalizedError, Sendable {
     case pushFailed(output: String)
     case unableToGetBranch(output: String)
     case unexpectedChanges(expected: [String], found: [String])
+    case repositoryDirty(files: [String])
 
     public var errorDescription: String? {
         switch self {
@@ -325,6 +326,16 @@ public enum GitServiceError: Error, LocalizedError, Sendable {
             But found changes in: \(found.joined(separator: ", "))
 
             ✅ Commit or stash unexpected changes before bumping version.
+            """
+
+        case .repositoryDirty(let files):
+            return """
+            Found unexpected uncommitted changes in the working directory.
+
+            Found these changes:
+            \(files.map { "  - \($0)" }.joined(separator: "\n"))
+
+            ✅ Commit or stash your changes before creating a version tag.
             """
         }
     }

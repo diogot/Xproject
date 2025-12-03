@@ -53,6 +53,7 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 - `BuildService`: Handles building for tests with Xcode discovery
 - `TestService`: Orchestrates test workflows including build and test phases across multiple schemes/destinations
 - `ReleaseService`: Orchestrates release workflow (archive → IPA generation → App Store upload)
+- `CleanService`: Removes build artifacts and test reports directories
 - `EnvironmentService`: Manages environment configurations, xcconfig generation, and variable mapping
 - `VersionService`: Handles version bumping and build number calculation from git commits
 - `GitService`: Git operations (commit, tag, push) with safety checks
@@ -95,6 +96,7 @@ xp config validate # Validate configuration files with comprehensive checks
 xp build           # Build for testing (supports --scheme, --clean, --destination)
 xp test            # Run tests (supports --scheme, --clean, --skip-build, --destination)
 xp release         # Create release builds (archive, IPA, upload with --archive-only, --skip-upload, --upload-only)
+xp clean           # Remove build artifacts and test reports (supports --dry-run)
 xp env list        # List available environments
 xp env show        # Show environment variables (current or specific)
 xp env current     # Show currently activated environment
@@ -128,6 +130,7 @@ xp test --config my-config.yml --scheme MyApp --clean --dry-run
 xp release production-ios
 xp release dev-ios --archive-only --dry-run
 xp setup --dry-run
+xp clean --dry-run
 xp config --config custom.yml validate
 xp env list
 xp env load dev --dry-run

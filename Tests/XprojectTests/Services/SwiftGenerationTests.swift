@@ -293,10 +293,10 @@ struct SwiftGenerationTests {
         // Filter for "apps" namespace (includes nested ios)
         let filtered = helper.filterVariables(variables, prefixes: ["apps"])
 
-        // Should have all from apps namespace (including nested ios)
+        // Should have all from apps namespace (leaf keys only, no namespace prefix)
         #expect(filtered.keys.contains("bundleIdentifier"))
         #expect(filtered.keys.contains("displayName"))
-        #expect(filtered.keys.contains("iosAppIconName"))
+        #expect(filtered.keys.contains("appIconName"))
 
         // Should not have root-level variables or other namespaces
         #expect(!filtered.keys.contains("environmentName"))
@@ -327,7 +327,7 @@ struct SwiftGenerationTests {
         #expect(!filtered.keys.contains("bundleIdentifier"))
     }
 
-    @Test("Flatten nested dictionary")
+    @Test("Flatten nested dictionary keeps only leaf keys")
     func testFlattenDictionary() throws {
         let nested: [String: Any] = [
             "bundle_identifier": "com.example",
@@ -339,8 +339,57 @@ struct SwiftGenerationTests {
         let helper = TestHelper()
         let flattened = helper.flattenDictionary(nested)
 
+        // Leaf keys are preserved without namespace prefix
         #expect(flattened["bundle_identifier"] as? String == "com.example")
-        #expect(flattened["ios_icon"] as? String == "AppIcon")
+        #expect(flattened["icon"] as? String == "AppIcon")
+
+        // Namespace key should not exist
+        #expect(flattened["ios_icon"] == nil)
+    }
+
+    @Test("Flatten deeply nested dictionary keeps only leaf keys")
+    func testFlattenDeeplyNestedDictionary() throws {
+        let nested: [String: Any] = [
+            "apps": [
+                "ios": [
+                    "provision_profile": "Development"
+                ],
+                "bundle_identifier": "com.example"
+            ]
+        ]
+
+        let helper = TestHelper()
+        let flattened = helper.flattenDictionary(nested)
+
+        // Only leaf keys should exist
+        #expect(flattened["provision_profile"] as? String == "Development")
+        #expect(flattened["bundle_identifier"] as? String == "com.example")
+
+        // Intermediate keys should not exist
+        #expect(flattened["apps_ios_provision_profile"] == nil)
+        #expect(flattened["ios_provision_profile"] == nil)
+        #expect(flattened["apps_bundle_identifier"] == nil)
+    }
+
+    @Test("Flatten dictionary with duplicate leaf keys uses last value")
+    func testFlattenDictionaryDuplicateLeafKeys() throws {
+        let nested: [String: Any] = [
+            "ios": [
+                "name": "iOS App"
+            ],
+            "tvos": [
+                "name": "tvOS App"
+            ]
+        ]
+
+        let helper = TestHelper()
+        let flattened = helper.flattenDictionary(nested)
+
+        // Only one "name" key should exist (last one wins due to merge)
+        #expect(flattened["name"] != nil)
+        // The value depends on dictionary iteration order, but should be one of them
+        let name = flattened["name"] as? String
+        #expect(name == "iOS App" || name == "tvOS App")
     }
 
     // MARK: - Integration Tests
@@ -632,17 +681,16 @@ private struct TestHelper {
         return filtered
     }
 
-    func flattenDictionary(_ dict: [String: Any], prefix: String = "") -> [String: Any] {
+    func flattenDictionary(_ dict: [String: Any]) -> [String: Any] {
         var result: [String: Any] = [:]
 
         for (key, value) in dict {
-            let newKey = prefix.isEmpty ? key : "\(prefix)_\(key)"
-
             if let nestedDict = value as? [String: Any] {
-                let flattened = flattenDictionary(nestedDict, prefix: newKey)
+                let flattened = flattenDictionary(nestedDict)
                 result.merge(flattened) { _, new in new }
             } else {
-                result[newKey] = value
+                // Terminal value - use only the leaf key
+                result[key] = value
             }
         }
 

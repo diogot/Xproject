@@ -129,7 +129,7 @@ struct AppKeysTemplateTests {
         #expect(generated.contains("private extension Array where Element == UInt8"))
         #expect(generated.contains("var deobfuscated: [UInt8]"))
         #expect(generated.contains("let halfCount = count / 2"))
-        #expect(generated.contains("zip(xoredHalf, keyHalf).map(^)"))
+        #expect(generated.contains("Swift.zip(xoredHalf, keyHalf).map(^)"))
     }
 
     @Test("Handle empty secrets")

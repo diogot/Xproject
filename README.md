@@ -103,6 +103,7 @@ A modern Swift command line tool for Xcode project build automation.
 - `xp build` - Build the Xcode project for testing
 - `xp test` - Run unit tests with multi-destination support
 - `xp release` - Create release builds with archive, IPA generation, and App Store upload
+- `xp clean` - Remove build artifacts and test reports directories
 - `xp config` - Manage and validate project configuration
 - `xp env` - Manage environment configurations (dev, staging, production)
 - `xp secrets` - Manage encrypted secrets with EJSON and XOR obfuscation
@@ -133,6 +134,9 @@ xp test --scheme MyApp --clean --destination "platform=iOS Simulator,OS=18.5,nam
 
 # Setup with dry-run preview
 xp setup --dry-run
+
+# Clean build artifacts
+xp clean --dry-run
 
 # Validate configuration
 xp config validate

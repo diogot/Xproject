@@ -140,7 +140,7 @@ public enum AppKeysTemplate {
             /// Splits the array in half and XORs the two halves together to recover
             /// the original bytes.
             var deobfuscated: [UInt8] {
-                guard count > 0, count % 2 == 0 else {
+                guard !isEmpty, count % 2 == 0 else {
                     return []
                 }
 
@@ -149,7 +149,7 @@ public enum AppKeysTemplate {
                 let keyHalf = suffix(halfCount)
 
                 // XOR the two halves to recover original bytes
-                return zip(xoredHalf, keyHalf).map(^)
+                return Swift.zip(xoredHalf, keyHalf).map(^)
             }
         }
 
@@ -220,11 +220,12 @@ public enum AppKeysTemplate {
 
         for (index, byte) in bytes.enumerated() {
             if index > 0 {
-                result += ", "
-            }
-
-            if index > 0 && index % bytesPerLine == 0 {
-                result += "\n        "
+                result += ","
+                if index % bytesPerLine == 0 {
+                    result += "\n        "
+                } else {
+                    result += " "
+                }
             }
 
             result += "\(byte)"

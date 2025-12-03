@@ -414,23 +414,20 @@ public final class EnvironmentService {
         return filtered
     }
 
-    /// Flatten nested dictionary to dot notation
+    /// Flatten nested dictionary, keeping only leaf key names
     /// - Parameter dict: Nested dictionary
-    /// - Parameter prefix: Current key prefix
-    /// - Returns: Flattened dictionary with underscore notation
-    private func flattenDictionary(_ dict: [String: Any], prefix: String = "") -> [String: Any] {
+    /// - Returns: Flattened dictionary with leaf keys only
+    private func flattenDictionary(_ dict: [String: Any]) -> [String: Any] {
         var result: [String: Any] = [:]
 
         for (key, value) in dict {
-            let newKey = prefix.isEmpty ? key : "\(prefix)_\(key)"
-
             if let nestedDict = value as? [String: Any] {
                 // Recursively flatten
-                let flattened = flattenDictionary(nestedDict, prefix: newKey)
+                let flattened = flattenDictionary(nestedDict)
                 result.merge(flattened) { _, new in new }
             } else {
-                // Terminal value
-                result[newKey] = value
+                // Terminal value - use only the leaf key
+                result[key] = value
             }
         }
 
