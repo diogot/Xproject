@@ -620,15 +620,25 @@ xp pr-report --dry-run                 # Preview without posting
 - **Models**: `PRReportConfiguration`, `PRReportResult`, `PRReportError` in Sources/Xproject/Models/PRReportConfiguration.swift
 - **Services**: `PRReportService` - Parses xcresult bundles, converts to annotations, reports to GitHub
 - **Commands**: `PRReportCommand` with options for xcresult paths, check name, build/test modes
-- **Tests**: 30 dedicated tests for PRReportService
+- **Tests**: 46 dedicated tests for PRReportService
 - **Dependencies**: `swift-pr-reporter` (PRReporterKit) and `swift-xcresult-parser` (XCResultParser)
 
 ### Features
 
 - **Glob pattern filtering**: Use patterns like `Pods/**` or `**/Generated/**` to ignore files
 - **Parallel test collapsing**: Deduplicate failures from parallel test runs
-- **Fork PR handling**: Gracefully handles fork PRs where Checks API is unavailable
+- **Graceful non-PR handling**: Automatically switches to dry-run mode when not in a PR context
 - **Summary generation**: Markdown summary with error/warning/test counts
+
+### Graceful Non-PR Handling
+
+When running outside a PR context (e.g., push to main after merge, local development), the command automatically switches to dry-run mode instead of failing:
+
+- **Not in GitHub Actions**: Displays results without posting
+- **Push event (no PR number)**: Shows results with informative skip message
+- **Fork PR**: Handles read-only token gracefully
+
+This allows the same CI workflow to run on both PR and non-PR events without conditional logic:
 
 ## Current System Overview (Reference Only)
 

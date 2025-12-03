@@ -149,7 +149,7 @@ struct PRReportCommand: AsyncParsableCommand {
         }
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private func printResults(_ result: PRReportResult) {
         print("")
         print("📈 Results:")
@@ -204,9 +204,18 @@ struct PRReportCommand: AsyncParsableCommand {
         // Final status
         print("")
         if dryRun {
-            // Print what would be posted
+            // Explicit dry-run mode
             printDryRunDetails(result)
+            if let skipReason = result.skipReason {
+                // Also show context issue for informational purposes
+                print("ℹ️  Note: GitHub posting would have been skipped anyway: \(skipReason)")
+            }
             print("✅ Dry-run complete (no changes made)")
+        } else if let skipReason = result.skipReason {
+            // GitHub posting was skipped due to context issues (not explicit dry-run)
+            printDryRunDetails(result)
+            print("⚠️  GitHub posting skipped: \(skipReason)")
+            print("   Results displayed above (no changes made)")
         } else {
             print("✅ PR report complete")
         }

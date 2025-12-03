@@ -295,6 +295,7 @@ struct PRReportResultTests {
         #expect(result.testsPassedCount == 0)
         #expect(result.testsSkippedCount == 0)
         #expect(result.conclusion == .neutral)
+        #expect(result.skipReason == nil)
     }
 
     @Test("Result can be created with custom values", .tags(.unit, .prReport))
@@ -318,6 +319,50 @@ struct PRReportResultTests {
         #expect(result.testsPassedCount == 100)
         #expect(result.testsSkippedCount == 5)
         #expect(result.conclusion == .failure)
+    }
+
+    @Test("Result can be created with skipReason", .tags(.unit, .prReport))
+    func resultWithSkipReason() throws {
+        let result = PRReportResult(
+            annotationsPosted: 3,
+            warningsCount: 2,
+            conclusion: .success,
+            skipReason: .missingPullRequestNumber
+        )
+
+        #expect(result.skipReason == .missingPullRequestNumber)
+        #expect(result.annotationsPosted == 3)
+        #expect(result.warningsCount == 2)
+    }
+}
+
+// MARK: - PRReportResult.SkipReason Tests
+
+@Suite("PRReportResult.SkipReason Tests")
+struct PRReportSkipReasonTests {
+    @Test("notInGitHubActions has correct description", .tags(.unit, .prReport))
+    func notInGitHubActionsDescription() throws {
+        let reason = PRReportResult.SkipReason.notInGitHubActions
+        #expect(reason.description == "Not running in GitHub Actions environment")
+    }
+
+    @Test("missingPullRequestNumber has correct description", .tags(.unit, .prReport))
+    func missingPullRequestNumberDescription() throws {
+        let reason = PRReportResult.SkipReason.missingPullRequestNumber
+        #expect(reason.description == "Not a pull request event (no PR number available)")
+    }
+
+    @Test("forkPR has correct description", .tags(.unit, .prReport))
+    func forkPRDescription() throws {
+        let reason = PRReportResult.SkipReason.forkPR
+        #expect(reason.description == "Fork PR detected (read-only token)")
+    }
+
+    @Test("SkipReason conforms to CustomStringConvertible", .tags(.unit, .prReport))
+    func skipReasonCustomStringConvertible() throws {
+        let reason: PRReportResult.SkipReason = .notInGitHubActions
+        let stringValue = String(describing: reason)
+        #expect(stringValue == "Not running in GitHub Actions environment")
     }
 }
 

@@ -116,6 +116,27 @@ public struct PRReportResult: Sendable {
     /// Annotations that would be posted (populated in dry-run mode)
     public let annotations: [AnnotationInfo]?
 
+    /// Reason why GitHub posting was skipped due to context issues (nil if posted successfully or in explicit dry-run mode)
+    public let skipReason: SkipReason?
+
+    /// Reasons why GitHub posting may be skipped
+    public enum SkipReason: Sendable, CustomStringConvertible {
+        case notInGitHubActions
+        case missingPullRequestNumber
+        case forkPR
+
+        public var description: String {
+            switch self {
+            case .notInGitHubActions:
+                return "Not running in GitHub Actions environment"
+            case .missingPullRequestNumber:
+                return "Not a pull request event (no PR number available)"
+            case .forkPR:
+                return "Fork PR detected (read-only token)"
+            }
+        }
+    }
+
     public init(
         checkRunURL: String? = nil,
         annotationsPosted: Int = 0,
@@ -126,7 +147,8 @@ public struct PRReportResult: Sendable {
         testsSkippedCount: Int = 0,
         conclusion: PRReportConclusion = .neutral,
         summary: String? = nil,
-        annotations: [AnnotationInfo]? = nil
+        annotations: [AnnotationInfo]? = nil,
+        skipReason: SkipReason? = nil
     ) {
         self.checkRunURL = checkRunURL
         self.annotationsPosted = annotationsPosted
@@ -138,6 +160,7 @@ public struct PRReportResult: Sendable {
         self.conclusion = conclusion
         self.summary = summary
         self.annotations = annotations
+        self.skipReason = skipReason
     }
 }
 
