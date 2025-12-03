@@ -51,8 +51,8 @@ struct CleanCommand: AsyncParsableCommand {
                 return
             }
 
-            // Show what was removed
-            print("Removing:")
+            // Show what was/would be removed
+            print(dryRun ? "Would remove:" : "Removed:")
             if result.buildRemoved {
                 print("  • \(result.buildPath)")
             }
