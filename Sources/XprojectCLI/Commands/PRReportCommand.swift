@@ -203,8 +203,13 @@ struct PRReportCommand: AsyncParsableCommand {
 
         // Final status
         print("")
-        if dryRun {
-            // Print what would be posted
+        if let skipReason = result.skipReason {
+            // GitHub posting was skipped due to context issues
+            printDryRunDetails(result)
+            print("⚠️  GitHub posting skipped: \(skipReason)")
+            print("   Results displayed above (no changes made)")
+        } else if dryRun {
+            // Explicit dry-run mode
             printDryRunDetails(result)
             print("✅ Dry-run complete (no changes made)")
         } else {

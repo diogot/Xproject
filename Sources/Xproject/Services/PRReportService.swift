@@ -61,6 +61,9 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             throw PRReportError.noXcresultBundles(directory: absoluteReportsPath())
         }
 
+        // Check GitHub context availability (unless explicitly dry-run)
+        let (effectiveDryRun, skipReason) = dryRun ? (true, nil) : checkGitHubContextAvailability()
+
         // Aggregate stats across all xcresults
         var totalStats = Statistics()
         var allAnnotations: [Annotation] = []
@@ -132,7 +135,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             }
 
             // Report to GitHub (each xcresult gets its own comment)
-            if !dryRun {
+            if !effectiveDryRun {
                 let filename = (absolutePath as NSString).lastPathComponent
                     .replacingOccurrences(of: ".xcresult", with: "")
                 let identifier = "xproject-pr-report-\(filename)"
@@ -150,7 +153,7 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
         // Combine all summaries for dry-run output
         let combinedSummary = allSummaries.joined(separator: "\n\n---\n\n")
 
-        if dryRun {
+        if effectiveDryRun {
             let annotationInfos = allAnnotations.map { annotation in
                 AnnotationInfo(
                     path: annotation.path,
@@ -171,7 +174,8 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
                 testsSkippedCount: totalStats.testsSkipped,
                 conclusion: overallConclusion,
                 summary: combinedSummary,
-                annotations: annotationInfos
+                annotations: annotationInfos,
+                skipReason: skipReason
             )
         }
 
@@ -215,6 +219,31 @@ public final class PRReportService: PRReportServiceProtocol, Sendable {
             return path
         }
         return "\(workingDirectory)/\(path)"
+    }
+
+    /// Check if GitHub context is available for posting.
+    /// Returns (shouldDryRun, skipReason) tuple.
+    private func checkGitHubContextAvailability() -> (Bool, PRReportResult.SkipReason?) {
+        // Try to get GitHub context from environment
+        do {
+            let context = try GitHubContext.fromEnvironment()
+
+            // Check if we have a PR number
+            if context.pullRequest == nil {
+                return (true, .missingPullRequestNumber)
+            }
+
+            // Check if this is a fork PR (read-only token)
+            if context.isForkPR {
+                return (true, .forkPR)
+            }
+
+            // Context is valid - can post to GitHub
+            return (false, nil)
+        } catch {
+            // Failed to get context - not in GitHub Actions environment
+            return (true, .notInGitHubActions)
+        }
     }
 
     private func convertToAnnotations(
