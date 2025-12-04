@@ -302,13 +302,13 @@ public struct CommandExecutor: CommandExecuting, Sendable {
 
             group.addTask {
                 // Wait for process to complete, then finish streams
+                // This is a fallback in case EOF wasn't detected via readabilityHandler
+                // (finish() is safe to call multiple times - it's a no-op if already finished)
                 process.waitUntilExit()
                 outputContinuation.finish()
                 errorContinuation.finish()
             }
         }
-
-        await collectRemainingData(outputPipe: outputPipe, errorPipe: errorPipe, collector: collector)
 
         return await collector.getData()
     }
@@ -331,10 +331,13 @@ public struct CommandExecutor: CommandExecuting, Sendable {
 
             pipe.fileHandleForReading.readabilityHandler = { handle in
                 let data = handle.availableData
-                if !data.isEmpty {
+                if data.isEmpty {
+                    // EOF detected in handler (primary path)
+                    handle.readabilityHandler = nil
+                    continuation.finish()
+                } else {
                     continuation.yield(data)
                 }
-                // Don't finish on empty data - will be finished externally
             }
 
             continuation.onTermination = { _ in
@@ -346,15 +349,6 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             fatalError("Continuation should be set immediately in AsyncStream initialization")
         }
         return (stream, continuation)
-    }
-
-    /// Collect any remaining data from pipes after process completion
-    private func collectRemainingData(outputPipe: Pipe, errorPipe: Pipe, collector: DataCollector) async {
-        let remainingOutputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let remainingErrorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-        await collector.appendOutput(remainingOutputData)
-        await collector.appendError(remainingErrorData)
     }
 
     /// Execute a command with arguments array (safer than shell string interpolation)
