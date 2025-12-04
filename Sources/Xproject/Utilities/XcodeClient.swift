@@ -204,7 +204,6 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let reportsPath = config.reportsPath()
 
         let xcodeLogFile = "\(buildPath)/xcode-\(reportName).log"
-        let reportFile = "\(reportsPath)/\(reportName).xml"
         let resultFile = "\(reportsPath)/\(reportName).xcresult"
 
         let allArgs = args + [
@@ -219,11 +218,11 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         // Clean previous outputs
         // Note: Use non-streaming execute for rm commands since they produce no output
-        _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(reportFile)' '\(resultFile)'")
+        _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(resultFile)'")
 
-        // Execute xcodebuild with xcpretty
+        // Execute xcodebuild
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
-                           "tee '\(xcodeLogFile)' | xcpretty --color --no-utf -r junit -o '\(reportFile)'"
+                           "tee '\(xcodeLogFile)'"
 
         if verbose {
             _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
