@@ -224,13 +224,9 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
 
         // Execute xcodebuild
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
-                           "tee '\(xcodeLogFile)'"
+                           "tee '\(xcodeLogFile)' | xcbeautify"
 
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
-        } else {
-            _ = try commandExecutor.executeOrThrow(buildCommand)
-        }
+        _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
     }
 
     private func getXcodeVersion(config: XprojectConfiguration) async throws -> String {
