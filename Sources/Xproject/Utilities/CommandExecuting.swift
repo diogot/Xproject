@@ -12,6 +12,11 @@ public protocol CommandExecuting: Sendable {
     func executeOrThrow(_ command: String, environment: [String: String]?) throws -> CommandResult
     func executeReadOnly(_ command: String, environment: [String: String]?) throws -> CommandResult
     func executeWithStreamingOutput(_ command: String, environment: [String: String]?) async throws -> CommandResult
+    func executeWithLineProcessor(
+        _ command: String,
+        environment: [String: String]?,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> CommandResult
     func executeWithArguments(command: String, arguments: [String], environment: [String: String]?) throws -> CommandResult
     func commandExists(_ command: String) -> Bool
     func withWorkingDirectory(_ path: String) -> CommandExecuting
@@ -45,6 +50,27 @@ public extension CommandExecuting {
         environment: [String: String]? = nil
     ) async throws -> CommandResult {
         let result = try await executeWithStreamingOutput(command, environment: environment)
+
+        if result.exitCode != 0 {
+            throw CommandError.executionFailed(result: result)
+        }
+
+        return result
+    }
+
+    func executeWithLineProcessor(
+        _ command: String,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> CommandResult {
+        return try await executeWithLineProcessor(command, environment: nil, processor: processor)
+    }
+
+    func executeWithLineProcessorOrThrow(
+        _ command: String,
+        environment: [String: String]? = nil,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> CommandResult {
+        let result = try await executeWithLineProcessor(command, environment: environment, processor: processor)
 
         if result.exitCode != 0 {
             throw CommandError.executionFailed(result: result)

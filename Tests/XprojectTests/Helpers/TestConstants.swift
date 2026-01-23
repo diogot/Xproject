@@ -31,7 +31,7 @@ public enum TestConstants {
         ]
 
         /// Common brew formulas for testing
-        public static let testBrewFormulas = ["swiftgen", "swiftlint", "xcbeautify"]
+        public static let testBrewFormulas = ["swiftgen", "swiftlint"]
     }
 
     /// Common error messages for testing

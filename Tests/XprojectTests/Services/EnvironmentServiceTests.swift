@@ -54,7 +54,7 @@ struct EnvironmentServiceTests {
 
     @Test("Load valid environment config")
     func loadValidConfig() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-load-config"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-load-config"
 
         try createTestEnvironment(
             at: workingDir,
@@ -78,7 +78,7 @@ struct EnvironmentServiceTests {
 
     @Test("Load config with bundle ID suffix")
     func loadConfigWithSuffix() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-bundle-suffix"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-bundle-suffix"
 
         try createTestEnvironment(
             at: workingDir,
@@ -102,7 +102,7 @@ struct EnvironmentServiceTests {
 
     @Test("Load config throws when not found")
     func loadConfigNotFound() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-no-config"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-no-config"
         let service = EnvironmentService()
 
         #expect(throws: EnvironmentError.self) {
@@ -114,7 +114,7 @@ struct EnvironmentServiceTests {
 
     @Test("Load valid environment variables")
     func loadValidVariables() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-load-vars"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-load-vars"
 
         try createTestEnvironment(
             at: workingDir,
@@ -143,7 +143,7 @@ struct EnvironmentServiceTests {
 
     @Test("Load variables throws when not found")
     func loadVariablesNotFound() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-no-vars"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-no-vars"
 
         try createTestEnvironment(
             at: workingDir,
@@ -169,7 +169,7 @@ struct EnvironmentServiceTests {
 
     @Test("List environments")
     func listEnvironments() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-list-envs"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-list-envs"
 
         try createTestEnvironment(
             at: workingDir,
@@ -200,7 +200,7 @@ struct EnvironmentServiceTests {
 
     @Test("Get current environment when not set")
     func getCurrentNotSet() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-current-notset"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-current-notset"
 
         try createTestEnvironment(
             at: workingDir,
@@ -223,7 +223,7 @@ struct EnvironmentServiceTests {
 
     @Test("Set and get current environment")
     func setAndGetCurrent() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-set-current"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-set-current"
 
         try createTestEnvironment(
             at: workingDir,
@@ -249,7 +249,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs for simple target")
     func generateSimpleXCConfigs() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-simple"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-simple"
 
         try createTestEnvironment(
             at: workingDir,
@@ -294,7 +294,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs with bundle ID suffix")
     func generateWithBundleIdSuffix() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-suffix"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-suffix"
 
         try createTestEnvironment(
             at: workingDir,
@@ -333,7 +333,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs with configuration-specific variables")
     func generateWithConfigVariables() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-config-vars"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-config-vars"
 
         try createTestEnvironment(
             at: workingDir,
@@ -384,7 +384,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs dry run does not create files")
     func generateDryRun() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-dryrun"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-dryrun"
 
         try createTestEnvironment(
             at: workingDir,
@@ -425,7 +425,7 @@ struct EnvironmentServiceTests {
 
     @Test("Validate valid environment config")
     func validateValid() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-valid"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-valid"
 
         try createTestEnvironment(
             at: workingDir,
@@ -454,7 +454,7 @@ struct EnvironmentServiceTests {
 
     @Test("Validate creates xcconfig directory when missing")
     func validateCreatesMissingXCConfigDir() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-no-xcconfig"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-no-xcconfig"
 
         try createTestEnvironment(
             at: workingDir,
@@ -491,7 +491,7 @@ struct EnvironmentServiceTests {
 
     @Test("Validate throws when required variable missing")
     func validateMissingVariable() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-missing-var"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-missing-var"
 
         try createTestEnvironment(
             at: workingDir,
@@ -524,7 +524,7 @@ struct EnvironmentServiceTests {
 
     @Test("Validate specific environment succeeds")
     func validateSpecificEnvironment() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-specific"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-specific"
 
         try createTestEnvironment(
             at: workingDir,
@@ -552,7 +552,7 @@ struct EnvironmentServiceTests {
 
     @Test("Validate specific environment throws when not found")
     func validateSpecificNotFound() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-validate-notfound"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-notfound"
 
         try createTestEnvironment(
             at: workingDir,
@@ -578,7 +578,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs without build number when nil")
     func generateWithoutBuildNumber() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-no-build"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-no-build"
 
         try createTestEnvironment(
             at: workingDir,
@@ -617,7 +617,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs with build number injection")
     func generateWithBuildNumber() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-build"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-build"
 
         try createTestEnvironment(
             at: workingDir,
@@ -659,7 +659,7 @@ struct EnvironmentServiceTests {
 
     @Test("Generate xcconfigs strips URL schemes")
     func generateStripsURLSchemes() throws {
-        let workingDir = FileManager.default.currentDirectoryPath + "/tmp/test-gen-url-strip"
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-gen-url-strip"
 
         try createTestEnvironment(
             at: workingDir,

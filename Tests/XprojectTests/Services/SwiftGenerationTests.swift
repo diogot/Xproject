@@ -371,7 +371,7 @@ struct SwiftGenerationTests {
         #expect(flattened["apps_bundle_identifier"] == nil)
     }
 
-    @Test("Flatten dictionary with duplicate leaf keys uses last value")
+    @Test("Flatten dictionary with duplicate leaf keys uses last value when not excluding")
     func testFlattenDictionaryDuplicateLeafKeys() throws {
         let nested: [String: Any] = [
             "ios": [
@@ -383,13 +383,103 @@ struct SwiftGenerationTests {
         ]
 
         let helper = TestHelper()
-        let flattened = helper.flattenDictionary(nested)
+        let flattened = helper.flattenDictionary(nested, excludingKeys: [])
 
         // Only one "name" key should exist (last one wins due to merge)
         #expect(flattened["name"] != nil)
         // The value depends on dictionary iteration order, but should be one of them
         let name = flattened["name"] as? String
         #expect(name == "iOS App" || name == "tvOS App")
+    }
+
+    @Test("Flatten dictionary excludes specified keys")
+    func testFlattenDictionaryExcludesKeys() throws {
+        let nested: [String: Any] = [
+            "shared_name": "Shared",
+            "mobile": [
+                "platform_name": "Mobile Platform"
+            ],
+            "desktop": [
+                "platform_name": "Desktop Platform"
+            ]
+        ]
+
+        let helper = TestHelper()
+
+        // Exclude "desktop" - should only get shared and mobile values
+        let flattened = helper.flattenDictionary(nested, excludingKeys: ["desktop"])
+
+        #expect(flattened["shared_name"] as? String == "Shared")
+        #expect(flattened["platform_name"] as? String == "Mobile Platform")
+    }
+
+    @Test("Filter variables separates nested platform prefixes correctly")
+    func testFilterVariablesSeparatesPlatforms() throws {
+        let variables: [String: Any] = [
+            "shared": [
+                "app_name": "TestApp",
+                "mobile": [
+                    "config_resource": "mobile_config",
+                    "provision_profile": "Mobile Profile"
+                ],
+                "desktop": [
+                    "config_resource": "desktop_config",
+                    "provision_profile": "Desktop Profile"
+                ]
+            ]
+        ]
+
+        let helper = TestHelper()
+
+        // Filter for shared + mobile only
+        let mobileFiltered = helper.filterVariables(variables, prefixes: ["shared", "mobile"])
+
+        // Should have shared values
+        #expect(mobileFiltered["appName"] as? String == "TestApp")
+        // Should have mobile-specific values
+        #expect(mobileFiltered["configResource"] as? String == "mobile_config")
+        #expect(mobileFiltered["provisionProfile"] as? String == "Mobile Profile")
+
+        // Filter for shared + desktop only
+        let desktopFiltered = helper.filterVariables(variables, prefixes: ["shared", "desktop"])
+
+        // Should have shared values
+        #expect(desktopFiltered["appName"] as? String == "TestApp")
+        // Should have desktop-specific values
+        #expect(desktopFiltered["configResource"] as? String == "desktop_config")
+        #expect(desktopFiltered["provisionProfile"] as? String == "Desktop Profile")
+    }
+
+    @Test("Filter variables is deterministic across multiple runs")
+    func testFilterVariablesIsDeterministic() throws {
+        let variables: [String: Any] = [
+            "platforms": [
+                "alpha": [
+                    "identifier": "alpha_id",
+                    "resource": "alpha_res"
+                ],
+                "beta": [
+                    "identifier": "beta_id",
+                    "resource": "beta_res"
+                ]
+            ]
+        ]
+
+        let helper = TestHelper()
+
+        // Run multiple times to ensure deterministic results
+        for _ in 0..<10 {
+            let alphaFiltered = helper.filterVariables(variables, prefixes: ["platforms", "alpha"])
+            let betaFiltered = helper.filterVariables(variables, prefixes: ["platforms", "beta"])
+
+            // Alpha should always get alpha values
+            #expect(alphaFiltered["identifier"] as? String == "alpha_id")
+            #expect(alphaFiltered["resource"] as? String == "alpha_res")
+
+            // Beta should always get beta values
+            #expect(betaFiltered["identifier"] as? String == "beta_id")
+            #expect(betaFiltered["resource"] as? String == "beta_res")
+        }
     }
 
     // MARK: - Integration Tests
@@ -540,6 +630,117 @@ struct SwiftGenerationTests {
         #expect(content.contains("public let environmentName"))
     }
 
+    @Test("Generate multiple platform outputs with separate values")
+    func testGenerateMultiplePlatformOutputs() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-multi-platform-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        // Create directory structure
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated/MobileApp"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated/DesktopApp"),
+            withIntermediateDirectories: true
+        )
+
+        // Create config.yml with two platform-specific outputs
+        // This simulates the scenario where apps.mobile and apps.desktop have same-named keys
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables:
+              BUNDLE_ID: apps.bundle_identifier
+
+        swift_generation:
+          outputs:
+            - path: Generated/MobileApp/EnvironmentService.swift
+              prefixes: [apps, mobile]
+              type: extension
+            - path: Generated/DesktopApp/EnvironmentService.swift
+              prefixes: [apps, desktop]
+              type: extension
+        """
+        let configURL = tempDir.appendingPathComponent("env/config.yml")
+        try config.write(to: configURL, atomically: true, encoding: .utf8)
+
+        // Create environment variables with platform-specific nested values
+        // Both "mobile" and "desktop" have identical key names but different values
+        let variables: [String: Any] = [
+            "apps": [
+                "bundle_display_name": "TestApp",
+                "mobile": [
+                    "bundle_identifier": "com.test.mobile",
+                    "config_resource": "mobile_config",
+                    "release_provision_profile": "Mobile Distribution Profile"
+                ],
+                "desktop": [
+                    "bundle_identifier": "com.test.desktop",
+                    "config_resource": "desktop_config",
+                    "release_provision_profile": "Desktop Distribution Profile"
+                ]
+            ]
+        ]
+
+        // Generate Swift files
+        let service = EnvironmentService()
+
+        // Run multiple times to ensure deterministic behavior
+        // The original bug was non-deterministic due to dictionary iteration order
+        for iteration in 0..<5 {
+            try service.generateSwiftFiles(
+                environmentName: "test",
+                variables: variables,
+                workingDirectory: tempPath,
+                dryRun: false
+            )
+
+            // Verify mobile file was created with MOBILE values
+            let mobileURL = tempDir.appendingPathComponent("Generated/MobileApp/EnvironmentService.swift")
+            #expect(FileManager.default.fileExists(atPath: mobileURL.path))
+            let mobileContent = try String(contentsOf: mobileURL, encoding: .utf8)
+
+            #expect(mobileContent.contains("extension EnvironmentService"), "Iteration \(iteration): Mobile should be extension")
+            #expect(mobileContent.contains("bundleDisplayName"), "Iteration \(iteration): Mobile should have shared bundleDisplayName")
+            #expect(mobileContent.contains("\"com.test.mobile\""), "Iteration \(iteration): Mobile should have mobile bundle identifier")
+            #expect(mobileContent.contains("\"mobile_config\""), "Iteration \(iteration): Mobile should have mobile config resource")
+            #expect(mobileContent.contains("\"Mobile Distribution Profile\""), "Iteration \(iteration): Mobile should have mobile provision profile")
+
+            // Verify mobile does NOT contain desktop values
+            #expect(!mobileContent.contains("\"com.test.desktop\""), "Iteration \(iteration): Mobile should NOT have desktop bundle identifier")
+            #expect(!mobileContent.contains("\"desktop_config\""), "Iteration \(iteration): Mobile should NOT have desktop config resource")
+            #expect(!mobileContent.contains("\"Desktop Distribution Profile\""), "Iteration \(iteration): Mobile should NOT have desktop provision profile")
+
+            // Verify desktop file was created with DESKTOP values
+            let desktopURL = tempDir.appendingPathComponent("Generated/DesktopApp/EnvironmentService.swift")
+            #expect(FileManager.default.fileExists(atPath: desktopURL.path))
+            let desktopContent = try String(contentsOf: desktopURL, encoding: .utf8)
+
+            #expect(desktopContent.contains("extension EnvironmentService"), "Iteration \(iteration): Desktop should be extension")
+            #expect(desktopContent.contains("bundleDisplayName"), "Iteration \(iteration): Desktop should have shared bundleDisplayName")
+            #expect(desktopContent.contains("\"com.test.desktop\""), "Iteration \(iteration): Desktop should have desktop bundle identifier")
+            #expect(desktopContent.contains("\"desktop_config\""), "Iteration \(iteration): Desktop should have desktop config resource")
+            #expect(desktopContent.contains("\"Desktop Distribution Profile\""), "Iteration \(iteration): Desktop should have desktop provision profile")
+
+            // Verify desktop does NOT contain mobile values
+            #expect(!desktopContent.contains("\"com.test.mobile\""), "Iteration \(iteration): Desktop should NOT have mobile bundle identifier")
+            #expect(!desktopContent.contains("\"mobile_config\""), "Iteration \(iteration): Desktop should NOT have mobile config resource")
+            #expect(!desktopContent.contains("\"Mobile Distribution Profile\""), "Iteration \(iteration): Desktop should NOT have mobile provision profile")
+        }
+    }
+
     @Test("Generate extension with additional imports from configuration")
     func testGenerateExtensionWithImports() async throws {
         let tempDir = FileManager.default.temporaryDirectory
@@ -662,17 +863,41 @@ private struct TestHelper {
 
     func filterVariables(_ variables: [String: Any], prefixes: [String]) -> [String: Any] {
         var filtered: [String: Any] = [:]
+        let prefixSet = Set(prefixes)
 
+        // First pass: collect all top-level namespace dictionaries
+        var topLevelNamespaces: [String: [String: Any]] = [:]
         for prefix in prefixes {
             if let namespaceDict = variables[prefix] as? [String: Any] {
-                // This is a namespace (e.g., "apps", "features")
-                let flattened = flattenDictionary(namespaceDict)
+                topLevelNamespaces[prefix] = namespaceDict
+            }
+        }
+
+        // Second pass: process each prefix
+        for prefix in prefixes {
+            if let namespaceDict = variables[prefix] as? [String: Any] {
+                // Top-level namespace - flatten but exclude nested dicts that are other prefixes
+                let flattened = flattenDictionary(namespaceDict, excludingKeys: prefixSet)
                 for (key, value) in flattened {
                     let camelKey = convertToCamelCase(key, prefix: "")
                     filtered[camelKey] = value
                 }
-            } else if let rootValue = variables[prefix] {
-                // This is a root-level variable (e.g., "environment_name", "api_url")
+            } else {
+                // Not a top-level key - look for it as nested key in top-level namespaces
+                for (_, namespaceDict) in topLevelNamespaces {
+                    if let nestedDict = namespaceDict[prefix] as? [String: Any] {
+                        let flattened = flattenDictionary(nestedDict, excludingKeys: prefixSet)
+                        for (key, value) in flattened {
+                            let camelKey = convertToCamelCase(key, prefix: "")
+                            filtered[camelKey] = value
+                        }
+                        break
+                    }
+                }
+            }
+
+            // Also check for root-level scalar values
+            if let rootValue = variables[prefix], !(rootValue is [String: Any]) {
                 let camelKey = convertToCamelCase(prefix, prefix: "")
                 filtered[camelKey] = rootValue
             }
@@ -681,15 +906,18 @@ private struct TestHelper {
         return filtered
     }
 
-    func flattenDictionary(_ dict: [String: Any]) -> [String: Any] {
+    func flattenDictionary(_ dict: [String: Any], excludingKeys: Set<String> = []) -> [String: Any] {
         var result: [String: Any] = [:]
 
         for (key, value) in dict {
+            if excludingKeys.contains(key) {
+                continue
+            }
+
             if let nestedDict = value as? [String: Any] {
-                let flattened = flattenDictionary(nestedDict)
+                let flattened = flattenDictionary(nestedDict, excludingKeys: excludingKeys)
                 result.merge(flattened) { _, new in new }
             } else {
-                // Terminal value - use only the leaf key
                 result[key] = value
             }
         }

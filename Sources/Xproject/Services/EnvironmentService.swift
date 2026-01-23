@@ -391,21 +391,54 @@ public final class EnvironmentService {
     /// - Parameters:
     ///   - variables: All environment variables
     ///   - prefixes: Namespace prefixes to include (e.g., ["apps", "features"])
+    ///
+    /// Prefixes can be:
+    /// - Top-level namespaces (e.g., "apps", "features")
+    /// - Nested namespace keys that exist under other top-level namespaces (e.g., "ios" under "apps")
+    ///
+    /// When a prefix like "ios" exists as a nested key under another prefix like "apps",
+    /// the "apps" namespace will exclude "ios" from its flattening, and "ios" will be
+    /// processed separately to get only its specific variables.
+    ///
     /// - Returns: Filtered and transformed variables
     private func filterVariables(_ variables: [String: Any], prefixes: [String]) -> [String: Any] {
         var filtered: [String: Any] = [:]
+        let prefixSet = Set(prefixes)
 
+        // First pass: collect all top-level namespace dictionaries
+        var topLevelNamespaces: [String: [String: Any]] = [:]
         for prefix in prefixes {
             if let namespaceDict = variables[prefix] as? [String: Any] {
-                // This is a namespace (e.g., "apps", "features")
-                // Flatten the namespace and add all its variables
-                let flattened = flattenDictionary(namespaceDict)
+                topLevelNamespaces[prefix] = namespaceDict
+            }
+        }
+
+        // Second pass: process each prefix
+        for prefix in prefixes {
+            if let namespaceDict = variables[prefix] as? [String: Any] {
+                // Top-level namespace - flatten but exclude nested dicts that are other prefixes
+                // This prevents mixing ios/tvos variables when both are specified
+                let flattened = flattenDictionary(namespaceDict, excludingKeys: prefixSet)
                 for (key, value) in flattened {
                     let camelKey = convertToCamelCase(key, prefix: "")
                     filtered[camelKey] = value
                 }
-            } else if let rootValue = variables[prefix] {
-                // This is a root-level variable (e.g., "environment_name", "api_url")
+            } else {
+                // Not a top-level key - look for it as nested key in top-level namespaces
+                for (_, namespaceDict) in topLevelNamespaces {
+                    if let nestedDict = namespaceDict[prefix] as? [String: Any] {
+                        let flattened = flattenDictionary(nestedDict, excludingKeys: prefixSet)
+                        for (key, value) in flattened {
+                            let camelKey = convertToCamelCase(key, prefix: "")
+                            filtered[camelKey] = value
+                        }
+                        break // Found it, stop searching
+                    }
+                }
+            }
+
+            // Also check for root-level scalar values (not dictionaries)
+            if let rootValue = variables[prefix], !(rootValue is [String: Any]) {
                 let camelKey = convertToCamelCase(prefix, prefix: "")
                 filtered[camelKey] = rootValue
             }
@@ -415,15 +448,22 @@ public final class EnvironmentService {
     }
 
     /// Flatten nested dictionary, keeping only leaf key names
-    /// - Parameter dict: Nested dictionary
+    /// - Parameters:
+    ///   - dict: Nested dictionary
+    ///   - excludingKeys: Keys to skip during flattening (used to prevent mixing platform-specific variables)
     /// - Returns: Flattened dictionary with leaf keys only
-    private func flattenDictionary(_ dict: [String: Any]) -> [String: Any] {
+    private func flattenDictionary(_ dict: [String: Any], excludingKeys: Set<String> = []) -> [String: Any] {
         var result: [String: Any] = [:]
 
         for (key, value) in dict {
+            // Skip keys that should be handled by other prefixes
+            if excludingKeys.contains(key) {
+                continue
+            }
+
             if let nestedDict = value as? [String: Any] {
-                // Recursively flatten
-                let flattened = flattenDictionary(nestedDict)
+                // Recursively flatten, passing through the exclusion set
+                let flattened = flattenDictionary(nestedDict, excludingKeys: excludingKeys)
                 result.merge(flattened) { _, new in new }
             } else {
                 // Terminal value - use only the leaf key

@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import XcbeautifyLib
 
 private typealias InstalledXcode = (path: String, version: String)
 
@@ -159,7 +160,9 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let ipaPath = "\(exportPath(filename: releaseConfig.output, config: config))/\(releaseConfig.scheme).ipa"
         let xcodeVersion = try await getXcodeVersion(config: config)
 
-        var uploadCommand = "\(xcodeVersion) xcrun altool --upload-app --type \(releaseConfig.type) -f '\(ipaPath)'"
+        // TODO: Remove --use-old-altool once Apple fixes the altool upload issue (re-evaluate after mid-2026)
+        // Tracking: https://github.com/fastlane/fastlane/issues/29698
+        var uploadCommand = "\(xcodeVersion) xcrun altool --upload-app --use-old-altool --type \(releaseConfig.type) -f '\(ipaPath)'"
 
         if let appStoreAccount = releaseConfig.appStoreAccount {
             uploadCommand += " -u \(appStoreAccount)"
@@ -220,14 +223,19 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         // Note: Use non-streaming execute for rm commands since they produce no output
         _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(resultFile)'")
 
-        // Execute xcodebuild
+        // Create output processor for beautifying xcodebuild output
+        let processor = XcodeOutputProcessor(
+            verbose: verbose,
+            colored: true,
+            preserveUnbeautifiedLines: false
+        )
+
+        // Execute xcodebuild with tee for raw logging, process output through xcbeautify
         let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
                            "tee '\(xcodeLogFile)'"
 
-        if verbose {
-            _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
-        } else {
-            _ = try commandExecutor.executeOrThrow(buildCommand)
+        _ = try await commandExecutor.executeWithLineProcessorOrThrow(buildCommand) { line in
+            processor.processLine(line)
         }
     }
 

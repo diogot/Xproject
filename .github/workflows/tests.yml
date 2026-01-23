@@ -34,10 +34,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .build
-        key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}-v2
+        key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
         restore-keys: |
-          spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}-v2
-          spm-${{ runner.os }}-v2
+          spm-${{ runner.os }}
 
     - name: Install SwiftLint
       run: |

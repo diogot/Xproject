@@ -20,10 +20,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
-        .package(url: "https://github.com/jpsim/Yams", from: "5.0.0"),
+        .package(url: "https://github.com/jpsim/Yams", from: "6.0.0"),
         .package(url: "https://github.com/diogot/swift-ejson.git", from: "1.2.0"),
         .package(url: "https://github.com/diogot/swift-pr-reporter.git", from: "1.0.0"),
-        .package(url: "https://github.com/diogot/swift-xcresult-parser.git", from: "1.0.0")
+        .package(url: "https://github.com/diogot/swift-xcresult-parser.git", from: "1.0.0"),
+        .package(url: "https://github.com/cpisciotta/xcbeautify", from: "2.0.0")
     ],
     targets: [
         .executableTarget(
@@ -40,7 +41,8 @@ let package = Package(
                 "Yams",
                 .product(name: "EJSONKit", package: "swift-ejson"),
                 .product(name: "PRReporterKit", package: "swift-pr-reporter"),
-                .product(name: "XCResultParser", package: "swift-xcresult-parser")
+                .product(name: "XCResultParser", package: "swift-xcresult-parser"),
+                .product(name: "XcbeautifyLib", package: "xcbeautify")
             ],
             swiftSettings: settings
         ),
