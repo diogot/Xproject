@@ -71,7 +71,7 @@ struct XcodeOutputProcessorTests {
         let processor = XcodeOutputProcessor(verbose: false, colored: false)
 
         // Use the format xcbeautify recognizes for test case failures
-        let testFailLine = "/path/to/MyTests.swift:10: error: -[MyTests testExample] : XCTAssertTrue failed"
+        let testFailLine = "/path/to/MyTests.swift:10: error: -[MyTests testExample] : failed - Expected true"
         let result = processor.processLine(testFailLine)
         // Test failures should always be shown in non-verbose mode
         #expect(result != nil, "Test failures should be shown in non-verbose mode")
