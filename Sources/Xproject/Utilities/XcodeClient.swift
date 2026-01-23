@@ -160,8 +160,8 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         let ipaPath = "\(exportPath(filename: releaseConfig.output, config: config))/\(releaseConfig.scheme).ipa"
         let xcodeVersion = try await getXcodeVersion(config: config)
 
-        // --use-old-altool should be removed once Apple fix their side
-        // https://github.com/fastlane/fastlane/issues/29698
+        // TODO: Remove --use-old-altool once Apple fixes the altool upload issue (re-evaluate after mid-2026)
+        // Tracking: https://github.com/fastlane/fastlane/issues/29698
         var uploadCommand = "\(xcodeVersion) xcrun altool --upload-app --use-old-altool --type \(releaseConfig.type) -f '\(ipaPath)'"
 
         if let appStoreAccount = releaseConfig.appStoreAccount {

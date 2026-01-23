@@ -23,12 +23,17 @@ struct XcodeOutputProcessorTests {
 
     @Test("Verbose mode shows compile output")
     func verboseModeShowsCompileOutput() {
-        let processor = XcodeOutputProcessor(verbose: true, colored: false)
+        let processor = XcodeOutputProcessor(
+            verbose: true,
+            colored: false,
+            preserveUnbeautifiedLines: true
+        )
 
-        let compileLine = "CompileSwift normal arm64 /path/to/File.swift"
+        // Use a line format that xcbeautify recognizes
+        let compileLine = "CompileSwift normal arm64 /path/to/File.swift (in target 'MyApp' from project 'MyApp')"
         let result = processor.processLine(compileLine)
-        // xcbeautify may format this differently, but it should return something
-        #expect(result != nil || processor.processLine("") == nil)
+        // In verbose mode with preserveUnbeautifiedLines, we should get output
+        #expect(result != nil)
     }
 
     // MARK: - Non-Verbose Mode Tests
@@ -41,7 +46,8 @@ struct XcodeOutputProcessorTests {
         // In practice, xcbeautify formats errors with ❌ or [x]
         let errorLine = "/path/to/File.swift:10:5: error: cannot find 'foo' in scope"
         let result = processor.processLine(errorLine)
-        // The result should contain error indicator if xcbeautify recognizes it
+        // Errors should always be shown in non-verbose mode
+        #expect(result != nil, "Errors should be shown in non-verbose mode")
         if let output = result {
             #expect(output.contains("error") || output.contains("❌") || output.contains("[x]"))
         }
@@ -53,7 +59,8 @@ struct XcodeOutputProcessorTests {
 
         let warningLine = "/path/to/File.swift:10:5: warning: unused variable 'x'"
         let result = processor.processLine(warningLine)
-        // The result should contain warning indicator if xcbeautify recognizes it
+        // Warnings should always be shown in non-verbose mode
+        #expect(result != nil, "Warnings should be shown in non-verbose mode")
         if let output = result {
             #expect(output.contains("warning") || output.contains("⚠️") || output.contains("[!]"))
         }
@@ -63,11 +70,13 @@ struct XcodeOutputProcessorTests {
     func nonVerboseModeShowsTestFailures() {
         let processor = XcodeOutputProcessor(verbose: false, colored: false)
 
-        let testFailLine = "Test Case '-[MyTests testExample]' failed (0.001 seconds)."
+        // Use the format xcbeautify recognizes for test case failures
+        let testFailLine = "/path/to/MyTests.swift:10: error: -[MyTests testExample] : XCTAssertTrue failed"
         let result = processor.processLine(testFailLine)
-        // Test failures should be shown in non-verbose mode
+        // Test failures should always be shown in non-verbose mode
+        #expect(result != nil, "Test failures should be shown in non-verbose mode")
         if let output = result {
-            #expect(output.contains("✖") || output.contains("failed"))
+            #expect(output.contains("✖") || output.contains("failed") || output.contains("error"))
         }
     }
 
