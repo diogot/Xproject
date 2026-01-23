@@ -22,7 +22,7 @@ A modern Swift command line tool for Xcode project build automation.
    Or build from source:
    ```bash
    git clone https://github.com/diogot/xp.git
-   cd xp/Xproject
+   cd xp
    swift build -c release
    sudo cp .build/release/xp /usr/local/bin/
    ```

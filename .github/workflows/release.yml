@@ -69,8 +69,8 @@ jobs:
           BINARY_VERSION=$(release/universal/xp --version)
           echo "Expected version: $VERSION"
           echo "Binary version: $BINARY_VERSION"
-          if [[ "$BINARY_VERSION" != *"$VERSION"* ]]; then
-            echo "Error: Binary version does not match VERSION file"
+          if [[ "$BINARY_VERSION" != "$VERSION" ]]; then
+            echo "Error: Binary version ($BINARY_VERSION) does not match VERSION file ($VERSION)"
             exit 1
           fi
 
