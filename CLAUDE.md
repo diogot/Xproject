@@ -14,6 +14,21 @@ This repository is undergoing a migration from Ruby Rake to a modern Swift comma
 
 **Important**: The current Ruby rakelib should be used only as reference for understanding existing functionality. All new development should focus on the Swift Xproject tool, migrating features one by one while improving upon the original design.
 
+## Before Starting a New Feature
+
+**Remember to bump the CLI version!** Before starting work on a new feature or bug fix that will be released, update the `VERSION` file at the project root with the new version number. This ensures:
+- The release workflow can create a new release when changes are merged
+- The `xp --version` command reports the correct version
+- Version validation passes in CI
+
+```bash
+# Check current version
+cat VERSION
+
+# Update to new version
+echo "1.1.0" > VERSION
+```
+
 ## Current Implementation Status
 
 ### Completed Features

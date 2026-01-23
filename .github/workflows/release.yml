@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Check Swift version
+        run: swift --version
+
+      - name: Validate version
+        id: version
+        uses: ./.github/actions/validate-version
+        with:
+          check-tag-exists: 'true'
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build release binary (x86_64)
+        run: |
+          swift build -c release --arch x86_64
+          mkdir -p release/x86_64
+          cp .build/release/xp release/x86_64/
+
+      - name: Build release binary (arm64)
+        run: |
+          swift build -c release --arch arm64
+          mkdir -p release/arm64
+          cp .build/release/xp release/arm64/
+
+      - name: Create universal binary
+        run: |
+          mkdir -p release/universal
+          lipo -create \
+            release/x86_64/xp \
+            release/arm64/xp \
+            -output release/universal/xp
+          chmod +x release/universal/xp
+
+      - name: Verify binary version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BINARY_VERSION=$(release/universal/xp --version)
+          echo "Expected version: $VERSION"
+          echo "Binary version: $BINARY_VERSION"
+          if [[ "$BINARY_VERSION" != "$VERSION" ]]; then
+            echo "Error: Binary version ($BINARY_VERSION) does not match VERSION file ($VERSION)"
+            exit 1
+          fi
+
+      - name: Create release archive
+        run: |
+          cd release/universal
+          tar -czvf ../xp-macos-universal.tar.gz xp
+          cd ..
+          shasum -a 256 xp-macos-universal.tar.gz > xp-macos-universal.tar.gz.sha256
+
+      - name: Generate release notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+          if [ -z "$PREV_TAG" ]; then
+            git log --pretty=format:"- %s" HEAD >> release_notes.md
+          else
+            git log --pretty=format:"- %s" ${PREV_TAG}..HEAD >> release_notes.md
+          fi
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+
+          cat >> release_notes.md << 'EOF'
+          ## Installation
+
+          ### macOS (Universal Binary - x86_64 + ARM64)
+
+          Download and install:
+          ```bash
+          curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz | tar xz
+          sudo mv xp /usr/local/bin/
+          xp --version
+          ```
+
+          ### Verify Checksum
+
+          ```bash
+          curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz.sha256 -o xp.sha256
+          shasum -a 256 -c xp.sha256
+          ```
+
+          For more information, see the [README](https://github.com/diogot/xp/blob/main/README.md).
+          EOF
+
+      - name: Create Release
+        uses: diogot/gh-actions-workflows/actions/create-release@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.version.outputs.version }}
+          title: v${{ steps.version.outputs.version }}
+          body-file: release_notes.md
+          files: |
+            release/xp-macos-universal.tar.gz
+            release/xp-macos-universal.tar.gz.sha256

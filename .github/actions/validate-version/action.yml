@@ -1,0 +1,72 @@
+name: Validate Version
+description: Extract and validate version from VERSION file against latest git tag
+
+inputs:
+  check-tag-exists:
+    description: Fail if the tag already exists
+    required: false
+    default: 'false'
+
+outputs:
+  version:
+    description: The extracted version from VERSION file
+    value: ${{ steps.extract.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Extract version from VERSION file
+      id: extract
+      shell: bash
+      run: |
+        VERSION=$(cat VERSION | tr -d '\n')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+    - name: Get latest tag
+      id: latest_tag
+      shell: bash
+      run: |
+        LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n1 || echo "")
+        if [ -z "$LATEST_TAG" ]; then
+          echo "tag=" >> $GITHUB_OUTPUT
+          echo "No existing tags found"
+        else
+          echo "tag=${LATEST_TAG#v}" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+        fi
+
+    - name: Check if tag exists
+      if: inputs.check-tag-exists == 'true'
+      shell: bash
+      run: |
+        VERSION="${{ steps.extract.outputs.version }}"
+        if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          echo "Error: Tag v$VERSION already exists"
+          exit 1
+        fi
+
+    - name: Validate version bump
+      shell: bash
+      run: |
+        VERSION="${{ steps.extract.outputs.version }}"
+        LATEST="${{ steps.latest_tag.outputs.tag }}"
+
+        echo "Current version: $VERSION"
+        echo "Latest tag: $LATEST"
+
+        if [ -z "$LATEST" ]; then
+          echo "No existing tags. Version $VERSION is valid."
+          exit 0
+        fi
+
+        # Check if version is greater than latest tag using sort -V
+        HIGHEST=$(printf '%s\n%s' "$VERSION" "$LATEST" | sort -V | tail -n1)
+
+        if [ "$HIGHEST" = "$VERSION" ] && [ "$VERSION" != "$LATEST" ]; then
+          echo "Version $VERSION is greater than $LATEST"
+          exit 0
+        else
+          echo "Error: Version $VERSION must be greater than latest tag $LATEST"
+          exit 1
+        fi
