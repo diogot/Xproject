@@ -12,15 +12,19 @@ A modern Swift command line tool for Xcode project build automation.
 
 ### Quick Start
 
-1. **Clone or add as git submodule:**
+1. **Install from GitHub Releases (recommended):**
    ```bash
-   # Option 1: Clone directly
-   git clone https://github.com/diogot/Xproject.git
-   cd Xproject
+   curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz | tar xz
+   sudo mv xp /usr/local/bin/
+   xp --version
+   ```
 
-   # Option 2: Add as submodule to your project
-   git submodule add https://github.com/diogot/Xproject.git Tools/Xproject
-   cd Tools/Xproject
+   Or build from source:
+   ```bash
+   git clone https://github.com/diogot/xp.git
+   cd xp/Xproject
+   swift build -c release
+   sudo cp .build/release/xp /usr/local/bin/
    ```
 
 2. **Create `Xproject.yml` in your project root:**
@@ -70,31 +74,22 @@ A modern Swift command line tool for Xcode project build automation.
    - [Secrets Management](docs/secrets-management.md) - EJSON encryption
    - [Provision Management](docs/provision-management.md) - Provisioning profiles for CI/CD
 
-3. **Run directly with Swift:**
+3. **Run commands:**
    ```bash
    # Show help
-   swift run xp --help
+   xp --help
 
    # Setup project
-   swift run xp setup
+   xp setup
 
    # Build project for testing
-   swift run xp build --scheme MyApp --clean
+   xp build --scheme MyApp --clean
 
    # Run tests
-   swift run xp test --scheme MyApp --clean
+   xp test --scheme MyApp --clean
 
    # Create release
-   swift run xp release production-ios
-   ```
-
-4. **Build and install locally (optional):**
-   ```bash
-   swift build -c release
-   cp .build/release/xp /usr/local/bin/xp
-
-   # Now you can use it globally
-   xp setup
+   xp release production-ios
    ```
 
 ### Available Commands
@@ -174,31 +169,6 @@ xp pr-report                          # Auto-discover xcresult bundles
 xp pr-report --check-name "iOS Tests" # Custom check name
 xp pr-report --dry-run                # Preview without posting
 ```
-
-### Integration with Existing Projects
-
-Add Xproject as a git submodule and create a simple script:
-
-**setup.sh:**
-```bash
-#!/bin/bash
-# Run from project root
-Tools/Xproject/.build/release/xp -C . setup
-```
-
-**build.sh:**
-```bash
-#!/bin/bash
-# Run from project root
-Tools/Xproject/.build/release/xp -C . build --scheme "$1" --clean
-```
-
-This approach ensures:
--  No external package managers required
--  Works with just Xcode installation
--  Version-locked to your project via git submodule
--  Same tool version across all team members
--  Works in CI/CD without additional setup
 
 ## Environment Management
 

@@ -33,7 +33,10 @@ let package = Package(
                 "Xproject",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
-            swiftSettings: settings
+            swiftSettings: settings,
+            plugins: [
+                .plugin(name: "XprojectVersionPlugin")
+            ]
         ),
         .target(
             name: "Xproject",
@@ -58,6 +61,10 @@ let package = Package(
                 .copy("Support")
             ],
             swiftSettings: settings
+        ),
+        .plugin(
+            name: "XprojectVersionPlugin",
+            capability: .buildTool()
         )
     ]
 )
