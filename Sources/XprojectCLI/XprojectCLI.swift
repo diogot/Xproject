@@ -33,6 +33,10 @@ struct XprojectCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "xp",
         abstract: "A modern Xcode project build automation tool",
+        discussion: """
+            Version: \(GeneratedVersion.version)
+            Project: https://github.com/diogot/xp
+            """,
         version: GeneratedVersion.version,
         subcommands: [
             SetupCommand.self,
