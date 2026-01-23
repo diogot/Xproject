@@ -103,7 +103,7 @@ jobs:
 
           Download and install:
           ```bash
-          curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz | tar xz
+          curl -L https://github.com/diogot/Xproject/releases/latest/download/xp-macos-universal.tar.gz | tar xz
           sudo mv xp /usr/local/bin/
           xp --version
           ```
@@ -111,11 +111,11 @@ jobs:
           ### Verify Checksum
 
           ```bash
-          curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz.sha256 -o xp.sha256
+          curl -L https://github.com/diogot/Xproject/releases/latest/download/xp-macos-universal.tar.gz.sha256 -o xp.sha256
           shasum -a 256 -c xp.sha256
           ```
 
-          For more information, see the [README](https://github.com/diogot/xp/blob/main/README.md).
+          For more information, see the [README](https://github.com/diogot/Xproject/blob/main/README.md).
           EOF
 
       - name: Create Release
