@@ -14,15 +14,15 @@ A modern Swift command line tool for Xcode project build automation.
 
 1. **Install from GitHub Releases (recommended):**
    ```bash
-   curl -L https://github.com/diogot/xp/releases/latest/download/xp-macos-universal.tar.gz | tar xz
+   curl -L https://github.com/diogot/Xproject/releases/latest/download/xp-macos-universal.tar.gz | tar xz
    sudo mv xp /usr/local/bin/
    xp --version
    ```
 
    Or build from source:
    ```bash
-   git clone https://github.com/diogot/xp.git
-   cd xp
+   git clone https://github.com/diogot/Xproject.git
+   cd Xproject
    swift build -c release
    sudo cp .build/release/xp /usr/local/bin/
    ```

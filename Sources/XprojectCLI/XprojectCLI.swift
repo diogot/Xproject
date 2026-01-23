@@ -35,7 +35,7 @@ struct XprojectCLI: AsyncParsableCommand {
         abstract: "A modern Xcode project build automation tool",
         discussion: """
             Version: \(GeneratedVersion.version)
-            Project: https://github.com/diogot/xp
+            Project: https://github.com/diogot/Xproject
             """,
         version: GeneratedVersion.version,
         subcommands: [
