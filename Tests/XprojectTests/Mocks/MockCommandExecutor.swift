@@ -161,6 +161,16 @@ public final class MockCommandExecutor: CommandExecuting, @unchecked Sendable {
         return try execute(command, environment: environment)
     }
 
+    public func executeWithLineProcessor(
+        _ command: String,
+        environment: [String: String]? = nil,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> CommandResult {
+        // For testing, line processor execution behaves the same as regular execute
+        // The processor is not called in mocks - tests should verify command execution
+        return try execute(command, environment: environment)
+    }
+
     public func executeWithArguments(
         command: String,
         arguments: [String],

@@ -351,6 +351,97 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         return (stream, continuation)
     }
 
+    /// Execute a command with line-by-line processing through a custom processor function.
+    /// Each line of output is passed to the processor. If the processor returns a non-nil string,
+    /// it is printed to stdout. This enables filtering and transforming output in real-time.
+    @discardableResult
+    public func executeWithLineProcessor(
+        _ command: String,
+        environment: [String: String]? = nil,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> CommandResult {
+        let workingDirectoryURL = URL(fileURLWithPath: self.workingDirectory)
+
+        if dryRun {
+            return handleDryRunStreamingOutput(command: command, environment: environment)
+        }
+
+        // Always print command info for streaming output (verbose-like behavior)
+        printVerboseCommandInfo(command: command, workingDirectory: workingDirectoryURL, environment: environment)
+
+        let process = createProcess(command: command, environment: environment)
+        let (outputData, errorData) = try await executeProcessWithLineProcessor(process, processor: processor)
+
+        return createCommandResult(
+            from: process,
+            outputData: outputData,
+            errorData: errorData,
+            command: command
+        )
+    }
+
+    /// Execute process with line-by-line streaming and custom processor
+    private func executeProcessWithLineProcessor(
+        _ process: Process,
+        processor: @escaping @Sendable (String) -> String?
+    ) async throws -> (Data, Data) {
+        let (outputPipe, errorPipe) = setupProcessPipes(process)
+        let collector = DataCollector()
+        let lineBuffer = LineBuffer()
+
+        // Create streams that will be manually finished
+        let (outputStream, outputContinuation) = createManagedAsyncStream(for: outputPipe)
+        let (errorStream, errorContinuation) = createManagedAsyncStream(for: errorPipe)
+
+        try process.run()
+
+        // Process streams concurrently
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await data in outputStream {
+                    await collector.appendOutput(data)
+
+                    // Process line-by-line
+                    if let string = String(data: data, encoding: .utf8) {
+                        let lines = await lineBuffer.append(string)
+                        for line in lines {
+                            if let processed = processor(line) {
+                                print(processed)
+                                fflush(stdout)
+                            }
+                        }
+                    }
+                }
+
+                // Process any remaining content in the buffer
+                if let remaining = await lineBuffer.flush() {
+                    if let processed = processor(remaining) {
+                        print(processed)
+                        fflush(stdout)
+                    }
+                }
+            }
+
+            group.addTask {
+                for await data in errorStream {
+                    if let string = String(data: data, encoding: .utf8) {
+                        fputs(string, stderr)
+                        fflush(stderr)
+                    }
+                    await collector.appendError(data)
+                }
+            }
+
+            group.addTask {
+                process.waitUntilExit()
+                outputContinuation.finish()
+                errorContinuation.finish()
+            }
+        }
+
+        return await collector.getData()
+    }
+
     /// Execute a command with arguments array (safer than shell string interpolation)
     @discardableResult
     public func executeWithArguments(
@@ -437,46 +528,6 @@ public struct CommandExecutor: CommandExecuting, Sendable {
             dryRun: self.dryRun,
             verbose: self.verbose
         )
-    }
-}
-
-// MARK: - Command Result
-
-public struct CommandResult: Sendable {
-    public let exitCode: Int32
-    public let output: String
-    public let error: String
-    public let command: String
-
-    public var isSuccess: Bool {
-        return exitCode == 0
-    }
-
-    public var combinedOutput: String {
-        if error.isEmpty {
-            return output
-        } else if output.isEmpty {
-            return error
-        } else {
-            return "\(output)\n\(error)"
-        }
-    }
-}
-
-// MARK: - Command Errors
-
-public enum CommandError: Error, LocalizedError, Sendable {
-    case executionFailed(result: CommandResult)
-    case commandNotFound(command: String)
-
-    public var errorDescription: String? {
-        switch self {
-        case .executionFailed(let result):
-            let errorOutput = result.error.isEmpty ? result.output : result.error
-            return "Command '\(result.command)' failed with exit code \(result.exitCode): \(errorOutput)"
-        case .commandNotFound(let command):
-            return "Command '\(command)' not found in PATH"
-        }
     }
 }
 

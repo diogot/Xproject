@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import XcbeautifyLib
 
 private typealias InstalledXcode = (path: String, version: String)
 
@@ -222,11 +223,20 @@ public final class XcodeClient: XcodeClientProtocol, Sendable {
         // Note: Use non-streaming execute for rm commands since they produce no output
         _ = try commandExecutor.executeOrThrow("rm -fr '\(xcodeLogFile)' '\(resultFile)'")
 
-        // Execute xcodebuild
-        let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
-                           "tee '\(xcodeLogFile)' | xcbeautify"
+        // Create output processor for beautifying xcodebuild output
+        let processor = XcodeOutputProcessor(
+            verbose: verbose,
+            colored: true,
+            preserveUnbeautifiedLines: false
+        )
 
-        _ = try await commandExecutor.executeWithStreamingOutputOrThrow(buildCommand)
+        // Execute xcodebuild with tee for raw logging, process output through xcbeautify
+        let buildCommand = "set -o pipefail && \(xcodeVersion) xcrun xcodebuild \(argsString) | " +
+                           "tee '\(xcodeLogFile)'"
+
+        _ = try await commandExecutor.executeWithLineProcessorOrThrow(buildCommand) { line in
+            processor.processLine(line)
+        }
     }
 
     private func getXcodeVersion(config: XprojectConfiguration) async throws -> String {
