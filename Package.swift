@@ -23,7 +23,7 @@ let package = Package(
         .package(url: "https://github.com/jpsim/Yams", from: "6.0.0"),
         .package(url: "https://github.com/diogot/swift-ejson.git", from: "1.2.0"),
         .package(url: "https://github.com/diogot/swift-pr-reporter.git", from: "1.0.0"),
-        .package(url: "https://github.com/diogot/swift-xcresult-parser.git", from: "1.0.0"),
+        .package(url: "https://github.com/diogot/swift-xcresult-parser.git", from: "1.0.5"),
         .package(url: "https://github.com/cpisciotta/xcbeautify", from: "2.0.0")
     ],
     targets: [
