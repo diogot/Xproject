@@ -349,11 +349,13 @@ public final class EnvironmentService {
             // Base type automatically includes all root-level variables
             if outputType == .base {
                 let rootLevelKeys = variables.keys.filter { !(variables[$0] is [String: Any]) }
-                prefixes = rootLevelKeys + prefixes
+                // Merge root-level keys with configured prefixes, removing duplicates
+                let combined = rootLevelKeys + prefixes
+                prefixes = Array(Set(combined))
             }
 
             // Filter variables by prefix
-            let filteredVars = filterVariables(variables, prefixes: prefixes)
+            let filteredVars = try filterVariables(variables, prefixes: prefixes)
 
             // Convert to Swift properties
             let properties = try convertToSwiftProperties(filteredVars)
@@ -401,73 +403,133 @@ public final class EnvironmentService {
     /// processed separately to get only its specific variables.
     ///
     /// - Returns: Filtered and transformed variables
-    private func filterVariables(_ variables: [String: Any], prefixes: [String]) -> [String: Any] {
+    /// - Throws: `EnvironmentError.duplicateLeafKey` if the same leaf key appears in multiple namespaces
+    private func filterVariables(_ variables: [String: Any], prefixes: [String]) throws -> [String: Any] {
         var filtered: [String: Any] = [:]
+        var sources: [String: String] = [:]
         let prefixSet = Set(prefixes)
+        let topLevelNamespaces = collectTopLevelNamespaces(from: variables, prefixes: prefixes)
 
-        // First pass: collect all top-level namespace dictionaries
+        for prefix in prefixes.sorted() {
+            if let namespaceDict = variables[prefix] as? [String: Any] {
+                let flattened = try flattenDictionary(namespaceDict, excludingKeys: prefixSet, parentPath: prefix)
+                try mergeFlattened(flattened, into: &filtered, sources: &sources)
+            } else {
+                try processNestedPrefix(prefix, topLevelNamespaces: topLevelNamespaces, prefixSet: prefixSet,
+                                        filtered: &filtered, sources: &sources)
+            }
+            try addRootLevelScalar(prefix, from: variables, to: &filtered, sources: &sources)
+        }
+        return filtered
+    }
+
+    private func collectTopLevelNamespaces(from variables: [String: Any], prefixes: [String]) -> [String: [String: Any]] {
         var topLevelNamespaces: [String: [String: Any]] = [:]
-        for prefix in prefixes {
+        for prefix in prefixes.sorted() {
             if let namespaceDict = variables[prefix] as? [String: Any] {
                 topLevelNamespaces[prefix] = namespaceDict
             }
         }
+        return topLevelNamespaces
+    }
 
-        // Second pass: process each prefix
-        for prefix in prefixes {
-            if let namespaceDict = variables[prefix] as? [String: Any] {
-                // Top-level namespace - flatten but exclude nested dicts that are other prefixes
-                // This prevents mixing ios/tvos variables when both are specified
-                let flattened = flattenDictionary(namespaceDict, excludingKeys: prefixSet)
-                for (key, value) in flattened {
-                    let camelKey = convertToCamelCase(key, prefix: "")
-                    filtered[camelKey] = value
-                }
-            } else {
-                // Not a top-level key - look for it as nested key in top-level namespaces
-                for (_, namespaceDict) in topLevelNamespaces {
-                    if let nestedDict = namespaceDict[prefix] as? [String: Any] {
-                        let flattened = flattenDictionary(nestedDict, excludingKeys: prefixSet)
-                        for (key, value) in flattened {
-                            let camelKey = convertToCamelCase(key, prefix: "")
-                            filtered[camelKey] = value
-                        }
-                        break // Found it, stop searching
-                    }
-                }
+    private func mergeFlattened(
+        _ flattened: [String: (value: Any, source: String)],
+        into filtered: inout [String: Any],
+        sources: inout [String: String]
+    ) throws {
+        for (key, data) in flattened {
+            let camelKey = convertToCamelCase(key, prefix: "")
+            if let existingSource = sources[camelKey] {
+                throw EnvironmentError.duplicateLeafKey(key: key, namespaces: [existingSource, data.source].sorted())
             }
+            filtered[camelKey] = data.value
+            sources[camelKey] = data.source
+        }
+    }
 
-            // Also check for root-level scalar values (not dictionaries)
-            if let rootValue = variables[prefix], !(rootValue is [String: Any]) {
-                let camelKey = convertToCamelCase(prefix, prefix: "")
-                filtered[camelKey] = rootValue
+    private func processNestedPrefix(
+        _ prefix: String,
+        topLevelNamespaces: [String: [String: Any]],
+        prefixSet: Set<String>,
+        filtered: inout [String: Any],
+        sources: inout [String: String]
+    ) throws {
+        for (namespaceName, namespaceDict) in topLevelNamespaces.sorted(by: { $0.key < $1.key }) {
+            if let nestedDict = namespaceDict[prefix] as? [String: Any] {
+                let parentPath = "\(namespaceName).\(prefix)"
+                let flattened = try flattenDictionary(nestedDict, excludingKeys: prefixSet, parentPath: parentPath)
+                try mergeFlattened(flattened, into: &filtered, sources: &sources)
+                break
             }
         }
+    }
 
-        return filtered
+    private func addRootLevelScalar(
+        _ prefix: String,
+        from variables: [String: Any],
+        to filtered: inout [String: Any],
+        sources: inout [String: String]
+    ) throws {
+        guard let rootValue = variables[prefix], !(rootValue is [String: Any]) else {
+            return
+        }
+        let camelKey = convertToCamelCase(prefix, prefix: "")
+        if let existingSource = sources[camelKey] {
+            throw EnvironmentError.duplicateLeafKey(key: prefix, namespaces: [existingSource, prefix].sorted())
+        }
+        filtered[camelKey] = rootValue
+        sources[camelKey] = prefix
     }
 
     /// Flatten nested dictionary, keeping only leaf key names
     /// - Parameters:
     ///   - dict: Nested dictionary
     ///   - excludingKeys: Keys to skip during flattening (used to prevent mixing platform-specific variables)
-    /// - Returns: Flattened dictionary with leaf keys only
-    private func flattenDictionary(_ dict: [String: Any], excludingKeys: Set<String> = []) -> [String: Any] {
-        var result: [String: Any] = [:]
+    ///   - parentPath: The path to the current dictionary (for error reporting)
+    /// - Returns: Flattened dictionary with leaf keys and their source paths
+    /// - Throws: `EnvironmentError.duplicateLeafKey` if the same leaf key appears in multiple namespaces
+    private func flattenDictionary(
+        _ dict: [String: Any],
+        excludingKeys: Set<String> = [],
+        parentPath: String = ""
+    ) throws -> [String: (value: Any, source: String)] {
+        var result: [String: (value: Any, source: String)] = [:]
 
-        for (key, value) in dict {
+        // Sort keys for deterministic iteration order
+        let sortedKeys = dict.keys.sorted()
+
+        for key in sortedKeys {
+            guard let value = dict[key] else { continue }
+
             // Skip keys that should be handled by other prefixes
             if excludingKeys.contains(key) {
                 continue
             }
 
+            let currentPath = parentPath.isEmpty ? key : "\(parentPath).\(key)"
+
             if let nestedDict = value as? [String: Any] {
                 // Recursively flatten, passing through the exclusion set
-                let flattened = flattenDictionary(nestedDict, excludingKeys: excludingKeys)
-                result.merge(flattened) { _, new in new }
+                let flattened = try flattenDictionary(nestedDict, excludingKeys: excludingKeys, parentPath: currentPath)
+                for (leafKey, leafData) in flattened {
+                    if let existing = result[leafKey] {
+                        throw EnvironmentError.duplicateLeafKey(
+                            key: leafKey,
+                            namespaces: [existing.source, leafData.source].sorted()
+                        )
+                    }
+                    result[leafKey] = leafData
+                }
             } else {
                 // Terminal value - use only the leaf key
-                result[key] = value
+                if let existing = result[key] {
+                    throw EnvironmentError.duplicateLeafKey(
+                        key: key,
+                        namespaces: [existing.source, currentPath].sorted()
+                    )
+                }
+                result[key] = (value: value, source: currentPath)
             }
         }
 

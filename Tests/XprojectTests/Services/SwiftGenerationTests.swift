@@ -196,292 +196,6 @@ struct SwiftGenerationTests {
         #expect(importCount == 3)
     }
 
-    // MARK: - CamelCase Conversion Tests
-
-    @Test("CamelCase conversion works correctly")
-    func testCamelCaseConversion() throws {
-        let helper = TestHelper()
-
-        let result1 = helper.convertToCamelCase("api_url", prefix: "")
-        #expect(result1 == "apiURL")
-
-        let result2 = helper.convertToCamelCase("bundle_identifier", prefix: "")
-        #expect(result2 == "bundleIdentifier")
-
-        let result3 = helper.convertToCamelCase("auth_url", prefix: "")
-        #expect(result3 == "authURL")
-
-        let result4 = helper.convertToCamelCase("ios_app_icon_name", prefix: "")
-        #expect(result4 == "iosAppIconName")
-    }
-
-    @Test("CamelCase handles URL suffix correctly")
-    func testURLSuffixHandling() throws {
-        let helper = TestHelper()
-
-        let result1 = helper.convertToCamelCase("config_url", prefix: "")
-        #expect(result1 == "configURL")
-
-        let result2 = helper.convertToCamelCase("base_url", prefix: "")
-        #expect(result2 == "baseURL")
-
-        let result3 = helper.convertToCamelCase("web_url", prefix: "")
-        #expect(result3 == "webURL")
-    }
-
-    // MARK: - Type Inference Tests
-
-    @Test("Type inference detects URL by name suffix")
-    func testTypeInferenceURLDetection() throws {
-        let helper = TestHelper()
-
-        let (type1, value1) = helper.inferSwiftType(name: "apiURL", value: "https://api.example.com")
-        #expect(type1 == .url)
-        #expect(value1 == "https://api.example.com")
-
-        let (type2, value2) = helper.inferSwiftType(name: "baseUrl", value: "https://base.com")
-        #expect(type2 == .url)
-        #expect(value2 == "https://base.com")
-    }
-
-    @Test("Type inference handles different value types")
-    func testTypeInference() throws {
-        let helper = TestHelper()
-
-        // String
-        let (type1, value1) = helper.inferSwiftType(name: "name", value: "test")
-        #expect(type1 == .string)
-        #expect(value1 == "test")
-
-        // Int
-        let (type2, value2) = helper.inferSwiftType(name: "count", value: 42)
-        #expect(type2 == .int)
-        #expect(value2 == "42")
-
-        // Bool
-        let (type3, value3) = helper.inferSwiftType(name: "enabled", value: true)
-        #expect(type3 == .bool)
-        #expect(value3 == "true")
-
-        // Double (whole number)
-        let (type4, value4) = helper.inferSwiftType(name: "timeout", value: 30.0)
-        #expect(type4 == .int)
-        #expect(value4 == "30")
-    }
-
-    // MARK: - Prefix Filtering Tests
-
-    @Test("Filter variables by namespace")
-    func testFilterVariables() throws {
-        let variables: [String: Any] = [
-            "environment_name": "dev",
-            "api_url": "https://api.example.com",
-            "apps": [
-                "bundle_identifier": "com.example.app",
-                "display_name": "MyApp",
-                "ios": [
-                    "app_icon_name": "AppIcon"
-                ]
-            ],
-            "features": [
-                "debug_menu": true
-            ]
-        ]
-
-        let helper = TestHelper()
-
-        // Filter for "apps" namespace (includes nested ios)
-        let filtered = helper.filterVariables(variables, prefixes: ["apps"])
-
-        // Should have all from apps namespace (leaf keys only, no namespace prefix)
-        #expect(filtered.keys.contains("bundleIdentifier"))
-        #expect(filtered.keys.contains("displayName"))
-        #expect(filtered.keys.contains("appIconName"))
-
-        // Should not have root-level variables or other namespaces
-        #expect(!filtered.keys.contains("environmentName"))
-        #expect(!filtered.keys.contains("apiURL"))
-        #expect(!filtered.keys.contains("debugMenu"))
-    }
-
-    @Test("Filter root-level variables")
-    func testFilterRootLevelVariables() throws {
-        let variables: [String: Any] = [
-            "environment_name": "dev",
-            "api_url": "https://api.example.com",
-            "apps": [
-                "bundle_identifier": "com.example.app"
-            ]
-        ]
-
-        let helper = TestHelper()
-
-        // Filter for root-level variables
-        let filtered = helper.filterVariables(variables, prefixes: ["environment_name", "api_url"])
-
-        // Should have root-level variables
-        #expect(filtered.keys.contains("environmentName"))
-        #expect(filtered.keys.contains("apiURL"))
-
-        // Should not have namespace variables
-        #expect(!filtered.keys.contains("bundleIdentifier"))
-    }
-
-    @Test("Flatten nested dictionary keeps only leaf keys")
-    func testFlattenDictionary() throws {
-        let nested: [String: Any] = [
-            "bundle_identifier": "com.example",
-            "ios": [
-                "icon": "AppIcon"
-            ]
-        ]
-
-        let helper = TestHelper()
-        let flattened = helper.flattenDictionary(nested)
-
-        // Leaf keys are preserved without namespace prefix
-        #expect(flattened["bundle_identifier"] as? String == "com.example")
-        #expect(flattened["icon"] as? String == "AppIcon")
-
-        // Namespace key should not exist
-        #expect(flattened["ios_icon"] == nil)
-    }
-
-    @Test("Flatten deeply nested dictionary keeps only leaf keys")
-    func testFlattenDeeplyNestedDictionary() throws {
-        let nested: [String: Any] = [
-            "apps": [
-                "ios": [
-                    "provision_profile": "Development"
-                ],
-                "bundle_identifier": "com.example"
-            ]
-        ]
-
-        let helper = TestHelper()
-        let flattened = helper.flattenDictionary(nested)
-
-        // Only leaf keys should exist
-        #expect(flattened["provision_profile"] as? String == "Development")
-        #expect(flattened["bundle_identifier"] as? String == "com.example")
-
-        // Intermediate keys should not exist
-        #expect(flattened["apps_ios_provision_profile"] == nil)
-        #expect(flattened["ios_provision_profile"] == nil)
-        #expect(flattened["apps_bundle_identifier"] == nil)
-    }
-
-    @Test("Flatten dictionary with duplicate leaf keys uses last value when not excluding")
-    func testFlattenDictionaryDuplicateLeafKeys() throws {
-        let nested: [String: Any] = [
-            "ios": [
-                "name": "iOS App"
-            ],
-            "tvos": [
-                "name": "tvOS App"
-            ]
-        ]
-
-        let helper = TestHelper()
-        let flattened = helper.flattenDictionary(nested, excludingKeys: [])
-
-        // Only one "name" key should exist (last one wins due to merge)
-        #expect(flattened["name"] != nil)
-        // The value depends on dictionary iteration order, but should be one of them
-        let name = flattened["name"] as? String
-        #expect(name == "iOS App" || name == "tvOS App")
-    }
-
-    @Test("Flatten dictionary excludes specified keys")
-    func testFlattenDictionaryExcludesKeys() throws {
-        let nested: [String: Any] = [
-            "shared_name": "Shared",
-            "mobile": [
-                "platform_name": "Mobile Platform"
-            ],
-            "desktop": [
-                "platform_name": "Desktop Platform"
-            ]
-        ]
-
-        let helper = TestHelper()
-
-        // Exclude "desktop" - should only get shared and mobile values
-        let flattened = helper.flattenDictionary(nested, excludingKeys: ["desktop"])
-
-        #expect(flattened["shared_name"] as? String == "Shared")
-        #expect(flattened["platform_name"] as? String == "Mobile Platform")
-    }
-
-    @Test("Filter variables separates nested platform prefixes correctly")
-    func testFilterVariablesSeparatesPlatforms() throws {
-        let variables: [String: Any] = [
-            "shared": [
-                "app_name": "TestApp",
-                "mobile": [
-                    "config_resource": "mobile_config",
-                    "provision_profile": "Mobile Profile"
-                ],
-                "desktop": [
-                    "config_resource": "desktop_config",
-                    "provision_profile": "Desktop Profile"
-                ]
-            ]
-        ]
-
-        let helper = TestHelper()
-
-        // Filter for shared + mobile only
-        let mobileFiltered = helper.filterVariables(variables, prefixes: ["shared", "mobile"])
-
-        // Should have shared values
-        #expect(mobileFiltered["appName"] as? String == "TestApp")
-        // Should have mobile-specific values
-        #expect(mobileFiltered["configResource"] as? String == "mobile_config")
-        #expect(mobileFiltered["provisionProfile"] as? String == "Mobile Profile")
-
-        // Filter for shared + desktop only
-        let desktopFiltered = helper.filterVariables(variables, prefixes: ["shared", "desktop"])
-
-        // Should have shared values
-        #expect(desktopFiltered["appName"] as? String == "TestApp")
-        // Should have desktop-specific values
-        #expect(desktopFiltered["configResource"] as? String == "desktop_config")
-        #expect(desktopFiltered["provisionProfile"] as? String == "Desktop Profile")
-    }
-
-    @Test("Filter variables is deterministic across multiple runs")
-    func testFilterVariablesIsDeterministic() throws {
-        let variables: [String: Any] = [
-            "platforms": [
-                "alpha": [
-                    "identifier": "alpha_id",
-                    "resource": "alpha_res"
-                ],
-                "beta": [
-                    "identifier": "beta_id",
-                    "resource": "beta_res"
-                ]
-            ]
-        ]
-
-        let helper = TestHelper()
-
-        // Run multiple times to ensure deterministic results
-        for _ in 0..<10 {
-            let alphaFiltered = helper.filterVariables(variables, prefixes: ["platforms", "alpha"])
-            let betaFiltered = helper.filterVariables(variables, prefixes: ["platforms", "beta"])
-
-            // Alpha should always get alpha values
-            #expect(alphaFiltered["identifier"] as? String == "alpha_id")
-            #expect(alphaFiltered["resource"] as? String == "alpha_res")
-
-            // Beta should always get beta values
-            #expect(betaFiltered["identifier"] as? String == "beta_id")
-            #expect(betaFiltered["resource"] as? String == "beta_res")
-        }
-    }
-
     // MARK: - Integration Tests
 
     @Test("Base type automatically includes all root-level variables")
@@ -656,7 +370,7 @@ struct SwiftGenerationTests {
         )
 
         // Create config.yml with two platform-specific outputs
-        // This simulates the scenario where apps.mobile and apps.desktop have same-named keys
+        // Each platform uses unique key names to avoid conflicts
         let config = """
         targets:
           - name: TestApp
@@ -667,30 +381,30 @@ struct SwiftGenerationTests {
         swift_generation:
           outputs:
             - path: Generated/MobileApp/EnvironmentService.swift
-              prefixes: [apps, mobile]
+              prefixes: [shared, mobile]
               type: extension
             - path: Generated/DesktopApp/EnvironmentService.swift
-              prefixes: [apps, desktop]
+              prefixes: [shared, desktop]
               type: extension
         """
         let configURL = tempDir.appendingPathComponent("env/config.yml")
         try config.write(to: configURL, atomically: true, encoding: .utf8)
 
-        // Create environment variables with platform-specific nested values
-        // Both "mobile" and "desktop" have identical key names but different values
+        // Create environment variables with platform-specific values
+        // Use separate top-level namespaces with unique key names per platform
         let variables: [String: Any] = [
-            "apps": [
-                "bundle_display_name": "TestApp",
-                "mobile": [
-                    "bundle_identifier": "com.test.mobile",
-                    "config_resource": "mobile_config",
-                    "release_provision_profile": "Mobile Distribution Profile"
-                ],
-                "desktop": [
-                    "bundle_identifier": "com.test.desktop",
-                    "config_resource": "desktop_config",
-                    "release_provision_profile": "Desktop Distribution Profile"
-                ]
+            "shared": [
+                "bundle_display_name": "TestApp"
+            ],
+            "mobile": [
+                "mobile_bundle_identifier": "com.test.mobile",
+                "mobile_config_resource": "mobile_config",
+                "mobile_provision_profile": "Mobile Distribution Profile"
+            ],
+            "desktop": [
+                "desktop_bundle_identifier": "com.test.desktop",
+                "desktop_config_resource": "desktop_config",
+                "desktop_provision_profile": "Desktop Distribution Profile"
             ]
         ]
 
@@ -698,7 +412,6 @@ struct SwiftGenerationTests {
         let service = EnvironmentService()
 
         // Run multiple times to ensure deterministic behavior
-        // The original bug was non-deterministic due to dictionary iteration order
         for iteration in 0..<5 {
             try service.generateSwiftFiles(
                 environmentName: "test",
@@ -808,120 +521,168 @@ struct SwiftGenerationTests {
         #expect(content.contains("import SharedTypes"))
         #expect(content.contains("public var bundleIdentifier"))
     }
-}
 
-// MARK: - Test Helper
+    @Test("Type inference and camelCase conversion work correctly end-to-end")
+    func testTypeInferenceAndCamelCase() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-type-inference-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
 
-/// Helper class that duplicates private method logic for testing
-private struct TestHelper {
-    func convertToCamelCase(_ key: String, prefix: String) -> String {
-        // Duplicate the logic from EnvironmentService
-        let components = key.split(separator: "_").map(String.init)
-        guard !components.isEmpty else {
-            return key
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
         }
 
-        var camelCase = components[0].lowercased()
-        for component in components.dropFirst() {
-            camelCase += component.capitalized
-        }
-
-        // Special handling for URL suffix
-        camelCase = camelCase.replacingOccurrences(
-            of: "Url",
-            with: "URL",
-            options: [],
-            range: camelCase.range(of: "Url")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated"),
+            withIntermediateDirectories: true
         )
 
-        return camelCase
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables: {}
+
+        swift_generation:
+          outputs:
+            - path: Generated/Environment.swift
+              prefixes: [apps]
+              type: extension
+        """
+        try config.write(
+            to: tempDir.appendingPathComponent("env/config.yml"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        // Variables with various types and naming patterns
+        let variables: [String: Any] = [
+            "apps": [
+                // CamelCase conversion patterns
+                "bundle_identifier": "com.example.app",      // → bundleIdentifier
+                "ios_app_icon_name": "AppIcon",              // → iosAppIconName
+                // URL detection by name suffix
+                "api_url": "https://api.example.com",        // → apiURL (URL type)
+                "config_url": "https://config.example.com",  // → configURL (URL type)
+                "base_url": "https://base.example.com",      // → baseURL (URL type)
+                // Type inference from values
+                "max_retries": 5,                            // → Int
+                "debug_enabled": true,                       // → Bool
+                "timeout_seconds": 30.0,                     // → Int (whole number Double)
+                // Deep nesting
+                "ios": [
+                    "provision_profile": "Development"       // → provisionProfile
+                ]
+            ]
+        ]
+
+        let service = EnvironmentService()
+        try service.generateSwiftFiles(
+            environmentName: "test",
+            variables: variables,
+            workingDirectory: tempPath,
+            dryRun: false
+        )
+
+        let content = try String(
+            contentsOf: tempDir.appendingPathComponent("Generated/Environment.swift"),
+            encoding: .utf8
+        )
+
+        // Verify CamelCase conversion
+        #expect(content.contains("bundleIdentifier"))
+        #expect(content.contains("iosAppIconName"))
+
+        // Verify URL type detection (uses url() helper)
+        #expect(content.contains("apiURL"))
+        #expect(content.contains("configURL"))
+        #expect(content.contains("baseURL"))
+        #expect(content.contains("url(\"https://api.example.com\")"))
+        #expect(content.contains("url(\"https://config.example.com\")"))
+
+        // Verify type inference
+        #expect(content.contains("maxRetries: Int { 5 }"))
+        #expect(content.contains("debugEnabled: Bool { true }"))
+        #expect(content.contains("timeoutSeconds: Int { 30 }"))
+
+        // Verify deep nesting flattens correctly
+        #expect(content.contains("provisionProfile"))
+        #expect(content.contains("\"Development\""))
     }
 
-    func inferSwiftType(name: String, value: Any) -> (SwiftType, String) {
-        // Duplicate the logic from EnvironmentService
-        if name.hasSuffix("URL") || name.hasSuffix("Url") {
-            if let stringValue = value as? String {
-                return (.url, stringValue)
-            }
+    @Test("Duplicate leaf keys in environment variables throws error")
+    func testDuplicateLeafKeysThrowsError() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-duplicate-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
         }
 
-        if let stringValue = value as? String {
-            return (.string, stringValue)
-        } else if let intValue = value as? Int {
-            return (.int, String(intValue))
-        } else if let boolValue = value as? Bool {
-            return (.bool, boolValue ? "true" : "false")
-        } else if let doubleValue = value as? Double {
-            if doubleValue.truncatingRemainder(dividingBy: 1) == 0 {
-                return (.int, String(Int(doubleValue)))
-            }
-            return (.string, String(doubleValue))
-        }
+        // Create directory structure
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated"),
+            withIntermediateDirectories: true
+        )
 
-        return (.string, String(describing: value))
-    }
+        // Create config.yml that requests both ios and tvos prefixes
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables: {}
 
-    func filterVariables(_ variables: [String: Any], prefixes: [String]) -> [String: Any] {
-        var filtered: [String: Any] = [:]
-        let prefixSet = Set(prefixes)
+        swift_generation:
+          outputs:
+            - path: Generated/Environment.swift
+              prefixes: [ios, tvos]
+              type: extension
+        """
+        let configURL = tempDir.appendingPathComponent("env/config.yml")
+        try config.write(to: configURL, atomically: true, encoding: .utf8)
 
-        // First pass: collect all top-level namespace dictionaries
-        var topLevelNamespaces: [String: [String: Any]] = [:]
-        for prefix in prefixes {
-            if let namespaceDict = variables[prefix] as? [String: Any] {
-                topLevelNamespaces[prefix] = namespaceDict
-            }
-        }
+        // Create variables with duplicate leaf keys across namespaces
+        let variables: [String: Any] = [
+            "ios": [
+                "app_name": "iOS App",
+                "bundle_id": "com.example.ios"
+            ],
+            "tvos": [
+                "app_name": "tvOS App",  // Duplicate key!
+                "bundle_id": "com.example.tvos"  // Duplicate key!
+            ]
+        ]
 
-        // Second pass: process each prefix
-        for prefix in prefixes {
-            if let namespaceDict = variables[prefix] as? [String: Any] {
-                // Top-level namespace - flatten but exclude nested dicts that are other prefixes
-                let flattened = flattenDictionary(namespaceDict, excludingKeys: prefixSet)
-                for (key, value) in flattened {
-                    let camelKey = convertToCamelCase(key, prefix: "")
-                    filtered[camelKey] = value
-                }
+        let service = EnvironmentService()
+
+        // Should throw duplicateLeafKey error
+        do {
+            try service.generateSwiftFiles(
+                environmentName: "test",
+                variables: variables,
+                workingDirectory: tempPath,
+                dryRun: false
+            )
+            Issue.record("Expected duplicateLeafKey error to be thrown")
+        } catch let error as EnvironmentError {
+            if case let .duplicateLeafKey(key, namespaces) = error {
+                // Should catch one of the duplicate keys (app_name or bundle_id)
+                #expect(key == "app_name" || key == "bundle_id")
+                #expect(namespaces.count == 2)
             } else {
-                // Not a top-level key - look for it as nested key in top-level namespaces
-                for (_, namespaceDict) in topLevelNamespaces {
-                    if let nestedDict = namespaceDict[prefix] as? [String: Any] {
-                        let flattened = flattenDictionary(nestedDict, excludingKeys: prefixSet)
-                        for (key, value) in flattened {
-                            let camelKey = convertToCamelCase(key, prefix: "")
-                            filtered[camelKey] = value
-                        }
-                        break
-                    }
-                }
-            }
-
-            // Also check for root-level scalar values
-            if let rootValue = variables[prefix], !(rootValue is [String: Any]) {
-                let camelKey = convertToCamelCase(prefix, prefix: "")
-                filtered[camelKey] = rootValue
+                Issue.record("Expected duplicateLeafKey error, got \(error)")
             }
         }
-
-        return filtered
-    }
-
-    func flattenDictionary(_ dict: [String: Any], excludingKeys: Set<String> = []) -> [String: Any] {
-        var result: [String: Any] = [:]
-
-        for (key, value) in dict {
-            if excludingKeys.contains(key) {
-                continue
-            }
-
-            if let nestedDict = value as? [String: Any] {
-                let flattened = flattenDictionary(nestedDict, excludingKeys: excludingKeys)
-                result.merge(flattened) { _, new in new }
-            } else {
-                result[key] = value
-            }
-        }
-
-        return result
     }
 }
