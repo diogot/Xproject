@@ -351,7 +351,7 @@ public final class EnvironmentService {
                 let rootLevelKeys = variables.keys.filter { !(variables[$0] is [String: Any]) }
                 // Merge root-level keys with configured prefixes, removing duplicates
                 let combined = rootLevelKeys + prefixes
-                prefixes = Array(Set(combined))
+                prefixes = Array(Set(combined)).sorted()
             }
 
             // Filter variables by prefix
@@ -438,7 +438,7 @@ public final class EnvironmentService {
         into filtered: inout [String: Any],
         sources: inout [String: String]
     ) throws {
-        for (key, data) in flattened {
+        for (key, data) in flattened.sorted(by: { $0.key < $1.key }) {
             let camelKey = convertToCamelCase(key, prefix: "")
             if let existingSource = sources[camelKey] {
                 throw EnvironmentError.duplicateLeafKey(key: key, namespaces: [existingSource, data.source].sorted())
@@ -512,7 +512,7 @@ public final class EnvironmentService {
             if let nestedDict = value as? [String: Any] {
                 // Recursively flatten, passing through the exclusion set
                 let flattened = try flattenDictionary(nestedDict, excludingKeys: excludingKeys, parentPath: currentPath)
-                for (leafKey, leafData) in flattened {
+                for (leafKey, leafData) in flattened.sorted(by: { $0.key < $1.key }) {
                     if let existing = result[leafKey] {
                         throw EnvironmentError.duplicateLeafKey(
                             key: leafKey,

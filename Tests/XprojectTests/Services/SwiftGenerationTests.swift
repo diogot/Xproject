@@ -677,9 +677,9 @@ struct SwiftGenerationTests {
             Issue.record("Expected duplicateLeafKey error to be thrown")
         } catch let error as EnvironmentError {
             if case let .duplicateLeafKey(key, namespaces) = error {
-                // Should catch one of the duplicate keys (app_name or bundle_id)
-                #expect(key == "app_name" || key == "bundle_id")
-                #expect(namespaces.count == 2)
+                // With deterministic iteration, "app_name" is detected first (alphabetically)
+                #expect(key == "app_name")
+                #expect(namespaces == ["ios.app_name", "tvos.app_name"])
             } else {
                 Issue.record("Expected duplicateLeafKey error, got \(error)")
             }
