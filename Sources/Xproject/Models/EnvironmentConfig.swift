@@ -155,6 +155,7 @@ public enum EnvironmentError: Error, LocalizedError {
     case invalidYAML(path: String, reason: String)
     case missingVariable(String, path: String)
     case invalidEnvironmentDirectory
+    case duplicateLeafKey(key: String, namespaces: [String])
 
     public var errorDescription: String? {
         switch self {
@@ -174,6 +175,12 @@ public enum EnvironmentError: Error, LocalizedError {
             return "Variable '\(varName)' not found at path '\(path)' in environment"
         case .invalidEnvironmentDirectory:
             return "Invalid environment directory structure. env/ directory must exist in project root."
+        case let .duplicateLeafKey(key, namespaces):
+            return """
+                Duplicate leaf key '\(key)' found in namespaces: \(namespaces.joined(separator: ", "))
+
+                Hint: Use separate output files for each namespace, or rename keys to be unique.
+                """
         }
     }
 }
