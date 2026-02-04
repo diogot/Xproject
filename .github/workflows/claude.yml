@@ -14,10 +14,10 @@ jobs:
   claude:
     if: |
       github.actor == github.repository_owner && (
-        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body || '', '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body || '', '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body || '', '@claude')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body || '', '@claude') || contains(github.event.issue.title || '', '@claude')))
       )
     runs-on: ubuntu-latest
     permissions:
@@ -31,6 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha || (github.event.issue.pull_request && format('refs/pull/{0}/head', github.event.issue.number)) || github.sha }}
 
       - name: Run Claude Code
         id: claude
