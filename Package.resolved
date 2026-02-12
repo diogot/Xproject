@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/diogot/swift-pr-reporter.git",
       "state" : {
-        "revision" : "dbf42eb1647f6d61b4ac4339f8ab57ca3dacfa60",
-        "version" : "1.0.3"
+        "revision" : "46d69235c485ae75952c17340657730d1d133e51",
+        "version" : "1.0.4"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jpsim/Yams",
       "state" : {
-        "revision" : "51b5127c7fb6ffac106ad6d199aaa33c5024895f",
-        "version" : "6.2.0"
+        "revision" : "deaf82e867fa2cbd3cd865978b079bfcf384ac28",
+        "version" : "6.2.1"
       }
     }
   ],
