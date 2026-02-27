@@ -574,6 +574,57 @@ struct EnvironmentServiceTests {
         }
     }
 
+    // MARK: - Swift Generation Validation Tests
+
+    @Test("Validate catches duplicate leaf keys in Swift generation")
+    func testValidateCatchesDuplicateLeafKeys() throws {
+        let workingDir = NSTemporaryDirectory() + UUID().uuidString + "/tmp/test-validate-dup-leaf"
+
+        try createTestEnvironment(
+            at: workingDir,
+            config: """
+            targets:
+              - name: MyApp
+                xcconfig_path: Config
+                shared_variables: {}
+
+            swift_generation:
+              outputs:
+                - path: Generated/Environment.swift
+                  prefixes: [ios, tvos]
+                  type: extension
+            """,
+            environments: [
+                "dev": """
+                ios:
+                  app_name: iOS App
+                  bundle_id: com.example.ios
+                tvos:
+                  app_name: tvOS App
+                  bundle_id: com.example.tvos
+                """
+            ],
+            xcconfigPaths: ["Config"]
+        )
+
+        defer { try? FileManager.default.removeItem(atPath: workingDir) }
+
+        let service = EnvironmentService()
+
+        // Should throw duplicateLeafKey via validateEnvironmentConfig
+        do {
+            try service.validateEnvironmentConfig(workingDirectory: workingDir)
+            Issue.record("Expected duplicateLeafKey error to be thrown")
+        } catch let error as EnvironmentError {
+            if case let .duplicateLeafKey(key, namespaces) = error {
+                #expect(key == "app_name")
+                #expect(namespaces == ["ios.app_name", "tvos.app_name"])
+            } else {
+                Issue.record("Expected duplicateLeafKey error, got \(error)")
+            }
+        }
+    }
+
     // MARK: - Build Number Injection Tests
 
     @Test("Generate xcconfigs without build number when nil")

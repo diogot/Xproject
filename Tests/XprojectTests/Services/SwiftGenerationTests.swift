@@ -615,6 +615,145 @@ struct SwiftGenerationTests {
         #expect(content.contains("\"Development\""))
     }
 
+    @Test("Sibling namespaces with duplicate leaf keys succeeds")
+    func testSiblingNamespacesWithDuplicateLeafKeysSucceeds() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-sibling-dup-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        // Create directory structure
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated"),
+            withIntermediateDirectories: true
+        )
+
+        // Create config.yml with a single output using apps prefix
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables: {}
+
+        swift_generation:
+          outputs:
+            - path: Generated/Environment.swift
+              prefixes: [apps]
+              type: extension
+        """
+        let configURL = tempDir.appendingPathComponent("env/config.yml")
+        try config.write(to: configURL, atomically: true, encoding: .utf8)
+
+        // Two sibling sub-namespaces under apps with the same leaf keys
+        let variables: [String: Any] = [
+            "apps": [
+                "notification_content": [
+                    "bundle_identifier": "com.example.content",
+                    "name": "Content Extension"
+                ],
+                "notification_service": [
+                    "bundle_identifier": "com.example.service",
+                    "name": "Service Extension"
+                ]
+            ]
+        ]
+
+        let service = EnvironmentService()
+
+        // Should succeed without error — siblings are independent namespaces
+        try service.generateSwiftFiles(
+            environmentName: "test",
+            variables: variables,
+            workingDirectory: tempPath,
+            dryRun: false
+        )
+
+        // Verify file was created
+        let outputURL = tempDir.appendingPathComponent("Generated/Environment.swift")
+        #expect(FileManager.default.fileExists(atPath: outputURL.path))
+
+        let content = try String(contentsOf: outputURL, encoding: .utf8)
+        // Last sibling wins deterministically (sorted order: notification_service > notification_content)
+        #expect(content.contains("\"com.example.service\""))
+        #expect(content.contains("\"Service Extension\""))
+    }
+
+    @Test("Parent-child duplicate leaf key throws error")
+    func testParentChildDuplicateLeafKeyThrowsError() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xproject-parent-child-dup-test-\(UUID().uuidString)")
+        let tempPath = tempDir.path
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        // Create directory structure
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("env"),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: tempDir.appendingPathComponent("Generated"),
+            withIntermediateDirectories: true
+        )
+
+        // Create config.yml
+        let config = """
+        targets:
+          - name: TestApp
+            xcconfig_path: Config
+            shared_variables: {}
+
+        swift_generation:
+          outputs:
+            - path: Generated/Environment.swift
+              prefixes: [apps]
+              type: extension
+        """
+        let configURL = tempDir.appendingPathComponent("env/config.yml")
+        try config.write(to: configURL, atomically: true, encoding: .utf8)
+
+        // Parent has direct scalar "name" AND a child sub-namespace also has "name"
+        let variables: [String: Any] = [
+            "apps": [
+                "name": "Main App",
+                "details": [
+                    "name": "Detail Name"
+                ]
+            ]
+        ]
+
+        let service = EnvironmentService()
+
+        // Should throw duplicateLeafKey error — parent-child conflict
+        do {
+            try service.generateSwiftFiles(
+                environmentName: "test",
+                variables: variables,
+                workingDirectory: tempPath,
+                dryRun: false
+            )
+            Issue.record("Expected duplicateLeafKey error to be thrown")
+        } catch let error as EnvironmentError {
+            if case let .duplicateLeafKey(key, namespaces) = error {
+                #expect(key == "name")
+                #expect(namespaces == ["apps.details.name", "apps.name"])
+            } else {
+                Issue.record("Expected duplicateLeafKey error, got \(error)")
+            }
+        }
+    }
+
     @Test("Duplicate leaf keys in environment variables throws error")
     func testDuplicateLeafKeysThrowsError() async throws {
         let tempDir = FileManager.default.temporaryDirectory
