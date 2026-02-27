@@ -436,11 +436,12 @@ public final class EnvironmentService {
     private func mergeFlattened(
         _ flattened: [String: (value: Any, source: String)],
         into filtered: inout [String: Any],
-        sources: inout [String: String]
+        sources: inout [String: String],
+        allowOverwrite: Bool = false
     ) throws {
         for (key, data) in flattened.sorted(by: { $0.key < $1.key }) {
             let camelKey = convertToCamelCase(key, prefix: "")
-            if let existingSource = sources[camelKey] {
+            if let existingSource = sources[camelKey], !allowOverwrite {
                 throw EnvironmentError.duplicateLeafKey(key: key, namespaces: [existingSource, data.source].sorted())
             }
             filtered[camelKey] = data.value
@@ -459,7 +460,9 @@ public final class EnvironmentService {
             if let nestedDict = namespaceDict[prefix] as? [String: Any] {
                 let parentPath = "\(namespaceName).\(prefix)"
                 let flattened = try flattenDictionary(nestedDict, excludingKeys: prefixSet, parentPath: parentPath)
-                try mergeFlattened(flattened, into: &filtered, sources: &sources)
+                // Nested prefixes are more specific than their parent namespace,
+                // so allow them to overwrite values contributed by sibling sub-namespaces
+                try mergeFlattened(flattened, into: &filtered, sources: &sources, allowOverwrite: true)
                 break
             }
         }
@@ -483,53 +486,64 @@ public final class EnvironmentService {
     }
 
     /// Flatten nested dictionary, keeping only leaf key names
+    ///
+    /// Uses a two-phase approach:
+    /// - Phase 1: Collect direct scalar (parent-level) keys
+    /// - Phase 2: Recurse into nested dicts. For each flattened leaf key from a child:
+    ///   - If a direct key with the same name exists → throw `duplicateLeafKey` (real parent-child conflict)
+    ///   - Otherwise → overwrite (sibling duplicate, last wins deterministically via sorted order)
+    ///
+    /// This allows sibling sub-namespaces to share leaf keys (e.g., `apps.sub1.name` and `apps.sub2.name`)
+    /// while still catching real parent-child conflicts (e.g., `apps.name` vs `apps.details.name`).
+    ///
     /// - Parameters:
     ///   - dict: Nested dictionary
     ///   - excludingKeys: Keys to skip during flattening (used to prevent mixing platform-specific variables)
     ///   - parentPath: The path to the current dictionary (for error reporting)
     /// - Returns: Flattened dictionary with leaf keys and their source paths
-    /// - Throws: `EnvironmentError.duplicateLeafKey` if the same leaf key appears in multiple namespaces
+    /// - Throws: `EnvironmentError.duplicateLeafKey` if a parent-child leaf key conflict is detected
     private func flattenDictionary(
         _ dict: [String: Any],
         excludingKeys: Set<String> = [],
         parentPath: String = ""
     ) throws -> [String: (value: Any, source: String)] {
         var result: [String: (value: Any, source: String)] = [:]
+        var directKeys = Set<String>()
 
         // Sort keys for deterministic iteration order
         let sortedKeys = dict.keys.sorted()
 
+        // Phase 1: Collect direct scalar keys
         for key in sortedKeys {
             guard let value = dict[key] else { continue }
-
-            // Skip keys that should be handled by other prefixes
-            if excludingKeys.contains(key) {
-                continue
-            }
+            if excludingKeys.contains(key) { continue }
+            guard !(value is [String: Any]) else { continue }
 
             let currentPath = parentPath.isEmpty ? key : "\(parentPath).\(key)"
+            result[key] = (value: value, source: currentPath)
+            directKeys.insert(key)
+        }
 
-            if let nestedDict = value as? [String: Any] {
-                // Recursively flatten, passing through the exclusion set
-                let flattened = try flattenDictionary(nestedDict, excludingKeys: excludingKeys, parentPath: currentPath)
-                for (leafKey, leafData) in flattened.sorted(by: { $0.key < $1.key }) {
-                    if let existing = result[leafKey] {
-                        throw EnvironmentError.duplicateLeafKey(
-                            key: leafKey,
-                            namespaces: [existing.source, leafData.source].sorted()
-                        )
-                    }
-                    result[leafKey] = leafData
-                }
-            } else {
-                // Terminal value - use only the leaf key
-                if let existing = result[key] {
+        // Phase 2: Recurse into nested dicts
+        for key in sortedKeys {
+            guard let value = dict[key] else { continue }
+            if excludingKeys.contains(key) { continue }
+            guard let nestedDict = value as? [String: Any] else { continue }
+
+            let currentPath = parentPath.isEmpty ? key : "\(parentPath).\(key)"
+            let flattened = try flattenDictionary(nestedDict, excludingKeys: excludingKeys, parentPath: currentPath)
+
+            for (leafKey, leafData) in flattened.sorted(by: { $0.key < $1.key }) {
+                if directKeys.contains(leafKey) {
+                    // Parent-child conflict: a direct scalar and a nested child share the same leaf key
+                    let existingSource = result[leafKey]?.source ?? parentPath
                     throw EnvironmentError.duplicateLeafKey(
-                        key: key,
-                        namespaces: [existing.source, currentPath].sorted()
+                        key: leafKey,
+                        namespaces: [existingSource, leafData.source].sorted()
                     )
                 }
-                result[key] = (value: value, source: currentPath)
+                // Sibling duplicate: last wins deterministically (sorted order)
+                result[leafKey] = leafData
             }
         }
 
@@ -656,6 +670,9 @@ public final class EnvironmentService {
         for envName in environments {
             let variables = try loadEnvironmentVariables(name: envName, workingDirectory: workingDirectory)
             try validateRequiredVariables(config: config, variables: variables, environmentName: envName)
+
+            // 5. Validate Swift generation for duplicate leaf keys
+            try validateSwiftGeneration(config: config, variables: variables, environmentName: envName)
         }
     }
 
@@ -707,6 +724,34 @@ public final class EnvironmentService {
                     }
                 }
             }
+        }
+    }
+
+    /// Validate Swift generation outputs for duplicate leaf key conflicts
+    ///
+    /// Iterates over all configured Swift generation outputs and calls `filterVariables`
+    /// for each output's prefixes. This surfaces both parent-child conflicts (from `flattenDictionary`)
+    /// and cross-prefix conflicts (from `mergeFlattened`).
+    private func validateSwiftGeneration(
+        config: EnvironmentConfig,
+        variables: [String: Any],
+        environmentName: String
+    ) throws {
+        guard let swiftConfig = config.swiftGeneration else {
+            return
+        }
+
+        for output in swiftConfig.outputs {
+            var prefixes = output.prefixes
+            let outputType = output.type ?? .base
+
+            if outputType == .base {
+                let rootLevelKeys = variables.keys.filter { !(variables[$0] is [String: Any]) }
+                let combined = rootLevelKeys + prefixes
+                prefixes = Array(Set(combined)).sorted()
+            }
+
+            _ = try filterVariables(variables, prefixes: prefixes)
         }
     }
 
