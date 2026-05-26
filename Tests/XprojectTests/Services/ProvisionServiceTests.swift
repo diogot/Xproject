@@ -24,6 +24,7 @@ struct ProvisionServiceTests {
     }
 
     /// Creates a mock .mobileprovision file
+    @discardableResult
     private func createMockProfile(in directory: String, name: String, content: String? = nil) throws -> String {
         let profilePath = (directory as NSString).appendingPathComponent(name)
         let data = (content ?? "Mock provisioning profile content for \(name)").data(using: .utf8)!
