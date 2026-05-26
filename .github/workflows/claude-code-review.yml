@@ -35,7 +35,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          # Full history so the allowlisted git log/show/blame commands return
+          # meaningful results to the review agent. Matches release.yml/tests.yml.
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || format('refs/pull/{0}/head', github.event.issue.number) }}
 
       - name: Run Claude Code Review
