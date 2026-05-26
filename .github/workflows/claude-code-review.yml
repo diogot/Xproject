@@ -35,7 +35,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          # Full history so the allowlisted git log/show/blame commands return
+          # meaningful results to the review agent. Matches release.yml/tests.yml.
+          fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || format('refs/pull/{0}/head', github.event.issue.number) }}
 
       - name: Run Claude Code Review
@@ -46,6 +48,12 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number || github.event.issue.number }}'
+          # The code-review slash command's frontmatter only allows gh CLI tools
+          # plus the inline-comment MCP. Add the read-only tools a real review
+          # needs (file inspection, codebase search, git history) so the agent
+          # is not burning turns on permission denials.
+          claude_args: |
+            --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git blame:*),Bash(rg:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
