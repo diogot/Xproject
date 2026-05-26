@@ -184,6 +184,9 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         try process.run()
         process.waitUntilExit()
         group.wait()
+        // Ensure all queued tee writes have flushed before returning, so callers
+        // that immediately exit (e.g. CLI entry points) don't drop tail output.
+        Self.teeQueue.sync {}
 
         return makeResult(
             out: outBuf.snapshot(),
@@ -219,23 +222,46 @@ public struct CommandExecutor: CommandExecuting, Sendable {
         }
     }
 
+    /// Bounded by one pipe buffer's worth on macOS (~64KB). The kernel never
+    /// returns more than the pipe holds, so a larger `upToCount` would not gain
+    /// throughput — and a much larger value risks unhelpful buffer sizing inside
+    /// Foundation. The readabilityHandler will be re-invoked for any remaining
+    /// bytes.
+    private static let readChunkSize = 64 * 1024
+
     /// Use `read(upToCount:)` instead of `availableData` to avoid the spurious
-    /// zero-byte callbacks documented in SR-14669, and treat both `nil` and
-    /// empty `Data` as the EOF signal.
+    /// zero-byte callbacks documented in SR-14669. The API returns `nil` at EOF;
+    /// a thrown error has no recovery path from inside a `readabilityHandler`
+    /// callback, so we log it to the parent's stderr and treat it as EOF —
+    /// terminating the drain is safer than spinning on the same failing fd.
     private static func readChunk(from handle: FileHandle) -> Data {
         do {
-            return try handle.read(upToCount: Int.max) ?? Data()
+            return try handle.read(upToCount: readChunkSize) ?? Data()
         } catch {
+            let message = "CommandExecutor: pipe read error (treating as EOF): \(error)\n"
+            FileHandle.standardError.write(Data(message.utf8))
             return Data()
         }
     }
 
+    /// Serial queue used to tee child output to the parent's stdout/stderr in
+    /// `verbose` mode. Writes are dispatched asynchronously so a slow consumer
+    /// of the parent's stdout cannot block the `readabilityHandler` — which
+    /// would let the child's pipe fill and recreate the deadlock the rest of
+    /// this file works to avoid.
+    private static let teeQueue = DispatchQueue(
+        label: "com.diogot.xproject.CommandExecutor.tee",
+        qos: .utility
+    )
+
     private static func write(_ data: Data, to target: TeeTarget) {
-        switch target {
-        case .stdout:
-            FileHandle.standardOutput.write(data)
-        case .stderr:
-            FileHandle.standardError.write(data)
+        teeQueue.async {
+            switch target {
+            case .stdout:
+                FileHandle.standardOutput.write(data)
+            case .stderr:
+                FileHandle.standardError.write(data)
+            }
         }
     }
 
