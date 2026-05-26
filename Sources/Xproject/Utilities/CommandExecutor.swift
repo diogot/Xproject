@@ -6,6 +6,7 @@
 import Foundation
 import Synchronization
 
+// swiftlint:disable:next type_body_length
 public struct CommandExecutor: CommandExecuting, Sendable {
     private let workingDirectory: String
     internal let dryRun: Bool
@@ -227,7 +228,7 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     /// throughput — and a much larger value risks unhelpful buffer sizing inside
     /// Foundation. The readabilityHandler will be re-invoked for any remaining
     /// bytes.
-    private static let readChunkSize = 64 * 1024
+    private static let readChunkSize = 64 * 1_024
 
     /// Use `read(upToCount:)` instead of `availableData` to avoid the spurious
     /// zero-byte callbacks documented in SR-14669. The API returns `nil` at EOF;
@@ -393,7 +394,9 @@ public struct CommandExecutor: CommandExecuting, Sendable {
     // MARK: - Verbose / dry-run helpers
 
     private func printEnvironmentBlock(_ environment: [String: String]?) {
-        guard let environment, !environment.isEmpty else { return }
+        guard let environment, !environment.isEmpty else {
+            return
+        }
         print("Environment:")
         for (key, value) in environment.sorted(by: { $0.key < $1.key }) {
             let isSensitive = Self.sensitiveEnvPatterns.contains { key.uppercased().contains($0) }
