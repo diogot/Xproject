@@ -330,4 +330,67 @@ struct CommandExecutorTests {
         #expect(result.exitCode == 0)
         #expect(result.output == "test_value")
     }
+
+    // MARK: - Large Output Deadlock Regression Tests
+    //
+    // macOS pipe buffers are ~64KB. If the parent process waits for the child to exit
+    // before draining the pipes, the child blocks writing once a buffer fills and the
+    // parent blocks waiting for the child to exit — classic deadlock. These tests
+    // produce 200_000 bytes on each of stdout and stderr so any single pipe fill alone
+    // is enough to trigger the deadlock against the old anti-pattern.
+
+    private static let largeOutputCommand =
+        "yes A | tr -d '\\n' | head -c 200000; yes B | tr -d '\\n' | head -c 200000 >&2"
+
+    @Test("execute drains stdout and stderr concurrently with large output",
+          .tags(.unit, .commandExecution))
+    func executeDoesNotDeadlockOnLargeOutput() throws {
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
+        let result = try executor.execute(Self.largeOutputCommand)
+
+        #expect(result.exitCode == 0)
+        #expect(result.output.count == 200_000)
+        #expect(result.error.count == 200_000)
+        #expect(result.output.allSatisfy { $0 == "A" })
+        #expect(result.error.allSatisfy { $0 == "B" })
+    }
+
+    @Test("executeReadOnly drains stdout and stderr concurrently with large output",
+          .tags(.unit, .commandExecution))
+    func executeReadOnlyDoesNotDeadlockOnLargeOutput() throws {
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
+        let result = try executor.executeReadOnly(Self.largeOutputCommand)
+
+        #expect(result.exitCode == 0)
+        #expect(result.output.count == 200_000)
+        #expect(result.error.count == 200_000)
+    }
+
+    @Test("executeWithArguments drains stdout and stderr concurrently with large output",
+          .tags(.unit, .commandExecution))
+    func executeWithArgumentsDoesNotDeadlockOnLargeOutput() throws {
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
+        let result = try executor.executeWithArguments(
+            command: "/bin/bash",
+            arguments: ["-c", Self.largeOutputCommand]
+        )
+
+        #expect(result.exitCode == 0)
+        #expect(result.output.count == 200_000)
+        #expect(result.error.count == 200_000)
+    }
+
+    @Test("Streaming output does not lose data at EOF for large output",
+          .tags(.unit, .commandExecution, .streaming))
+    func streamingOutputDoesNotLoseDataAtEOF() async throws {
+        let executor = CommandExecutor(workingDirectory: FileManager.default.temporaryDirectory.path)
+        // A trailing sentinel that must be present if no data is dropped between the
+        // final readabilityHandler dispatch and the process termination.
+        let command = "yes A | tr -d '\\n' | head -c 200000; printf 'END_SENTINEL'"
+        let result = try await executor.executeWithStreamingOutput(command)
+
+        #expect(result.exitCode == 0)
+        #expect(result.output.hasSuffix("END_SENTINEL"))
+        #expect(result.output.count == 200_000 + "END_SENTINEL".count)
+    }
 }
